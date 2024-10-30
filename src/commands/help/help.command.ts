@@ -1,0 +1,23 @@
+/* eslint-disable no-console */
+import { APPS_DIRECTORY_NAME, CLI_BASE_COMMAND, LIBS_DIRECTORY_NAME } from '../../constants';
+import { ChalkUtilities } from '../../encapsulation';
+import { Command } from '../command.enum';
+
+// eslint-disable-next-line jsdoc/require-jsdoc
+function getCommandLabel(command: Command, shortForm: Command): string {
+    return `${ChalkUtilities.secondary(command)} / ${ChalkUtilities.secondary(shortForm)}:`;
+}
+
+/**
+ *
+ */
+export function runHelp(): void {
+    console.log(ChalkUtilities.boldUnderline('Commands:'));
+    console.log(getCommandLabel(Command.HELP, Command.H), 'opens this help-page');
+    console.log(getCommandLabel(Command.VERSION, Command.V), 'shows the currently used version');
+    console.log(getCommandLabel(Command.INIT, Command.I), 'initializes a new monorepo workspace');
+    console.log(getCommandLabel(Command.ADD, Command.A), 'adds a new application to the current monorepo workspace');
+    console.log(`${ChalkUtilities.secondary('Running an npm script')}:`);
+    console.log(`To run an npm script of one of your projects you can use ${CLI_BASE_COMMAND} "project" "npmScript"`);
+    console.log(`This works for projects in the "${APPS_DIRECTORY_NAME}" and "${LIBS_DIRECTORY_NAME}" directories of your workspace`);
+}
