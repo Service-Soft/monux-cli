@@ -1,5 +1,5 @@
 /**
- *
+ * All commands that the cli supports.
  */
 export enum Command {
     HELP = 'help',

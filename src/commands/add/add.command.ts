@@ -1,11 +1,11 @@
-import { AddAngularCommand } from './add-angular';
-import { addAngularLibrary } from './add-angular-library/add-angular-library.function';
-import { addAngularWebsite } from './add-angular-website/add-angular-website.function';
-import { addLoopback } from './add-loopback/add-loopback.function';
+import { AddAngularCommand } from './add-angular/add-angular.command';
+import { AddAngularLibraryCommand } from './add-angular-library/add-angular-library.command';
 import { addTsLibrary } from './add-ts-library';
 import { AddConfiguration, AddType } from './models/add-configuration.model';
 import { InquirerUtilities, QuestionsFor } from '../../encapsulation';
 import { WorkspaceUtilities } from '../../workspace';
+import { AddAngularWebsiteCommand } from './add-angular-website/add-angular-website.command';
+import { AddLoopbackCommand } from './add-loopback/add-loopback.command';
 
 const addConfigQuestions: QuestionsFor<AddConfiguration> = {
     name: {
@@ -22,7 +22,7 @@ const addConfigQuestions: QuestionsFor<AddConfiguration> = {
 };
 
 /**
- *
+ * Runs the add cli command.
  */
 export async function runAdd(): Promise<void> {
     const config: AddConfiguration = await InquirerUtilities.prompt(addConfigQuestions);
@@ -33,15 +33,15 @@ export async function runAdd(): Promise<void> {
             return;
         }
         case AddType.ANGULAR_LIBRARY: {
-            await addAngularLibrary(config);
+            await new AddAngularLibraryCommand(config).run();
             return;
         }
         case AddType.ANGULAR_WEBSITE: {
-            await addAngularWebsite(config);
+            await new AddAngularWebsiteCommand(config).run();
             return;
         }
         case AddType.LOOPBACK: {
-            await addLoopback(config);
+            await new AddLoopbackCommand(config).run();
             return;
         }
         case AddType.TS_LIBRARY: {

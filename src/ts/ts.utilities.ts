@@ -2,15 +2,14 @@ import { FsUtilities } from '../encapsulation';
 import { TsImportDefinition } from './ts-import-definition.model';
 
 /**
- *
+ * Utilities for handling typescript files.
  */
 export abstract class TsUtilities {
 
     /**
-     *
-     * @param path
-     * @param imp
-     * @param imports
+     * Adds the given imports to the file at the given path.
+     * @param path - The path of the ts file to add the imports to.
+     * @param imports - The imports to add.
      */
     static async addImportStatementsToFile(path: string, imports: TsImportDefinition[]): Promise<void> {
         for (const imp of imports) {
@@ -20,12 +19,7 @@ export abstract class TsUtilities {
         }
     }
 
-    /**
-     *
-     * @param lines
-     * @param imp
-     */
-    static addImportStatement(lines: string[], imp: TsImportDefinition): string[] {
+    private static addImportStatement(lines: string[], imp: TsImportDefinition): string[] {
         // check if an import from the path already exists
         const existingImport: string | undefined = lines.find(l => l.includes('import ') && l.includes(imp.path));
         if (!existingImport) {
@@ -48,6 +42,9 @@ export abstract class TsUtilities {
         if (imp.defaultImport) {
             return existingImport.replace('{', `${imp.element}, {`);
         }
-        return existingImport.replace('import {', `import { ${imp.element},`);
+        if (existingImport.includes('{')) {
+            return existingImport.replace('import {', `import { ${imp.element},`);
+        }
+        return existingImport.replace('import ', `import { ${imp.element} }, `);
     }
 }

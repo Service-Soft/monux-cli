@@ -1,5 +1,5 @@
 /**
- *
+ * The type of project to add.
  */
 export enum AddType {
     ANGULAR = 'angular',
@@ -10,15 +10,15 @@ export enum AddType {
 }
 
 /**
- *
+ * BaseConfiguration for the add cli command.
  */
 export type AddConfiguration = {
     /**
-     *
+     * The type of project to add.
      */
     type: AddType,
     /**
-     *
+     * The name of the new project.
      */
     name: string
 };

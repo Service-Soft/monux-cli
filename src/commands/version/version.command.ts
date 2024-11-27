@@ -2,7 +2,7 @@
 import { ChalkUtilities } from '../../encapsulation';
 
 /**
- *
+ * Runs the version cli command.
  */
 export function runVersion(): void {
     console.log(ChalkUtilities.boldUnderline('Version:'));

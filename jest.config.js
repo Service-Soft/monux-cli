@@ -7,5 +7,6 @@ module.exports = {
         '^.+.tsx?$': ['ts-jest', {}]
     },
     setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
-    bail: true
+    bail: true,
+    modulePathIgnorePatterns: ['tmp']
 };

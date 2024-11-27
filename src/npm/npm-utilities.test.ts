@@ -1,14 +1,16 @@
 import { beforeEach, describe, expect, test } from '@jest/globals';
 
-import { fakeUpdatePackageJsonData, FileMockUtilities, mockConstants } from '../__testing__';
+import { fakeUpdatePackageJsonData, FileMockUtilities, getMockConstants, MockConstants } from '../__testing__';
 import { NpmUtilities } from './npm.utilities';
 import { FsUtilities } from '../encapsulation';
 import { PackageJson } from './package-json.model';
 
+const mockConstants: MockConstants = getMockConstants('npm-utilities');
+
 describe('NpmUtilities', () => {
     beforeEach(async () => {
-        await FileMockUtilities.clearTemp();
-        await FileMockUtilities.createPackageJson();
+        await FileMockUtilities.clearTemp(mockConstants);
+        await FileMockUtilities.createPackageJson(mockConstants);
     });
 
     test('init', async () => {
@@ -30,13 +32,13 @@ describe('NpmUtilities', () => {
         ]);
     });
 
-    test.only('update', async () => {
+    test('update', async () => {
         const updateData: Partial<PackageJson> = fakeUpdatePackageJsonData();
-        await NpmUtilities['update'](mockConstants.PACKAGE_JSON, updateData);
+        await NpmUtilities['update'](mockConstants.ROOT_PACKAGE_JSON, updateData);
 
-        const packageJson: PackageJson = await FsUtilities.parseFileAs(mockConstants.PACKAGE_JSON);
-        expect(packageJson.main).toEqual(updateData.main ?? 'index.js');
-        expect(packageJson.scripts).toEqual({ ...updateData.scripts, test: 'echo \"Error: no test specified\" && exit 1' });
-        expect(packageJson.workspaces).toEqual(updateData.workspaces ?? undefined);
+        const packageJson: PackageJson = await FsUtilities.parseFileAs(mockConstants.ROOT_PACKAGE_JSON);
+        expect(packageJson.main).toEqual(updateData.main);
+        expect(packageJson.scripts).toEqual(updateData.scripts);
+        expect(packageJson.workspaces).toEqual(updateData.workspaces);
     });
 });

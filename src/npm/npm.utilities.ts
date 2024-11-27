@@ -7,33 +7,34 @@ import { PackageJson } from './package-json.model';
 import { PACKAGE_JSON_FILE_NAME } from '../constants';
 
 /**
- *
+ * Options for running the npm init command.
  */
 type NpmInitConfig = {
     /**
-     *
+     * The scope of the project to initialize (eg. @project).
      */
     scope: string,
     /**
-     *
+     * The path where the project should be initialized.
      */
     path: string
 };
 
 /**
- * Utilities for npm cli.
+ * Utilities for the npm cli.
  */
 export abstract class NpmUtilities {
 
     /**
-     *
-     * @param config
-     * @param output
+     * Initializes a new npm project.
+     * @param config - Configuration for how and where the project should be initialized.
+     * @param output - Whether or not the output of the command should be logged.
      */
     static async init(config: 'root' | NpmInitConfig, output?: boolean): Promise<void> {
         if (config === 'root') {
             CPUtilities.execSync('npm init -y', output);
-            await this.update(PACKAGE_JSON_FILE_NAME, {});
+            const oldPackageJson: PackageJson = await FsUtilities.parseFileAs(PACKAGE_JSON_FILE_NAME);
+            await FsUtilities.updateFile(PACKAGE_JSON_FILE_NAME, JsonUtilities.stringify(oldPackageJson), 'replace', false);
             return;
         }
         CPUtilities.execSync(
@@ -41,7 +42,8 @@ export abstract class NpmUtilities {
             output
         );
         const packageJsonPath: string = path.join(config.path, PACKAGE_JSON_FILE_NAME);
-        await this.update(packageJsonPath, {});
+        const oldPackageJson: PackageJson = await FsUtilities.parseFileAs(packageJsonPath);
+        await FsUtilities.updateFile(packageJsonPath, JsonUtilities.stringify(oldPackageJson), 'replace', false);
     }
 
     /**
@@ -72,13 +74,13 @@ export abstract class NpmUtilities {
      * @param npmPackages - The packages to install.
      * @param development - Whether or not the packages will be installed with -D or not.
      */
-    static async installInRoot(npmPackages: string[], development: boolean = false): Promise<void> {
+    static installInRoot(npmPackages: string[], development: boolean = false): void {
         this.installInPath('', npmPackages, development);
     }
 
     private static installInPath(path: string, npmPackages: string[], development: boolean): void {
         const installCommand: string = development ? 'npm i -D' : 'npm i';
-        CPUtilities.execSync(npmPackages.reduce((prev, p) => `${prev} && ${installCommand} ${p}`, `cd ${path}`));
+        CPUtilities.execSync(`cd ${path} && ${installCommand} ${npmPackages.join(' ')}`);
     }
 
     /**
@@ -104,10 +106,7 @@ export abstract class NpmUtilities {
         const oldPackageJson: PackageJson = await FsUtilities.parseFileAs(path);
         const packageJson: PackageJson = {
             ...oldPackageJson,
-            ...data,
-            scripts: {
-                ...data.scripts
-            }
+            ...data
         };
         await FsUtilities.updateFile(path, JsonUtilities.stringify(packageJson), 'replace', false);
     }

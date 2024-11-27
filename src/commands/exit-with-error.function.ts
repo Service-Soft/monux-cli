@@ -1,8 +1,8 @@
 import { MORE_INFORMATION_MESSAGE } from '../constants';
 
 /**
- *
- * @param message
+ * Exits the cli with the given error message.
+ * @param message - The message/reason to display when exiting.
  */
 export function exitWithError(message: string): void {
     // eslint-disable-next-line no-console

@@ -9,7 +9,7 @@ function getCommandLabel(command: Command, shortForm: Command): string {
 }
 
 /**
- *
+ * Runs the help cli command.
  */
 export function runHelp(): void {
     console.log(ChalkUtilities.boldUnderline('Commands:'));

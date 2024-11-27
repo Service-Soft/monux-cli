@@ -5,12 +5,12 @@ import { FsUtilities, JsonUtilities } from '../encapsulation';
 import { WorkspaceConfig } from './workspace-config.model';
 
 /**
- *
+ * Utilities for the root workspace.
  */
 export abstract class WorkspaceUtilities {
 
     /**
-     *
+     * Creates a new workspace config file inside the current directory.
      */
     static async createConfig(): Promise<void> {
         const cwd: string = process.cwd();
@@ -20,7 +20,8 @@ export abstract class WorkspaceUtilities {
     }
 
     /**
-     *
+     * Gets the workspace configuration if there is any.
+     * @returns The found config or undefined.
      */
     static async getConfig(): Promise<WorkspaceConfig | undefined> {
         if (!await FsUtilities.exists(WORKSPACE_FILE_NAME)) {
@@ -31,7 +32,9 @@ export abstract class WorkspaceUtilities {
     }
 
     /**
-     *
+     * Gets the workspace configuration.
+     * @returns The workspace config.
+     * @throws When no workspace config was found.
      */
     static async getConfigOrFail(): Promise<WorkspaceConfig> {
         const res: WorkspaceConfig | undefined = await this.getConfig();
@@ -42,8 +45,9 @@ export abstract class WorkspaceUtilities {
     }
 
     /**
-     *
-     * @param name
+     * Finds the directory of the project with the given name.
+     * @param name - The name of the project to find.
+     * @returns The found directory or undefined.
      */
     static async findProject(name: string): Promise<Dirent | undefined> {
         const allProjects: Dirent[] = await this.getProjects();
@@ -51,8 +55,10 @@ export abstract class WorkspaceUtilities {
     }
 
     /**
-     *
-     * @param name
+     * Finds the directory of the project with the given name.
+     * @param name - The name of the project to find.
+     * @returns The found directory.
+     * @throws When no project with the given name was found.
      */
     static async findProjectOrFail(name: string): Promise<Dirent> {
         const res: Dirent | undefined = await this.findProject(name);
@@ -63,8 +69,9 @@ export abstract class WorkspaceUtilities {
     }
 
     /**
-     *
-     * @param filter
+     * Gets either all libraries, all apps or every project.
+     * @param filter - Filter to only return libraries, apps or all projects.
+     * @returns An array of directories.
      */
     static async getProjects(filter: 'libs' | 'apps' | 'all' = 'all'): Promise<Dirent[]> {
         switch (filter) {

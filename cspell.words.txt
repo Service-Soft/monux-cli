@@ -1,2 +1,5 @@
 WORKDIR
 stringifying
+codepaths
+urlset
+outdir

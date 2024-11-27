@@ -3,7 +3,7 @@ import { InquirerUtilities, QuestionsFor } from '../../../encapsulation';
 import { OmitStrict } from '../../../types';
 
 /**
- *
+ * Base Add Command class.
  */
 export abstract class AddCommand<ConfigurationType extends AddConfiguration = AddConfiguration> {
 
@@ -12,15 +12,18 @@ export abstract class AddCommand<ConfigurationType extends AddConfiguration = Ad
     constructor(protected readonly baseConfig: AddConfiguration) {}
 
     /**
-     *
-     * @param baseConfig
-     * @param args
+     * Generates the project.
+     * @param baseConfig - The base configuration from the cli.
+     * @param args - Any additional args.
      */
+    // eslint-disable-next-line typescript/no-explicit-any
     abstract run(...args: any[]): Promise<void>;
 
     /**
-     *
-     * @param baseConfig
+     * Gets the complete configuration.
+     * Consists of the base config of the add cli command
+     * and any additional config that is needed based on this.configQuestions.
+     * @returns The combination of the base- and the additional configuration.
      */
     protected async getConfig(): Promise<ConfigurationType> {
         return {

@@ -1,21 +1,27 @@
+import path from 'path';
+
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
 import { AngularUtilities } from './angular.utilities';
-import { fakeTsImportDefinition, FileMockUtilities, mockConstants } from '../__testing__';
+import { fakeAddNavElementConfig, fakeTsImportDefinition, FileMockUtilities, getMockConstants, MockConstants } from '../__testing__';
 import { CPUtilities, FsUtilities } from '../encapsulation';
 import { NpmUtilities } from '../npm';
 import { TsImportDefinition } from '../ts';
+import { AddNavElementConfig } from './add-nav-element-config.model';
+
+const mockConstants: MockConstants = getMockConstants('angular-utilities');
 
 let npmInstallMock: jest.SpiedFunction<typeof NpmUtilities.install>;
 let cpExecSyncMock: jest.SpiedFunction<typeof CPUtilities.execSync>;
 
 describe('AngularUtilities', () => {
     beforeEach(async () => {
-        await FileMockUtilities.clearTemp();
-        await FileMockUtilities.createAppComponentTsFile();
-        await FileMockUtilities.createAppComponentHtmlFile();
-        await FileMockUtilities.createAppRoutesTs();
-        await FileMockUtilities.createAppConfig();
+        await FileMockUtilities.clearTemp(mockConstants);
+        await FileMockUtilities.createAppComponentTsFile(mockConstants);
+        await FileMockUtilities.createAppComponentHtmlFile(mockConstants);
+        await FileMockUtilities.createAppRoutesTs(mockConstants);
+        await FileMockUtilities.createAppConfig(mockConstants);
+        await FileMockUtilities.createAngularJson(mockConstants);
         npmInstallMock = jest.spyOn(NpmUtilities, 'install').mockImplementation(async () => {});
         cpExecSyncMock = jest.spyOn(CPUtilities, 'execSync').mockImplementation(() => {});
     });
@@ -44,7 +50,7 @@ describe('AngularUtilities', () => {
         await AngularUtilities.addNavigation(mockConstants.ANGULAR_APP_DIR, mockConstants.ANGULAR_APP_NAME);
 
         expect(npmInstallMock).toHaveBeenCalledTimes(1);
-        expect(npmInstallMock).toHaveBeenCalledWith(mockConstants.ANGULAR_APP_NAME, ['ngx-material-navigation', '@fortawesome/angular-fontawesome', '@fortawesome/free-solid-svg-icons']);
+        expect(npmInstallMock).toHaveBeenCalledWith(mockConstants.ANGULAR_APP_NAME, ['ngx-material-navigation']);
 
         const htmlLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_COMPONENT_HTML);
         expect(htmlLines).toEqual([
@@ -81,26 +87,19 @@ describe('AngularUtilities', () => {
 
         const routesLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_ROUTES_TS);
         expect(routesLines).toEqual([
-            'import { FooterRow, NavElementTypes, NavRoute, NavUtilities, NavbarRow, NgxMatNavigationNotFoundComponent } from \'ngx-material-navigation}\';',
+            'import { FooterRow, NavElementTypes, NavRoute, NavUtilities, NavbarRow, NgxMatNavigationNotFoundComponent } from \'ngx-material-navigation\';',
             '',
             'export const navbarRows: NavbarRow<NavRoute>[] = [',
             '    {',
-            '        elements: [',
-            '            {',
-            '                type: NavElementTypes.TITLE_WITH_INTERNAL_LINK,',
-            '                title: \'Home\',',
-            '                link: {',
-            '                    title: \'Home\',',
-            '                    path: \'\',',
-            '                    loadComponent: () => import(\'./pages/home/home.component\').then(m => m.HomeComponent)',
-            '                },',
-            '                collapse: \'never\'',
-            '            }',
-            '        ]',
+            '        elements: []',
             '    }',
             '];',
             '',
-            'export const footerRows: FooterRow[] = [];',
+            'export const footerRows: FooterRow[] = [',
+            '    {',
+            '        elements: []',
+            '    }',
+            '];',
             '',
             'const notFoundRoute: NavRoute = {',
             '    title: \'Page not found\',',
@@ -121,11 +120,210 @@ describe('AngularUtilities', () => {
         ]);
     });
 
+    test('generatePage for navbar', async () => {
+        await AngularUtilities.addNavigation(mockConstants.ANGULAR_APP_DIR, mockConstants.ANGULAR_APP_NAME);
+
+        cpExecSyncMock.mockRestore(); // restores the mock so that 'ng generate component will actually be executed'
+        const addNavElementConfig: AddNavElementConfig = fakeAddNavElementConfig();
+        await AngularUtilities.generatePage(
+            mockConstants.ANGULAR_APP_DIR,
+            'Test',
+            addNavElementConfig,
+            undefined
+        );
+
+        const exists: boolean[] = await Promise.all([
+            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.ts')),
+            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.html')),
+            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.scss'))
+        ]);
+        expect(exists.some(e => !e)).toBe(false);
+
+        const routesLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_ROUTES_TS);
+        expect(routesLines).toEqual([
+            'import { FooterRow, NavElementTypes, NavRoute, NavUtilities, NavbarRow, NgxMatNavigationNotFoundComponent } from \'ngx-material-navigation\';',
+            '',
+            'export const navbarRows: NavbarRow<NavRoute>[] = [',
+            '    {',
+            '        elements: [',
+            '            {',
+            '                type: NavElementTypes.TITLE_WITH_INTERNAL_LINK,',
+            '                title: \'Test\',',
+            '                link: {',
+            '                    route: {',
+            '                        path: \'\',',
+            '                        title: \'Test | Website\',',
+            '                        loadComponent: () => import(\'./pages/test/test.component\').then(m => m.TestComponent)',
+            '                    }',
+            '                }',
+            '            }',
+            '        ]',
+            '    }',
+            '];',
+            '',
+            'export const footerRows: FooterRow[] = [',
+            '    {',
+            '        elements: []',
+            '    }',
+            '];',
+            '',
+            'const notFoundRoute: NavRoute = {',
+            '    title: \'Page not found\',',
+            '    path: \'**\',',
+            '    component: NgxMatNavigationNotFoundComponent,',
+            '    data: {',
+            '        pageNotFoundConfig: {',
+            '            homeRoute: \'\',',
+            '            title: \'Page not found\',',
+            '            message: \'The page you are looking for might have been removed, had its name changed or is temporarily unavailable.\',',
+            '            buttonLabel: \'Homepage\'',
+            '        }',
+            '    }',
+            '};',
+            '',
+            'export const routes: NavRoute[] = NavUtilities.getAngularRoutes(navbarRows, footerRows, [notFoundRoute]);'
+        ]);
+
+        await AngularUtilities.generatePage(
+            mockConstants.ANGULAR_APP_DIR,
+            'TestTest',
+            addNavElementConfig,
+            undefined
+        );
+        const exists2: boolean[] = await Promise.all([
+            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test-test', 'test-test.component.ts')),
+            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test-test', 'test-test.component.html')),
+            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test-test', 'test-test.component.scss'))
+        ]);
+        expect(exists2.some(e => !e)).toBe(false);
+
+        const routesLines2: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_ROUTES_TS);
+        expect(routesLines2).toEqual([
+            'import { FooterRow, NavElementTypes, NavRoute, NavUtilities, NavbarRow, NgxMatNavigationNotFoundComponent } from \'ngx-material-navigation\';',
+            '',
+            'export const navbarRows: NavbarRow<NavRoute>[] = [',
+            '    {',
+            '        elements: [',
+            '            {',
+            '                type: NavElementTypes.TITLE_WITH_INTERNAL_LINK,',
+            '                title: \'Test\',',
+            '                link: {',
+            '                    route: {',
+            '                        path: \'\',',
+            '                        title: \'Test | Website\',',
+            '                        loadComponent: () => import(\'./pages/test/test.component\').then(m => m.TestComponent)',
+            '                    }',
+            '                }',
+            '            },',
+            '            {',
+            '                type: NavElementTypes.TITLE_WITH_INTERNAL_LINK,',
+            '                title: \'Test\',',
+            '                link: {',
+            '                    route: {',
+            '                        path: \'\',',
+            '                        title: \'Test | Website\',',
+            '                        loadComponent: () => import(\'./pages/test/test.component\').then(m => m.TestComponent)',
+            '                    }',
+            '                }',
+            '            }',
+            '        ]',
+            '    }',
+            '];',
+            '',
+            'export const footerRows: FooterRow[] = [',
+            '    {',
+            '        elements: []',
+            '    }',
+            '];',
+            '',
+            'const notFoundRoute: NavRoute = {',
+            '    title: \'Page not found\',',
+            '    path: \'**\',',
+            '    component: NgxMatNavigationNotFoundComponent,',
+            '    data: {',
+            '        pageNotFoundConfig: {',
+            '            homeRoute: \'\',',
+            '            title: \'Page not found\',',
+            '            message: \'The page you are looking for might have been removed, had its name changed or is temporarily unavailable.\',',
+            '            buttonLabel: \'Homepage\'',
+            '        }',
+            '    }',
+            '};',
+            '',
+            'export const routes: NavRoute[] = NavUtilities.getAngularRoutes(navbarRows, footerRows, [notFoundRoute]);'
+        ]);
+    });
+
+    test('generatePage for footer', async () => {
+        await AngularUtilities.addNavigation(mockConstants.ANGULAR_APP_DIR, mockConstants.ANGULAR_APP_NAME);
+
+        cpExecSyncMock.mockRestore(); // restores the mock so that 'ng generate component will actually be executed'
+        const addNavElementConfig: AddNavElementConfig = fakeAddNavElementConfig('footer');
+        await AngularUtilities.generatePage(
+            mockConstants.ANGULAR_APP_DIR,
+            'Test',
+            addNavElementConfig,
+            undefined
+        );
+
+        const exists: boolean[] = await Promise.all([
+            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.ts')),
+            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.html')),
+            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.scss'))
+        ]);
+        expect(exists.some(e => !e)).toBe(false);
+
+        const routesLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_ROUTES_TS);
+        expect(routesLines).toEqual([
+            'import { FooterRow, NavElementTypes, NavRoute, NavUtilities, NavbarRow, NgxMatNavigationNotFoundComponent } from \'ngx-material-navigation\';',
+            '',
+            'export const navbarRows: NavbarRow<NavRoute>[] = [',
+            '    {',
+            '        elements: []',
+            '    }',
+            '];',
+            '',
+            'export const footerRows: FooterRow[] = [',
+            '    {',
+            '        elements: [',
+            '            {',
+            '                type: NavElementTypes.TITLE_WITH_INTERNAL_LINK,',
+            '                title: \'Test\',',
+            '                link: {',
+            '                    route: {',
+            '                        path: \'\',',
+            '                        title: \'Test | Website\',',
+            '                        loadComponent: () => import(\'./pages/test/test.component\').then(m => m.TestComponent)',
+            '                    }',
+            '                }',
+            '            }',
+            '        ]',
+            '    }',
+            '];',
+            '',
+            'const notFoundRoute: NavRoute = {',
+            '    title: \'Page not found\',',
+            '    path: \'**\',',
+            '    component: NgxMatNavigationNotFoundComponent,',
+            '    data: {',
+            '        pageNotFoundConfig: {',
+            '            homeRoute: \'\',',
+            '            title: \'Page not found\',',
+            '            message: \'The page you are looking for might have been removed, had its name changed or is temporarily unavailable.\',',
+            '            buttonLabel: \'Homepage\'',
+            '        }',
+            '    }',
+            '};',
+            '',
+            'export const routes: NavRoute[] = NavUtilities.getAngularRoutes(navbarRows, footerRows, [notFoundRoute]);'
+        ]);
+    });
+
     test('addPwaSupport', async () => {
         await AngularUtilities.addPwaSupport(mockConstants.ANGULAR_APP_DIR, mockConstants.ANGULAR_APP_NAME);
 
         expect(cpExecSyncMock).toHaveBeenCalledTimes(1);
-        expect(cpExecSyncMock).toHaveBeenCalledWith(`cd ${mockConstants.ANGULAR_APP_DIR} && npx @angular/cli add @angular/pwa --skip-confirmation`);
+        expect(cpExecSyncMock).toHaveBeenCalledWith(`cd ${mockConstants.ANGULAR_APP_DIR} && npx @angular/cli@18 add @angular/pwa --skip-confirmation`);
         expect(npmInstallMock).toHaveBeenCalledTimes(1);
         expect(npmInstallMock).toHaveBeenCalledWith(mockConstants.ANGULAR_APP_NAME, ['ngx-pwa']);
 

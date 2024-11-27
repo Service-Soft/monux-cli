@@ -2,10 +2,10 @@
 import { Dirent } from 'fs';
 import path from 'path';
 
-import { AngularUtilities } from '../../../angular';
-import { APPS_DIRECTORY_NAME } from '../../../constants';
+import { AngularUtilities, NavElementTypes } from '../../../angular';
+import { ANGULAR_JSON_FILE_NAME, APPS_DIRECTORY_NAME } from '../../../constants';
 import { DockerUtilities } from '../../../docker';
-import { CPUtilities, FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
+import { FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
 import { EslintUtilities } from '../../../eslint';
 import { NpmUtilities } from '../../../npm';
 import { TailwindUtilities } from '../../../tailwind';
@@ -16,17 +16,22 @@ import { AddCommand } from '../models/add-command.class';
 import { AddConfiguration } from '../models/add-configuration.model';
 
 /**
- *
+ * Configuration for adding a new angular app.
  */
 type AddAngularConfiguration = AddConfiguration & {
     /**
-     *
+     * The port that should be used by the application.
+     * @default 4200
      */
-    port: number
+    port: number,
+    /**
+     * Suffix for the html title (eg. "| My Company").
+     */
+    titleSuffix: string
 };
 
 /**
- *
+ * Command that handles adding an angular application to the monorepo.
  */
 export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
     protected override readonly configQuestions: QuestionsFor<OmitStrict<AddAngularConfiguration, keyof AddConfiguration>> = {
@@ -35,6 +40,12 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
             message: 'port',
             required: true,
             default: 4200
+        },
+        titleSuffix: {
+            type: 'input',
+            message: 'title suffix (eg. "| My Company")',
+            default: `| ${this.baseConfig.name}`,
+            required: true
         }
     };
 
@@ -48,22 +59,43 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
             AngularUtilities.addPwaSupport(root, config.name),
             AngularUtilities.addNavigation(root, config.name),
             EslintUtilities.setupProjectEslint(root, true),
-            TailwindUtilities.setupProjectTailwind(root),
+            TailwindUtilities.setupProjectTailwind(root, true),
             DockerUtilities.addServiceToCompose({
                 name: config.name,
                 build: `./${root}`,
                 volumes: [{ path: `/${config.name}` }]
             }),
-            NpmUtilities.install(config.name, ['ngx-persistence-logger'])
+            NpmUtilities.install(config.name, ['ngx-persistence-logger']),
+            AngularUtilities.updateAngularJson(
+                path.join(root, ANGULAR_JSON_FILE_NAME),
+                { $schema: '../../node_modules/@angular/cli/lib/config/schema.json' }
+            )
         ]);
+        await AngularUtilities.generatePage(
+            root,
+            'Home',
+            {
+                addTo: 'navbar',
+                rowIndex: 0,
+                element: {
+                    type: NavElementTypes.TITLE_WITH_INTERNAL_LINK,
+                    title: `Home ${config.titleSuffix}`,
+                    link: {
+                        route: {
+                            path: '',
+                            title: 'Home',
+                            // @ts-ignore
+                            // eslint-disable-next-line typescript/no-unsafe-return, typescript/no-unsafe-member-access
+                            loadComponent: () => import('./pages/imprint/imprint.component').then(m => m.ImprintComponent)
+                        }
+                    }
+                }
+            },
+            undefined
+        );
     }
 
-    /**
-     *
-     * @param root
-     * @param config
-     */
-    protected async createDockerfile(root: string, config: AddAngularConfiguration): Promise<void> {
+    private async createDockerfile(root: string, config: AddAngularConfiguration): Promise<void> {
         await FsUtilities.createFile(
             path.join(root, 'Dockerfile'),
             [
@@ -87,7 +119,7 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
 
     private async createProject(config: AddAngularConfiguration): Promise<string> {
         console.log('Creates the base app');
-        CPUtilities.execSync(`cd ${APPS_DIRECTORY_NAME} && npx @angular/cli new ${config.name} --skip-git --style=scss --ssr`);
+        AngularUtilities.runCommand(APPS_DIRECTORY_NAME, `new ${config.name}`, { '--skip-git': true, '--style': 'scss', '--ssr': true });
         const newProject: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
         const root: string = path.join(newProject.parentPath, newProject.name);
         await FsUtilities.updateFile(path.join(root, 'src', 'app', 'app.component.html'), '', 'replace');
@@ -99,6 +131,7 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
         await FsUtilities.rm(path.join(root, '.vscode'));
         await FsUtilities.rm(path.join(root, '.editorconfig'));
         await FsUtilities.rm(path.join(root, '.gitignore'));
+        await FsUtilities.rm(path.join(root, 'src', 'app', 'app.component.spec.ts'));
     }
 
     private async setupTsConfig(root: string, projectName: string): Promise<void> {

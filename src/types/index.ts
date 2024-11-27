@@ -1,2 +1,3 @@
-export * from './key-value.model';
-export * from './omit-strict.model';
+export * from './key-value.type';
+export * from './omit-strict.type';
+export * from './deep-partial.type';

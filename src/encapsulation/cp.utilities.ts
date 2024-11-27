@@ -1,11 +1,13 @@
 import { execSync, ExecSyncOptions } from 'child_process';
 
-import { mockConstants } from '../__testing__';
-
 /**
  * Encapsulates functionality of the child_process package.
  */
 export abstract class CPUtilities {
+
+    // eslint-disable-next-line typescript/prefer-readonly
+    private static cwd?: string;
+
     /**
      * Executes a command and waits for its execution.
      * @param command - The command to run.
@@ -15,7 +17,7 @@ export abstract class CPUtilities {
         const options: ExecSyncOptions = {
             stdio: output ? 'inherit' : undefined,
             killSignal: 'SIGINT',
-            cwd: process.env['NODE_ENV'] === 'test' ? mockConstants.TMP_DIR : undefined
+            cwd: this.cwd
         };
         execSync(command, options);
     }

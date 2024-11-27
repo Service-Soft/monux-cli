@@ -31,6 +31,31 @@ export const LIBS_DIRECTORY_NAME: string = 'libs';
 export const DOCKER_COMPOSE_FILE_NAME: string = 'docker-compose.yaml';
 
 /**
+ * The name of the eslint config file.
+ */
+export const ESLINT_CONFIG_FILE_NAME: string = 'eslint.config.js';
+
+/**
+ * The name of the tailwind config file.
+ */
+export const TAILWIND_CONFIG_FILE_NAME: string = 'tailwind.config.js';
+
+/**
+ * The name of the ts config file.
+ */
+export const TS_CONFIG_FILE_NAME: string = 'tsconfig.json';
+
+/**
+ * The name of the angular json file.
+ */
+export const ANGULAR_JSON_FILE_NAME: string = 'angular.json';
+
+/**
+ * The name of the angular routes file.
+ */
+export const ANGULAR_ROUTES_FILE_NAME: string = 'routes.ts';
+
+/**
  * The message to notify the user of the help command.
  */
 export const MORE_INFORMATION_MESSAGE: string = `run ${ChalkUtilities.secondary(

@@ -1,7 +1,7 @@
 import { Dirent } from 'fs';
 import path from 'path';
 
-import { LIBS_DIRECTORY_NAME } from '../../../constants';
+import { LIBS_DIRECTORY_NAME, TS_CONFIG_FILE_NAME } from '../../../constants';
 import { FsUtilities, QuestionsFor } from '../../../encapsulation';
 import { EslintUtilities } from '../../../eslint';
 import { NpmUtilities } from '../../../npm';
@@ -12,17 +12,17 @@ import { AddCommand } from '../models/add-command.class';
 import { AddConfiguration } from '../models/add-configuration.model';
 
 /**
- *
+ * Configuration for creating a new ts library.
  */
 type TsLibraryConfiguration = AddConfiguration & {
     /**
-     *
+     * The scope of the library, eg. '@project'.
      */
     scope: string
 };
 
 /**
- *
+ * The command for adding a typescript library to the monorepo.
  */
 export class AddTsLibraryCommand extends AddCommand<TsLibraryConfiguration> {
     protected override configQuestions: QuestionsFor<OmitStrict<TsLibraryConfiguration, keyof AddConfiguration>> = {
@@ -44,7 +44,7 @@ export class AddTsLibraryCommand extends AddCommand<TsLibraryConfiguration> {
         await FsUtilities.createFile(path.join(root, 'src', 'index.ts'), '');
 
         await Promise.all([
-            EslintUtilities.setupProjectEslint(root, false, 'tsconfig.json'),
+            EslintUtilities.setupProjectEslint(root, false, TS_CONFIG_FILE_NAME),
             this.setupTsConfig(config.name),
             this.updateBaseTsConfig(config, root)
         ]);
@@ -58,11 +58,6 @@ export class AddTsLibraryCommand extends AddCommand<TsLibraryConfiguration> {
         await Promise.all(projects.map((p) => NpmUtilities.install(p.name, [npmPackage])));
     }
 
-    /**
-     *
-     * @param config
-     * @param root
-     */
     private async updateBaseTsConfig(config: TsLibraryConfiguration, root: string): Promise<void> {
         await TsConfigUtilities.updateBaseTsConfig({
             compilerOptions: {
@@ -74,6 +69,7 @@ export class AddTsLibraryCommand extends AddCommand<TsLibraryConfiguration> {
     }
 
     private async setupTsConfig(projectName: string): Promise<void> {
+        // eslint-disable-next-line no-console
         console.log('sets up tsconfig');
         await TsConfigUtilities.updateTsConfig(
             projectName,
@@ -91,6 +87,7 @@ export class AddTsLibraryCommand extends AddCommand<TsLibraryConfiguration> {
     }
 
     private async createProject(config: TsLibraryConfiguration): Promise<string> {
+        // eslint-disable-next-line no-console
         console.log('Creates the library');
         const libraryPath: string = path.join(LIBS_DIRECTORY_NAME, config.name);
         await NpmUtilities.init({ path: libraryPath, scope: config.scope });
