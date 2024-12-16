@@ -31,6 +31,31 @@ export const LIBS_DIRECTORY_NAME: string = 'libs';
 export const DOCKER_COMPOSE_FILE_NAME: string = 'docker-compose.yaml';
 
 /**
+ * The name of the docker compose file.
+ */
+export const DOCKER_FILE_NAME: string = 'Dockerfile';
+
+/**
+ * The name of the .env file.
+ */
+export const ENV_FILE_NAME: string = '.env';
+
+/**
+ * The name of the environment.ts file.
+ */
+export const ENVIRONMENT_TS_FILE_NAME: string = 'environment.ts';
+
+/**
+ * The name of the environment.model.ts file.
+ */
+export const ENVIRONMENT_MODEL_TS_FILE_NAME: string = 'environment.model.ts';
+
+/**
+ * The name of the global-environment.model.ts.
+ */
+export const GLOBAL_ENVIRONMENT_MODEL_FILE_NAME: string = 'global-environment.model.ts';
+
+/**
  * The name of the eslint config file.
  */
 export const ESLINT_CONFIG_FILE_NAME: string = 'eslint.config.js';
@@ -54,6 +79,11 @@ export const ANGULAR_JSON_FILE_NAME: string = 'angular.json';
  * The name of the angular routes file.
  */
 export const ANGULAR_ROUTES_FILE_NAME: string = 'routes.ts';
+
+/**
+ * Name of the .gitignore file.
+ */
+export const GIT_IGNORE_FILE_NAME: string = '.gitignore';
 
 /**
  * The message to notify the user of the help command.

@@ -27,6 +27,14 @@ export type ComposeService = {
      */
     name: string,
     /**
+     * The command options for the service.
+     */
+    command?: string[],
+    /**
+     * The ports definition of the service.
+     */
+    ports?: ComposePort[],
+    /**
      * The volumes that are used by the service.
      */
     volumes?: ComposeServiceVolume[],
@@ -47,7 +55,25 @@ export type ComposeService = {
     /**
      * Environment variables to be used by the service.
      */
-    environment?: ComposeServiceEnvironment
+    environment?: ComposeServiceEnvironment,
+    /**
+     * The labels to use on the service.
+     */
+    labels: string[]
+};
+
+/**
+ * Definition of a port from a docker compose service.
+ */
+export type ComposePort = number | {
+    /**
+     * The internal port.
+     */
+    internal: number,
+    /**
+     * The exposed, external port.
+     */
+    external: number
 };
 
 /**
@@ -63,7 +89,11 @@ export type ComposeBuild = string | {
     /**
      * The dockerfile to use for the build.
      */
-    dockerfile: string
+    dockerfile: string,
+    /**
+     * The context to provide when building from the dockerfile.
+     */
+    context: string
 };
 
 /**

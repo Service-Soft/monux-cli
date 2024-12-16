@@ -1,5 +1,5 @@
 /* eslint-disable jsdoc/require-jsdoc */
-import { faker } from '@faker-js/faker/.';
+import { faker } from '@faker-js/faker';
 
 import { fakeUniqueString } from './fake-unique-string.function';
 import { KeyValue } from '../../../types';

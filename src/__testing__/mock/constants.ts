@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { ANGULAR_JSON_FILE_NAME, ANGULAR_ROUTES_FILE_NAME, APPS_DIRECTORY_NAME, DOCKER_COMPOSE_FILE_NAME, ESLINT_CONFIG_FILE_NAME, LIBS_DIRECTORY_NAME, PACKAGE_JSON_FILE_NAME } from '../../constants';
+import { ANGULAR_JSON_FILE_NAME, ANGULAR_ROUTES_FILE_NAME, APPS_DIRECTORY_NAME, DOCKER_COMPOSE_FILE_NAME, ENV_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, ESLINT_CONFIG_FILE_NAME, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME, LIBS_DIRECTORY_NAME, PACKAGE_JSON_FILE_NAME } from '../../constants';
 
 // eslint-disable-next-line jsdoc/require-jsdoc
 export type MockConstants = {
@@ -31,6 +31,10 @@ export type MockConstants = {
     // eslint-disable-next-line jsdoc/require-jsdoc
     ANGULAR_JSON: string,
     // eslint-disable-next-line jsdoc/require-jsdoc
+    ANGULAR_ENVIRONMENT_MODEL: string,
+    // eslint-disable-next-line jsdoc/require-jsdoc
+    ANGULAR_ENVIRONMENT: string,
+    // eslint-disable-next-line jsdoc/require-jsdoc
     TS_LIBRARY_DIR: string,
     // eslint-disable-next-line jsdoc/require-jsdoc
     TS_LIBRARY_SCOPE: string,
@@ -39,7 +43,11 @@ export type MockConstants = {
     // eslint-disable-next-line jsdoc/require-jsdoc
     ROOT_PACKAGE_JSON: string,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    TS_LIBRARY_NAME: string
+    TS_LIBRARY_NAME: string,
+    // eslint-disable-next-line jsdoc/require-jsdoc
+    ENV: string,
+    // eslint-disable-next-line jsdoc/require-jsdoc
+    GLOBAL_ENV_MODEL: string
 };
 
 /**
@@ -73,11 +81,15 @@ export function getMockConstants(projectName: string): MockConstants {
         ANGULAR_ROUTES_TS: path.join(ANGULAR_APP_DIR, 'src', 'app', ANGULAR_ROUTES_FILE_NAME),
         ANGULAR_APP_CONFIG_TS: path.join(ANGULAR_APP_DIR, 'src', 'app', 'app.config.ts'),
         ANGULAR_JSON: path.join(ANGULAR_APP_DIR, ANGULAR_JSON_FILE_NAME),
+        ANGULAR_ENVIRONMENT: path.join(ANGULAR_APP_DIR, 'src', 'environment', ENVIRONMENT_TS_FILE_NAME),
+        ANGULAR_ENVIRONMENT_MODEL: path.join(ANGULAR_APP_DIR, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
         TS_LIBRARY_NAME: TS_LIBRARY_NAME,
         TS_LIBRARY_DIR: TS_LIBRARY_DIR,
         TS_LIBRARY_SCOPE: `@${TS_LIBRARY_NAME}`,
         TS_LIBRARY_PACKAGE_JSON: path.join(TS_LIBRARY_DIR, PACKAGE_JSON_FILE_NAME),
-        ROOT_PACKAGE_JSON: path.join(PROJECT_DIR, PACKAGE_JSON_FILE_NAME)
+        ROOT_PACKAGE_JSON: path.join(PROJECT_DIR, PACKAGE_JSON_FILE_NAME),
+        ENV: path.join(PROJECT_DIR, ENV_FILE_NAME),
+        GLOBAL_ENV_MODEL: path.join(PROJECT_DIR, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME)
     } as const;
     return mockConstants;
 }

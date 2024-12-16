@@ -16,12 +16,12 @@ export abstract class TailwindUtilities {
         await FsUtilities.createFile(
             path.join(root, TAILWIND_CONFIG_FILE_NAME),
             [
-                'baseConfig = require(\'../../\');',
+                'baseConfig = require(\'../../tailwind.config\');',
                 '' + (!disableCommentRule ? '\n// eslint-disable-next-line jsdoc/require-jsdoc' : ''),
                 '/** @type {import(\'tailwindcss\').Config} */',
                 'module.exports = {',
                 '\tpresets: [baseConfig],',
-                '\tcontent: [\'./**/*.{html,ts}\'],',
+                '\tcontent: [\'./src/**/*.{html,ts}\'],',
                 '\ttheme: {',
                 '\t\textend: {}',
                 '\t},',

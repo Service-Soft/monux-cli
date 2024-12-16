@@ -1,11 +1,21 @@
 
-import { APPS_DIRECTORY_NAME, ESLINT_CONFIG_FILE_NAME, LIBS_DIRECTORY_NAME, TAILWIND_CONFIG_FILE_NAME, WORKSPACE_FILE_NAME } from '../../constants';
+import { APPS_DIRECTORY_NAME, ENV_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, ESLINT_CONFIG_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, TAILWIND_CONFIG_FILE_NAME, WORKSPACE_FILE_NAME } from '../../constants';
 import { DockerUtilities } from '../../docker';
-import { CPUtilities, FsUtilities } from '../../encapsulation';
-import { NpmUtilities } from '../../npm';
+import { CPUtilities, FsUtilities, InquirerUtilities, QuestionsFor } from '../../encapsulation';
+import { EnvUtilities } from '../../env';
+import { NpmPackage, NpmUtilities } from '../../npm';
 import { TsConfigUtilities } from '../../tsconfig';
 import { WorkspaceUtilities } from '../../workspace';
 import { exitWithError } from '../exit-with-error.function';
+import { InitConfiguration } from './init-configuration.model';
+
+const initConfigQuestions: QuestionsFor<InitConfiguration> = {
+    email: {
+        type: 'input',
+        message: 'E-Mail (only ever used locally)',
+        required: true
+    }
+};
 
 /**
  * Runs the init cli command.
@@ -15,21 +25,30 @@ export async function runInit(): Promise<void> {
         exitWithError('Error: The current directory is already a monorepo workspace');
     }
 
+    const config: InitConfiguration = await InquirerUtilities.prompt(initConfigQuestions);
+
     await NpmUtilities.init('root', false);
 
-    NpmUtilities.installInRoot(['eslint-config-service-soft', 'eslint', 'tailwindcss', 'postcss', 'autoprefixer'], true);
+    NpmUtilities.installInRoot([
+        NpmPackage.ESLINT_CONFIG_SERVICE_SOFT,
+        NpmPackage.ESLINT,
+        NpmPackage.TAILWIND,
+        NpmPackage.POSTCSS,
+        NpmPackage.AUTOPREFIXER
+    ], true);
 
     await Promise.all([
         WorkspaceUtilities.createConfig(),
         TsConfigUtilities.createBaseTsConfig(),
         createEslintConfig(),
         createCspellWords(),
-        DockerUtilities.createDockerCompose(),
+        DockerUtilities.createDockerCompose(config.email),
         FsUtilities.mkdir(APPS_DIRECTORY_NAME),
         FsUtilities.mkdir(LIBS_DIRECTORY_NAME),
         createGitIgnore(),
         createTailwindConfig(),
-        addNpmWorkspaces()
+        addNpmWorkspaces(),
+        EnvUtilities.init()
     ]);
     CPUtilities.execSync('git init');
 }
@@ -45,9 +64,10 @@ async function addNpmWorkspaces(): Promise<void> {
  * Creates the base .gitignore.
  */
 async function createGitIgnore(): Promise<void> {
-    await FsUtilities.createFile('.gitignore', [
+    await FsUtilities.createFile(GIT_IGNORE_FILE_NAME, [
         '# See http://help.github.com/ignore-files/ for more about ignoring files.',
-        'secrets.ts',
+        ENV_FILE_NAME,
+        ENVIRONMENT_TS_FILE_NAME,
         '# compiled output',
         'dist',
         'tmp',

@@ -2,7 +2,7 @@ import { Dirent } from 'fs';
 import path from 'path';
 
 import { AngularUtilities } from '../../../angular';
-import { ANGULAR_JSON_FILE_NAME, LIBS_DIRECTORY_NAME, PACKAGE_JSON_FILE_NAME } from '../../../constants';
+import { ANGULAR_JSON_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, PACKAGE_JSON_FILE_NAME } from '../../../constants';
 import { FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
 import { EslintUtilities } from '../../../eslint';
 import { NpmUtilities, PackageJson } from '../../../npm';
@@ -45,7 +45,7 @@ export class AddAngularLibraryCommand extends AddCommand<AddAngularLibraryConfig
         await Promise.all([
             FsUtilities.rm(path.join(result.root, '.vscode')),
             FsUtilities.rm(path.join(result.root, '.editorconfig')),
-            FsUtilities.rm(path.join(result.root, '.gitignore')),
+            FsUtilities.rm(path.join(result.root, GIT_IGNORE_FILE_NAME)),
             FsUtilities.rm(path.join(result.root, LIBS_DIRECTORY_NAME)),
             this.updateNgPackageJson(result.root),
             this.updateAngularJson(result.root, config.name),
@@ -71,7 +71,7 @@ export class AddAngularLibraryCommand extends AddCommand<AddAngularLibraryConfig
         AngularUtilities.runCommand(
             path.join(LIBS_DIRECTORY_NAME, config.name),
             `generate library ${config.name}`,
-            {}
+            { '--inline-style': true }
         );
 
         const oldPackageJson: PackageJson = await FsUtilities.parseFileAs(

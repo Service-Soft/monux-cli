@@ -5,6 +5,8 @@ import { CPUtilities, FsUtilities, JsonUtilities } from '../encapsulation';
 import { WorkspaceUtilities } from '../workspace';
 import { PackageJson } from './package-json.model';
 import { PACKAGE_JSON_FILE_NAME } from '../constants';
+import { NpmPackage } from './npm-package.enum';
+import { mergeDeep } from '../utilities';
 
 /**
  * Options for running the npm init command.
@@ -19,6 +21,16 @@ type NpmInitConfig = {
      */
     path: string
 };
+
+/**
+ *
+ */
+type FrequentlyUsedNpmScripts = 'build' | 'start' | 'test';
+
+/**
+ *
+ */
+export type NpmScript = FrequentlyUsedNpmScripts | Omit<string, FrequentlyUsedNpmScripts>;
 
 /**
  * Utilities for the npm cli.
@@ -51,7 +63,7 @@ export abstract class NpmUtilities {
      * @param projectName - The project to run the npm script in.
      * @param npmScript - The npm script to run.
      */
-    static async run(projectName: string, npmScript: string): Promise<void> {
+    static async run(projectName: string, npmScript: NpmScript): Promise<void> {
         const project: Dirent = await WorkspaceUtilities.findProjectOrFail(projectName);
         const projectPath: string = path.join(project.parentPath, project.name);
         CPUtilities.execSync(`cd ${projectPath} && npm run ${npmScript}`);
@@ -63,10 +75,12 @@ export abstract class NpmUtilities {
      * @param npmPackages - The packages to install.
      * @param development - Whether or not the packages will be installed with -D or not.
      */
-    static async install(projectName: string, npmPackages: string[], development: boolean = false): Promise<void> {
+    static async install(projectName: string, npmPackages: NpmPackage[], development: boolean = false): Promise<void> {
         const project: Dirent = await WorkspaceUtilities.findProjectOrFail(projectName);
         const projectPath: string = path.join(project.parentPath, project.name);
-        this.installInPath(projectPath, npmPackages, development);
+
+        const installCommand: string = development ? 'npm i -D' : 'npm i';
+        CPUtilities.execSync(`cd ${projectPath} && ${installCommand} ${npmPackages.join(' ')}`);
     }
 
     /**
@@ -74,13 +88,9 @@ export abstract class NpmUtilities {
      * @param npmPackages - The packages to install.
      * @param development - Whether or not the packages will be installed with -D or not.
      */
-    static installInRoot(npmPackages: string[], development: boolean = false): void {
-        this.installInPath('', npmPackages, development);
-    }
-
-    private static installInPath(path: string, npmPackages: string[], development: boolean): void {
+    static installInRoot(npmPackages: NpmPackage[], development: boolean = false): void {
         const installCommand: string = development ? 'npm i -D' : 'npm i';
-        CPUtilities.execSync(`cd ${path} && ${installCommand} ${npmPackages.join(' ')}`);
+        CPUtilities.execSync(`${installCommand} ${npmPackages.join(' ')}`);
     }
 
     /**
@@ -104,10 +114,7 @@ export abstract class NpmUtilities {
 
     private static async update(path: string, data: Partial<PackageJson>): Promise<void> {
         const oldPackageJson: PackageJson = await FsUtilities.parseFileAs(path);
-        const packageJson: PackageJson = {
-            ...oldPackageJson,
-            ...data
-        };
+        const packageJson: PackageJson = mergeDeep(oldPackageJson, data);
         await FsUtilities.updateFile(path, JsonUtilities.stringify(packageJson), 'replace', false);
     }
 }

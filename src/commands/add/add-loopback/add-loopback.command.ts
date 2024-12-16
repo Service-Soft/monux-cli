@@ -1,7 +1,7 @@
 import { Dirent } from 'fs';
 import path from 'path';
 
-import { APPS_DIRECTORY_NAME, TS_CONFIG_FILE_NAME } from '../../../constants';
+import { APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, GIT_IGNORE_FILE_NAME, TS_CONFIG_FILE_NAME } from '../../../constants';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, QuestionsFor } from '../../../encapsulation';
 import { EslintUtilities } from '../../../eslint';
@@ -49,8 +49,12 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
             EslintUtilities.setupProjectEslint(root, true, TS_CONFIG_FILE_NAME),
             DockerUtilities.addServiceToCompose({
                 name: config.name,
-                build: `./${root}`,
-                volumes: [{ path: `/${config.name}` }]
+                build: {
+                    dockerfile: `./${root}/${DOCKER_FILE_NAME}`,
+                    context: '.'
+                },
+                volumes: [{ path: `/${config.name}` }],
+                labels: DockerUtilities.getTraefikLabels(config.name)
             })
         ]);
     }
@@ -71,7 +75,7 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
         const root: string = path.join(newProject.parentPath, newProject.name);
         await Promise.all([
             FsUtilities.rm(path.join(root, 'src', '__tests__')),
-            FsUtilities.rm(path.join(root, '.gitignore')),
+            FsUtilities.rm(path.join(root, GIT_IGNORE_FILE_NAME)),
             FsUtilities.rm(path.join(root, 'DEVELOPING.md')),
             FsUtilities.rm(path.join(root, 'src', 'controllers', 'ping.controller.ts')),
             FsUtilities.updateFile(path.join(root, 'src', 'controllers', 'index.ts'), '', 'replace')

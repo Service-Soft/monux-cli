@@ -3,7 +3,7 @@ import path from 'path';
 import type { FooterRow, NavbarRow } from 'ngx-material-navigation';
 
 import { CPUtilities, FileLine, FsUtilities, JsonUtilities } from '../encapsulation';
-import { NpmUtilities } from '../npm';
+import { NpmPackage, NpmUtilities } from '../npm';
 import { TsImportDefinition, TsUtilities } from '../ts';
 import { AngularJson, AngularJsonAssetPattern } from './angular-json.model';
 import { NgPackageJson } from './ng-package-json.model';
@@ -11,6 +11,7 @@ import { ANGULAR_JSON_FILE_NAME, ANGULAR_ROUTES_FILE_NAME } from '../constants';
 import { DeepPartial } from '../types';
 import { AddNavElementConfig } from './add-nav-element-config.model';
 import { mergeDeep, optionsToCliString } from '../utilities';
+import { NavElementTypes } from './nav-element-types.enum';
 
 /**
  * The `ng new {}` command.
@@ -47,11 +48,15 @@ type NewOptions = {
     /**
      * Which stylesheets to use.
      */
-    '--style'?: 'css' | 'scss',
+    '--style'?: 'css',
     /**
      * Whether or not to use ssr.
      */
-    '--ssr'?: boolean
+    '--ssr'?: boolean,
+    /**
+     * Whether or not to use inline styles instead of a whole css file for each component.
+     */
+    '--inline-style'?: boolean
 };
 
 /**
@@ -61,7 +66,11 @@ type GenerateOptions = {
     /**
      * Whether or not generating tests should be skipped.
      */
-    '--skip-tests'?: boolean
+    '--skip-tests'?: boolean,
+    /**
+     * Whether or not to use inline styles instead of a whole css file for each component.
+     */
+    '--inline-style'?: boolean
 };
 
 /**
@@ -91,6 +100,47 @@ export abstract class AngularUtilities {
     private static readonly CLI_VERSION: number = 18;
 
     /**
+     * Sets up  angular material in the project with the provided root.
+     * @param root - The root of the angular project to setup material for.
+     */
+    static async setupMaterial(root: string): Promise<void> {
+        await Promise.all([
+            this.addProvideAnimations(root),
+            FsUtilities.updateFile(path.join(root, 'src', 'styles.css'), [
+                '@import "@angular/material/prebuilt-themes/indigo-pink.css";',
+                '',
+                'html,',
+                'body {',
+                '\theight: 100%;',
+                '\tscroll-behavior: smooth;',
+                '}',
+                '',
+                'body {',
+                '\tmargin: 0;',
+                '\tfont-family: Arial, Helvetica, sans-serif;',
+                '}'
+            ], 'append')
+        ]);
+    }
+
+    private static async addProvideAnimations(root: string): Promise<void> {
+        const appConfigTs: string = path.join(root, 'src', 'app', 'app.config.ts');
+
+        const currentContent: string = await FsUtilities.readFile(appConfigTs);
+        if (currentContent.includes('provideAnimations') && currentContent.includes('@angular/platform-browser/animations')) {
+            return; // Is already configured;
+        }
+
+        await Promise.all([
+            FsUtilities.replaceInFile(appConfigTs, ']\n};', ', provideAnimations()]\n};'),
+            TsUtilities.addImportStatementsToFile(
+                appConfigTs,
+                [{ defaultImport: false, element: 'provideAnimations', path: '@angular/platform-browser/animations' }]
+            )
+        ]);
+    }
+
+    /**
      * Runs an angular cli command inside the provided directory.
      * @param directory - The directory to run the command inside.
      * @param command - The command to run.
@@ -114,19 +164,42 @@ export abstract class AngularUtilities {
         domain: string | undefined
     ): Promise<void> {
         const pagesDir: string = path.join(root, 'src', 'app', 'pages');
-        this.runCommand(pagesDir, `generate component ${pageName}`, { '--skip-tests': true });
+        this.runCommand(pagesDir, `generate component ${pageName}`, { '--skip-tests': true, '--inline-style': true });
 
         if (navElement) {
             await this.addNavElement(root, navElement);
         }
 
         const sitemapPath: string = path.join(root, 'src', 'sitemap.xml');
-        if (domain && await FsUtilities.exists(sitemapPath)) {
+        const route: string | undefined = this.resolveInternalRoute(navElement);
+        if (
+            domain
+            && route != undefined
+            && await FsUtilities.exists(sitemapPath)
+            && !(await FsUtilities.readFile(sitemapPath)).includes(`<loc>https://${domain}/${route}</loc>`)
+        ) {
             await FsUtilities.replaceAllInFile(
                 sitemapPath,
                 '</urlset>',
-                `\t<url>\n\t\t<loc>https://${domain}</loc>\n\t</url>\n</urlset>`
+                `\t<url>\n\t\t<loc>https://${domain}/${route}</loc>\n\t</url>\n</urlset>`
             );
+        }
+    }
+
+    private static resolveInternalRoute(navElement: AddNavElementConfig | undefined): string | undefined {
+        if (!navElement?.element) {
+            return;
+        }
+        switch (navElement?.element.type) {
+            case NavElementTypes.TITLE_WITH_INTERNAL_LINK: {
+                return typeof navElement.element.link.route === 'string' ? undefined : navElement.element.link.route.path;
+            }
+            case NavElementTypes.INTERNAL_LINK: {
+                return typeof navElement.element.route === 'string' ? undefined : navElement.element.route.path;
+            }
+            default: {
+                throw new Error('Could not determine internal route from nav element');
+            }
         }
     }
 
@@ -164,8 +237,7 @@ export abstract class AngularUtilities {
         throw new Error('Not implemented');
         // eslint-disable-next-line no-console
         console.log('Adds tracking');
-        const trackingPackage: string = 'ngx-material-tracking';
-        await NpmUtilities.install(projectName, [trackingPackage]);
+        await NpmUtilities.install(projectName, [NpmPackage.NGX_MATERIAL_TRACKING]);
     }
 
     /**
@@ -219,8 +291,7 @@ export abstract class AngularUtilities {
         // eslint-disable-next-line no-console
         console.log('Adds navigation');
 
-        const navigationPackage: string = 'ngx-material-navigation';
-        await NpmUtilities.install(name, [navigationPackage]);
+        await NpmUtilities.install(name, [NpmPackage.NGX_MATERIAL_NAVIGATION]);
         await FsUtilities.updateFile(
             path.join(root, 'src', 'app', 'app.component.html'),
             [
@@ -239,12 +310,12 @@ export abstract class AngularUtilities {
             [
                 {
                     element: 'NgxMatNavigationNavbarComponent',
-                    path: navigationPackage,
+                    path: NpmPackage.NGX_MATERIAL_NAVIGATION,
                     defaultImport: false
                 },
                 {
                     element: 'NgxMatNavigationFooterComponent',
-                    path: navigationPackage,
+                    path: NpmPackage.NGX_MATERIAL_NAVIGATION,
                     defaultImport: false
                 }
             ]
@@ -262,12 +333,12 @@ export abstract class AngularUtilities {
             },
             {
                 element: 'NavbarRow',
-                path: navigationPackage,
+                path: NpmPackage.NGX_MATERIAL_NAVIGATION,
                 defaultImport: false
             },
             {
                 element: 'FooterRow',
-                path: navigationPackage,
+                path: NpmPackage.NGX_MATERIAL_NAVIGATION,
                 defaultImport: false
             }
         ]);
@@ -342,8 +413,8 @@ export abstract class AngularUtilities {
     static async addPwaSupport(root: string, name: string): Promise<void> {
         // eslint-disable-next-line no-console
         console.log('Adds pwa support');
-        this.runCommand(root, 'add @angular/pwa', { '--skip-confirmation': true });
-        await NpmUtilities.install(name, ['ngx-pwa']);
+        this.runCommand(root, `add @angular/pwa@${this.CLI_VERSION}`, { '--skip-confirmation': true });
+        await NpmUtilities.install(name, [NpmPackage.NGX_PWA]);
         await FsUtilities.updateFile(
             path.join(root, 'src', 'app', 'app.component.html'),
             ['<ngx-pwa-offline-status-bar></ngx-pwa-offline-status-bar>'],
@@ -368,10 +439,7 @@ export abstract class AngularUtilities {
      */
     static async updateNgPackageJson(path: string, data: Partial<NgPackageJson>): Promise<void> {
         const oldData: NgPackageJson = await FsUtilities.parseFileAs(path);
-        const updatedData: NgPackageJson = {
-            ...oldData,
-            ...data
-        };
+        const updatedData: NgPackageJson = mergeDeep(oldData, data);
         await FsUtilities.updateFile(path, JsonUtilities.stringify(updatedData), 'replace', false);
     }
 

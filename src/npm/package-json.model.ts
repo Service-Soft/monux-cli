@@ -1,7 +1,41 @@
 /**
+ *
+ */
+type PackageJsonExportEntry = {
+    /**
+     *
+     */
+    types: string,
+    /**
+     *
+     */
+    import: string,
+    /**
+     *
+     */
+    require: string
+};
+
+/**
  * Model for a package.json file.
  */
 export type PackageJson = {
+    /**
+     *
+     */
+    name: string,
+    /**
+     *
+     */
+    files?: string[],
+    /**
+     *
+     */
+    module?: string,
+    /**
+     *
+     */
+    exports?: Record<string, PackageJsonExportEntry>,
     /**
      * The scripts inside the file.
      */

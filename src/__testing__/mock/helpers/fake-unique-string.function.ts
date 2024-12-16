@@ -1,5 +1,5 @@
 /* eslint-disable jsdoc/require-jsdoc */
-import { faker } from '@faker-js/faker/.';
+import { faker } from '@faker-js/faker';
 
 const usedKeys: string[] = [];
 export function fakeUniqueString(): string {

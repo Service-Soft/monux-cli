@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { Command, runAdd, runHelp, runInit, runRun, runVersion } from './commands';
+import { Command, runAdd, runBuildEnv, runDown, runHelp, runInit, runRun, runUp, runVersion } from './commands';
 import { validateInput } from './commands/validate-input.function';
 import { DeathUtilities, FigletUtilities } from './encapsulation';
 
@@ -40,6 +40,20 @@ async function main(): Promise<void> {
         case Command.A: {
             await runAdd();
             return;
+        }
+        case Command.UP:
+        case Command.U: {
+            await runUp();
+            return;
+        }
+        case Command.DOWN:
+        case Command.D: {
+            runDown();
+            return;
+        }
+        case Command.BUILD_ENV:
+        case Command.B_ENV: {
+            await runBuildEnv();
         }
     }
 }

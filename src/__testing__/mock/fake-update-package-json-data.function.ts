@@ -1,5 +1,5 @@
 /* eslint-disable jsdoc/require-jsdoc */
-import { faker } from '@faker-js/faker/.';
+import { faker } from '@faker-js/faker';
 
 import { fakeArray, fakeStringRecord, fakeUniqueString } from './helpers';
 import { PackageJson } from '../../npm';

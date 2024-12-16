@@ -15,7 +15,7 @@ export abstract class FileMockUtilities {
                     projectType: 'application',
                     schematics: {
                         '@schematics/angular:component': {
-                            style: 'scss'
+                            style: 'css'
                         }
                     },
                     root: '',
@@ -54,7 +54,7 @@ export abstract class FileMockUtilities {
             '\tstandalone: true,',
             '\timports: [RouterOutlet],',
             '\ttemplateUrl: \'./app.component.html\',',
-            '\tstyleUrl: \'./app.component.scss\'',
+            '\tstyleUrl: \'./app.component.css\'',
             '})',
             'export class AppComponent {}'
         ], true, false);

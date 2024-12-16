@@ -5,3 +5,6 @@ export * from './run';
 export * from './version';
 export * from './command.enum';
 export * from './exit-with-error.function';
+export * from './up';
+export * from './build-env';
+export * from './down';

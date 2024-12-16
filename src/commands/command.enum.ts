@@ -9,5 +9,11 @@ export enum Command {
     INIT = 'init',
     I = 'i',
     ADD = 'add',
-    A = 'a'
+    A = 'a',
+    UP = 'up',
+    U = 'u',
+    BUILD_ENV = 'build-env',
+    B_ENV = 'b-env',
+    DOWN = 'down',
+    D = 'd'
 }

@@ -157,7 +157,7 @@ interface AngularJsonSchematicOptions {
      */
     inlineTemplate?: boolean,
     /**
-     * Whether or not to use inlineStyles.
+     * Whether or not to use inline styles.
      */
     inlineStyle?: boolean,
     /**

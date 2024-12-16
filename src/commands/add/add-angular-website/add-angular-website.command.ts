@@ -2,7 +2,7 @@ import { Dirent } from 'fs';
 import path from 'path';
 
 import { AngularUtilities, NavElementTypes } from '../../../angular';
-import { ANGULAR_JSON_FILE_NAME, APPS_DIRECTORY_NAME } from '../../../constants';
+import { ANGULAR_JSON_FILE_NAME, APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, GIT_IGNORE_FILE_NAME } from '../../../constants';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
 import { EslintUtilities } from '../../../eslint';
@@ -70,23 +70,29 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
     override async run(): Promise<void> {
         const config: AddAngularWebsiteConfiguration = await this.getConfig();
         const root: string = await this.createProject(config);
+
         await Promise.all([
             this.cleanUp(root),
             this.setupTsConfig(root, config.name),
             this.createDockerfile(root, config),
             AngularUtilities.addNavigation(root, config.name),
             EslintUtilities.setupProjectEslint(root, true),
-            TailwindUtilities.setupProjectTailwind(root, true),
+            this.setupTailwind(root),
             DockerUtilities.addServiceToCompose({
                 name: config.name,
-                build: `./${root}`,
-                volumes: [{ path: `/${config.name}` }]
+                build: {
+                    dockerfile: `./${root}/${DOCKER_FILE_NAME}`,
+                    context: '.'
+                },
+                volumes: [{ path: `/${config.name}` }],
+                labels: DockerUtilities.getTraefikLabels(config.name)
             }),
             AngularUtilities.updateAngularJson(
                 path.join(root, ANGULAR_JSON_FILE_NAME),
                 { $schema: '../../node_modules/@angular/cli/lib/config/schema.json' }
             ),
-            AngularUtilities.addSitemapAndRobots(root, config.name, config.domain)
+            AngularUtilities.addSitemapAndRobots(root, config.name, config.domain),
+            AngularUtilities.setupMaterial(root)
         ]);
         await AngularUtilities.generatePage(root, 'Home', {
             addTo: 'navbar',
@@ -140,23 +146,31 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
         }
     }
 
+    private async setupTailwind(root: string): Promise<void> {
+        await TailwindUtilities.setupProjectTailwind(root, true);
+        await FsUtilities.updateFile(path.join(root, 'src', 'styles.css'), [
+            '@tailwind base;',
+            '@tailwind components;',
+            '@tailwind utilities;'
+        ], 'prepend');
+    }
+
     private async createDockerfile(root: string, config: AddAngularWebsiteConfiguration): Promise<void> {
         await FsUtilities.createFile(
-            path.join(root, 'Dockerfile'),
+            path.join(root, DOCKER_FILE_NAME),
             [
-                'FROM node:20 AS build-stage',
+                'FROM node:20 AS build',
                 '# Set to a non-root built-in user `node`',
                 'USER node',
-                'RUN mkdir -p /home/node/app',
-                'COPY --chown=node . /home/node/app',
-                'WORKDIR /home/node/app',
+                'RUN mkdir -p /home/node/root',
+                'COPY --chown=node . /home/node/root',
+                'WORKDIR /home/node/root',
                 'RUN npm install',
-                'RUN npm run build --omit=dev',
+                `RUN npm run build --workspace=${APPS_DIRECTORY_NAME}/${config.name} --omit=dev`,
                 '',
                 'FROM node:20',
                 'WORKDIR /usr/app',
-                `COPY --from=build /home/node/app/dist/${config.name} ./`,
-                `EXPOSE ${config.port}`,
+                `COPY --from=build /home/node/root/${APPS_DIRECTORY_NAME}/${config.name}/dist/${config.name} ./`,
                 'CMD node server/server.mjs'
             ]
         );
@@ -191,14 +205,18 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
         console.log('cleans up');
         await FsUtilities.rm(path.join(root, '.vscode'));
         await FsUtilities.rm(path.join(root, '.editorconfig'));
-        await FsUtilities.rm(path.join(root, '.gitignore'));
+        await FsUtilities.rm(path.join(root, GIT_IGNORE_FILE_NAME));
         await FsUtilities.rm(path.join(root, 'src', 'app', 'app.component.spec.ts'));
     }
 
     private async createProject(config: AddAngularWebsiteConfiguration): Promise<string> {
         // eslint-disable-next-line no-console
         console.log('Creates the base website');
-        AngularUtilities.runCommand(APPS_DIRECTORY_NAME, `new ${config.name}`, { '--skip-git': true, '--style': 'scss', '--ssr': true });
+        AngularUtilities.runCommand(
+            APPS_DIRECTORY_NAME,
+            `new ${config.name}`,
+            { '--skip-git': true, '--style': 'css', '--inline-style': true, '--ssr': true }
+        );
         const newProject: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
         const root: string = path.join(newProject.parentPath, newProject.name);
         await FsUtilities.updateFile(path.join(root, 'src', 'app', 'app.component.html'), '', 'replace');

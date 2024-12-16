@@ -18,7 +18,7 @@ describe('TailwindUtilities', () => {
         await TailwindUtilities.setupProjectTailwind(mockConstants.TS_LIBRARY_DIR, true);
         const lines: string[] = await FsUtilities.readFileLines(path.join(mockConstants.TS_LIBRARY_DIR, TAILWIND_CONFIG_FILE_NAME));
         expect(lines).toEqual([
-            'baseConfig = require(\'../../\');',
+            'baseConfig = require(\'../../tailwind.config\');',
             '',
             '/** @type {import(\'tailwindcss\').Config} */',
             'module.exports = {',

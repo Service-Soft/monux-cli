@@ -3,3 +3,11 @@ stringifying
 codepaths
 urlset
 outdir
+TRAEFIK
+websecure
+certresolver
+myresolver
+letsencrypt
+certificatesresolvers
+exposedbydefault
+httpchallenge

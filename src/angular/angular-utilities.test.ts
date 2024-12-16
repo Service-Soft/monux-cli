@@ -40,7 +40,7 @@ describe('AngularUtilities', () => {
             '    standalone: true,',
             `    imports: [RouterOutlet, ${def.element}],`,
             '    templateUrl: \'./app.component.html\',',
-            '    styleUrl: \'./app.component.scss\'',
+            '    styleUrl: \'./app.component.css\'',
             '})',
             'export class AppComponent {}'
         ]);
@@ -73,7 +73,7 @@ describe('AngularUtilities', () => {
             '    standalone: true,',
             '    imports: [RouterOutlet, NgxMatNavigationNavbarComponent, NgxMatNavigationFooterComponent],',
             '    templateUrl: \'./app.component.html\',',
-            '    styleUrl: \'./app.component.scss\'',
+            '    styleUrl: \'./app.component.css\'',
             '})',
             'export class AppComponent {',
             '    navbarRows: NavbarRow[] = navbarRows;',
@@ -135,7 +135,7 @@ describe('AngularUtilities', () => {
         const exists: boolean[] = await Promise.all([
             FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.ts')),
             FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.html')),
-            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.scss'))
+            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.css'))
         ]);
         expect(exists.some(e => !e)).toBe(false);
 
@@ -193,7 +193,7 @@ describe('AngularUtilities', () => {
         const exists2: boolean[] = await Promise.all([
             FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test-test', 'test-test.component.ts')),
             FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test-test', 'test-test.component.html')),
-            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test-test', 'test-test.component.scss'))
+            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test-test', 'test-test.component.css'))
         ]);
         expect(exists2.some(e => !e)).toBe(false);
 
@@ -269,7 +269,7 @@ describe('AngularUtilities', () => {
         const exists: boolean[] = await Promise.all([
             FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.ts')),
             FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.html')),
-            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.scss'))
+            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.css'))
         ]);
         expect(exists.some(e => !e)).toBe(false);
 
@@ -341,7 +341,7 @@ describe('AngularUtilities', () => {
             '    standalone: true,',
             '    imports: [RouterOutlet, NgxPwaOfflineStatusBarComponent],',
             '    templateUrl: \'./app.component.html\',',
-            '    styleUrl: \'./app.component.scss\'',
+            '    styleUrl: \'./app.component.css\'',
             '})',
             'export class AppComponent {}'
         ]);

@@ -18,6 +18,9 @@ export function fakeComposeService(): ComposeService {
         build: faker.helpers.maybe(() => faker.system.directoryPath()),
         image: faker.helpers.maybe(() => faker.word.noun()),
         networks: faker.helpers.maybe(() => fakeArray(() => fakeUniqueString(), faker.number.int({ min: 1, max: 5 }))),
-        volumes: faker.helpers.maybe(() => fakeArray(() => fakeComposeVolume(), faker.number.int({ min: 1, max: 5 })))
+        volumes: faker.helpers.maybe(() => fakeArray(() => fakeComposeVolume(), faker.number.int({ min: 1, max: 5 }))),
+        command: faker.helpers.maybe(() => fakeArray(() => faker.word.noun(), faker.number.int({ min: 1, max: 5 }))),
+        // ports: faker.helpers.maybe(() => fakeArray(() => faker.word.noun(), faker.number.int({ min: 1, max: 5 })))
+        labels: fakeArray(() => faker.word.noun(), faker.number.int({ min: 0, max: 5 }))
     };
 }
