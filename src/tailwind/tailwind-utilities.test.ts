@@ -15,15 +15,16 @@ describe('TailwindUtilities', () => {
     });
 
     test('setupProjectTailwind', async () => {
-        await TailwindUtilities.setupProjectTailwind(mockConstants.TS_LIBRARY_DIR, true);
+        await TailwindUtilities.setupProjectTailwind(mockConstants.TS_LIBRARY_DIR);
         const lines: string[] = await FsUtilities.readFileLines(path.join(mockConstants.TS_LIBRARY_DIR, TAILWIND_CONFIG_FILE_NAME));
         expect(lines).toEqual([
             'baseConfig = require(\'../../tailwind.config\');',
             '',
+            '// eslint-disable-next-line jsdoc/require-description',
             '/** @type {import(\'tailwindcss\').Config} */',
             'module.exports = {',
             '    presets: [baseConfig],',
-            '    content: [\'./**/*.{html,ts}\'],',
+            '    content: [\'./src/**/*.{html,ts}\'],',
             '    theme: {',
             '        extend: {}',
             '    },',

@@ -4,6 +4,7 @@ import path from 'path';
 import { APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, GIT_IGNORE_FILE_NAME, TS_CONFIG_FILE_NAME } from '../../../constants';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, QuestionsFor } from '../../../encapsulation';
+import { EnvUtilities } from '../../../env';
 import { EslintUtilities } from '../../../eslint';
 import { LoopbackUtilities } from '../../../loopback';
 import { TsConfigUtilities } from '../../../tsconfig';
@@ -17,9 +18,18 @@ import { AddConfiguration } from '../models/add-configuration.model';
  */
 type AddLoopbackConfiguration = AddConfiguration & {
     /**
+     * The domain that the website should be reached under.
+     */
+    domain: string,
+    /**
      * Whether or not to add lbx-change-sets.
      */
-    addChangeHistory: boolean
+    addChangeHistory: boolean,
+    /**
+     * The port that should be used by the application.
+     * @default 3000
+     */
+    port: number
     // TODO
     // dbConfig: LbDatabaseConfig
 };
@@ -29,6 +39,17 @@ type AddLoopbackConfiguration = AddConfiguration & {
  */
 export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
     protected override configQuestions: QuestionsFor<OmitStrict<AddLoopbackConfiguration, keyof AddConfiguration>> = {
+        port: {
+            type: 'number',
+            message: 'port',
+            required: true,
+            default: 3000
+        },
+        domain: {
+            type: 'input',
+            message: 'domain (eg. "admin.localhost" or "admin.test.com")',
+            required: true
+        },
         addChangeHistory: {
             type: 'select',
             message: 'Add change history?',
@@ -46,16 +67,20 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
 
         await Promise.all([
             this.setupTsConfig(root, config.name),
-            EslintUtilities.setupProjectEslint(root, true, TS_CONFIG_FILE_NAME),
-            DockerUtilities.addServiceToCompose({
-                name: config.name,
-                build: {
-                    dockerfile: `./${root}/${DOCKER_FILE_NAME}`,
-                    context: '.'
+            EslintUtilities.setupProjectEslint(root, true, false, TS_CONFIG_FILE_NAME),
+            DockerUtilities.addServiceToCompose(
+                {
+                    name: config.name,
+                    build: {
+                        dockerfile: `./${root}/${DOCKER_FILE_NAME}`,
+                        context: '.'
+                    },
+                    volumes: [{ path: `/${config.name}` }],
+                    labels: DockerUtilities.getTraefikLabels(config.name, 3000)
                 },
-                volumes: [{ path: `/${config.name}` }],
-                labels: DockerUtilities.getTraefikLabels(config.name)
-            })
+                config.domain
+            ),
+            EnvUtilities.setupProjectEnvironment(root, false)
         ]);
     }
 

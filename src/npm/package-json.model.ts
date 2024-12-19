@@ -1,17 +1,18 @@
 /**
- *
+ * Export entry in the package json.
+ * Mostly used for declaring .d.ts files in libraries.
  */
 type PackageJsonExportEntry = {
     /**
-     *
+     * Path to the root type declaration file, eg. Index.d.ts.
      */
     types: string,
     /**
-     *
+     * Path esm root file, eg. Index.js or shared.js.
      */
     import: string,
     /**
-     *
+     * Path to the common js root file, eg. Index.umd.cjs or shared.umd.cjs.
      */
     require: string
 };
@@ -21,19 +22,19 @@ type PackageJsonExportEntry = {
  */
 export type PackageJson = {
     /**
-     *
+     * The name of the package.
      */
     name: string,
     /**
-     *
+     * Files that should be included in the package.
      */
     files?: string[],
     /**
-     *
+     * Whether or not the package is using modules.
      */
     module?: string,
     /**
-     *
+     * Object to configure what to export and in which way.
      */
     exports?: Record<string, PackageJsonExportEntry>,
     /**

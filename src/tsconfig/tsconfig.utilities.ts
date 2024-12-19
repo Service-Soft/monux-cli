@@ -51,7 +51,7 @@ export abstract class TsConfigUtilities {
                 target: 'ESNext' as unknown as ScriptTarget,
                 useUnknownInCatchVariables: true
             },
-            exclude: ['node_modules', 'tmp', 'build', 'dist']
+            exclude: ['node_modules', 'tmp', 'dist']
         };
         await FsUtilities.createFile('tsconfig.base.json', JsonUtilities.stringify(tsconfig));
     }

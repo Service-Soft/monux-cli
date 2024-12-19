@@ -56,7 +56,7 @@ describe('EnvUtilities', () => {
     });
 
     test('setupProjectEnvironment', async () => {
-        await EnvUtilities.setupProjectEnvironment(mockConstants.ANGULAR_APP_DIR, mockConstants.PROJECT_DIR);
+        await EnvUtilities.setupProjectEnvironment(mockConstants.ANGULAR_APP_DIR, true, mockConstants.PROJECT_DIR);
 
         const environmentModelLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_ENVIRONMENT_MODEL);
         expect(environmentModelLines).toEqual([
@@ -79,7 +79,8 @@ describe('EnvUtilities', () => {
         expect(environmentLines).toEqual([
             'import { Environment } from \'./environment.model\';',
             '',
-            'export const environment: Environment = {};'
+            'export const environment: Environment = {',
+            '};'
         ]);
     });
 });

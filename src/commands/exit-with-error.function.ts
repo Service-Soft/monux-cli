@@ -1,4 +1,5 @@
 import { MORE_INFORMATION_MESSAGE } from '../constants';
+import { ChalkUtilities } from '../encapsulation';
 
 /**
  * Exits the cli with the given error message.
@@ -6,7 +7,7 @@ import { MORE_INFORMATION_MESSAGE } from '../constants';
  */
 export function exitWithError(message: string): void {
     // eslint-disable-next-line no-console
-    console.error(message);
+    console.error(ChalkUtilities.error(message));
     // eslint-disable-next-line no-console
     console.log(MORE_INFORMATION_MESSAGE);
     process.exit(0);

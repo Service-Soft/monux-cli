@@ -11,8 +11,8 @@ async function main(): Promise<void> {
 
     await validateInput(args);
 
-    if (args.length === 2) {
-        await runRun(args[0], args[1]);
+    if (args.length >= 2) {
+        await runRun(...args);
         return;
     }
 

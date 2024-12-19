@@ -11,3 +11,5 @@ letsencrypt
 certificatesresolvers
 exposedbydefault
 httpchallenge
+placeholderresolver
+loadbalancer

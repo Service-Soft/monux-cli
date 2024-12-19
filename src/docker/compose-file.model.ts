@@ -59,7 +59,7 @@ export type ComposeService = {
     /**
      * The labels to use on the service.
      */
-    labels: string[]
+    labels?: string[]
 };
 
 /**

@@ -18,6 +18,7 @@ describe('EslintUtilities', () => {
         expect(lines).toEqual([
             'baseConfig = require(\'../../eslint.config\');',
             '',
+            '// eslint-disable-next-line jsdoc/require-description',
             '/** @type {import(\'eslint\').Linter.Config} */',
             'module.exports = [',
             '    ...baseConfig,',
@@ -32,7 +33,7 @@ describe('EslintUtilities', () => {
             '    {',
             '        files: [\'**/*.ts\', \'**/*.handlebars\', \'**/*.html\', \'**/*.js\', \'**/*.json\'],',
             '        rules: {',
-            '            \'jsdoc/require-description\': \'off\',',
+            '            \'jsdoc/require-jsdoc\': \'off\',',
             '            \'cspell/spellchecker\': [',
             '                \'warn\',',
             '                {',

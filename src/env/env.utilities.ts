@@ -74,14 +74,15 @@ export abstract class EnvUtilities {
     /**
      * Sets up environment variables inside a project.
      * @param projectPath - The path to the project root.
+     * @param disableCommentRule - Whether or not "eslint-disable jsdoc/require-jsdoc" needs to be at the start of the model.
      * @param rootPath - The path to the mono repo root.
      */
-    static async setupProjectEnvironment(projectPath: string, rootPath: string = ''): Promise<void> {
+    static async setupProjectEnvironment(projectPath: string, disableCommentRule: boolean, rootPath: string = ''): Promise<void> {
         await FsUtilities.createFile(
             path.join(projectPath, 'src', 'environment', 'environment.model.ts'),
             [
-                '/* eslint-disable jsdoc/require-jsdoc */',
-                'import { GlobalEnvironment } from \'../../../../global-environment.model\';',
+                // eslint-disable-next-line stylistic/max-len
+                (disableCommentRule ? '/* eslint-disable jsdoc/require-jsdoc */\n' : '') + 'import { GlobalEnvironment } from \'../../../../global-environment.model\';',
                 '',
                 '// eslint-disable-next-line typescript/typedef, unusedImports/no-unused-vars',
                 'const variables = defineVariables([] as const);',
@@ -134,7 +135,7 @@ export abstract class EnvUtilities {
             if (def == undefined) {
                 throw new Error(`Could not find definition for variable "${key}"`);
             }
-            if (!def.required && !v) {
+            if (!def.required && (!v || v == 'undefined')) {
                 res.push({ key, value: undefined, type: def.type, required: def.required });
                 continue;
             }
@@ -197,7 +198,7 @@ export abstract class EnvUtilities {
         const res: KeyValue<EnvValidationErrorMessage>[] = [];
         for (const d of variableDefinitions) {
             const foundValue: EnvValue | undefined = envValues.find(v => v.key === d.key)?.value;
-            if (d.required && foundValue == undefined) {
+            if (d.required && (foundValue == undefined || foundValue === '' || foundValue === 'undefined')) {
                 res.push({ key: d.key, value: EnvValidationErrorMessage.REQUIRED });
                 continue;
             }
@@ -253,7 +254,7 @@ export abstract class EnvUtilities {
         if ((await FsUtilities.readFile(environmentFilePath)).includes(`${variable.key}=`)) {
             throw new Error(`The variable ${variable.key} has already been set.`);
         }
-        await FsUtilities.updateFile(environmentFilePath, `${variable.key}=${variable.value}`, 'append');
+        await FsUtilities.updateFile(environmentFilePath, `${variable.key}=${variable.value ?? ''}`, 'append');
 
         const environmentModelFilePath: string = path.join(rootPath, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
 

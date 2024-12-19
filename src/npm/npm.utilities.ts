@@ -23,12 +23,13 @@ type NpmInitConfig = {
 };
 
 /**
- *
+ * Well known npm scripts that are frequently used.
  */
 type FrequentlyUsedNpmScripts = 'build' | 'start' | 'test';
 
 /**
- *
+ * Type for an npm script.
+ * Provides autocomplete for frequently used scripts like "build", "start" or "test" but also provides support for any other string.
  */
 export type NpmScript = FrequentlyUsedNpmScripts | Omit<string, FrequentlyUsedNpmScripts>;
 

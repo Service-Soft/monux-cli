@@ -5,6 +5,7 @@ import { AngularUtilities, NavElementTypes } from '../../../angular';
 import { ANGULAR_JSON_FILE_NAME, APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, GIT_IGNORE_FILE_NAME } from '../../../constants';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
+import { EnvUtilities } from '../../../env';
 import { EslintUtilities } from '../../../eslint';
 import { TailwindUtilities } from '../../../tailwind';
 import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
@@ -50,7 +51,7 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
         },
         domain: {
             type: 'input',
-            message: 'domain (eg. "www.test.com")',
+            message: 'domain (eg. "localhost" or "test.com")',
             required: true
         },
         titleSuffix: {
@@ -78,21 +79,25 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
             AngularUtilities.addNavigation(root, config.name),
             EslintUtilities.setupProjectEslint(root, true),
             this.setupTailwind(root),
-            DockerUtilities.addServiceToCompose({
-                name: config.name,
-                build: {
-                    dockerfile: `./${root}/${DOCKER_FILE_NAME}`,
-                    context: '.'
+            DockerUtilities.addServiceToCompose(
+                {
+                    name: config.name,
+                    build: {
+                        dockerfile: `./${root}/${DOCKER_FILE_NAME}`,
+                        context: '.'
+                    },
+                    volumes: [{ path: `/${config.name}` }],
+                    labels: DockerUtilities.getTraefikLabels(config.name, 4000)
                 },
-                volumes: [{ path: `/${config.name}` }],
-                labels: DockerUtilities.getTraefikLabels(config.name)
-            }),
+                config.domain
+            ),
             AngularUtilities.updateAngularJson(
                 path.join(root, ANGULAR_JSON_FILE_NAME),
                 { $schema: '../../node_modules/@angular/cli/lib/config/schema.json' }
             ),
             AngularUtilities.addSitemapAndRobots(root, config.name, config.domain),
-            AngularUtilities.setupMaterial(root)
+            AngularUtilities.setupMaterial(root),
+            EnvUtilities.setupProjectEnvironment(root, false)
         ]);
         await AngularUtilities.generatePage(root, 'Home', {
             addTo: 'navbar',
@@ -147,7 +152,7 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
     }
 
     private async setupTailwind(root: string): Promise<void> {
-        await TailwindUtilities.setupProjectTailwind(root, true);
+        await TailwindUtilities.setupProjectTailwind(root);
         await FsUtilities.updateFile(path.join(root, 'src', 'styles.css'), [
             '@tailwind base;',
             '@tailwind components;',

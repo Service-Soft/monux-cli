@@ -1,6 +1,6 @@
 import { AddAngularCommand } from './add-angular/add-angular.command';
 import { AddAngularLibraryCommand } from './add-angular-library/add-angular-library.command';
-import { addTsLibrary } from './add-ts-library';
+import { AddTsLibraryCommand } from './add-ts-library';
 import { AddConfiguration, AddType } from './models/add-configuration.model';
 import { InquirerUtilities, QuestionsFor } from '../../encapsulation';
 import { WorkspaceUtilities } from '../../workspace';
@@ -45,7 +45,7 @@ export async function runAdd(): Promise<void> {
             return;
         }
         case AddType.TS_LIBRARY: {
-            await addTsLibrary(config);
+            await new AddTsLibraryCommand(config).run();
             return;
         }
     }

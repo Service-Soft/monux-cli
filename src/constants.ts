@@ -86,6 +86,16 @@ export const ANGULAR_ROUTES_FILE_NAME: string = 'routes.ts';
 export const GIT_IGNORE_FILE_NAME: string = '.gitignore';
 
 /**
+ * The environment variable for configuring if traefik should run as web or as websecure.
+ */
+export const TRAEFIK_WEB_SECURE_ENVIRONMENT_VARIABLE: string = 'web_secure';
+
+/**
+ * The environment variable for the ssl resolver. If this is unset, the docker compose can run without ssl on localhost.
+ */
+export const TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE: string = 'ssl_resolver';
+
+/**
  * The message to notify the user of the help command.
  */
 export const MORE_INFORMATION_MESSAGE: string = `run ${ChalkUtilities.secondary(

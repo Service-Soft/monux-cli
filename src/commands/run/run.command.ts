@@ -1,11 +1,24 @@
+import { Dirent } from 'fs';
+import path from 'path';
 
-import { NpmUtilities } from '../../npm';
+import { CPUtilities } from '../../encapsulation';
+import { NativeNpmCommands, NpmUtilities } from '../../npm';
+import { WorkspaceUtilities } from '../../workspace';
 
 /**
  * Runs the run cli command.
- * @param projectName - The name of the project to run the command in.
- * @param npmScript - The name of the npm script that should be run.
+ * @param args - The passed cli commands.
  */
-export async function runRun(projectName: string, npmScript: string): Promise<void> {
-    await NpmUtilities.run(projectName, npmScript);
+export async function runRun(...args: string[]): Promise<void> {
+    const projectName: string = args[0];
+    const npmScript: string = args[1];
+    const nativeCommand: boolean = Object.values(NativeNpmCommands).includes(args[1] as NativeNpmCommands);
+
+    if (!nativeCommand) {
+        await NpmUtilities.run(projectName, npmScript);
+    }
+
+    const project: Dirent = await WorkspaceUtilities.findProjectOrFail(projectName);
+    const projectPath: string = path.join(project.parentPath, project.name);
+    CPUtilities.execSync(`cd ${projectPath} && npm ${args.slice(1).join(' ')}`);
 }

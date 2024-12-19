@@ -44,9 +44,9 @@ export class AddTsLibraryCommand extends AddCommand<TsLibraryConfiguration> {
         // await FsUtilities.createFile(path.join(root, 'src', 'index.ts'), '');
 
         await Promise.all([
-            EslintUtilities.setupProjectEslint(root, false, TS_CONFIG_FILE_NAME),
+            EslintUtilities.setupProjectEslint(root, false, true, TS_CONFIG_FILE_NAME),
             // this.setupTsConfig(config.name),
-            // this.updateBaseTsConfig(config, root),
+            this.updateBaseTsConfig(config, root),
             FsUtilities.rm(path.join(root, GIT_IGNORE_FILE_NAME)),
             FsUtilities.rm(path.join(root, 'index.html')),
             FsUtilities.rm(path.join(root, 'public')),
@@ -68,33 +68,33 @@ export class AddTsLibraryCommand extends AddCommand<TsLibraryConfiguration> {
         await Promise.all(projects.map((p) => NpmUtilities.install(p.name, [npmPackage as NpmPackage])));
     }
 
-    // private async updateBaseTsConfig(config: TsLibraryConfiguration, root: string): Promise<void> {
-    //     await TsConfigUtilities.updateBaseTsConfig({
-    //         compilerOptions: {
-    //             paths: {
-    //                 [`${config.scope}/${config.name}`]: [root]
-    //             }
-    //         }
-    //     });
-    // }
-
-    private async setupTsConfig(projectName: string): Promise<void> {
-        // eslint-disable-next-line no-console
-        console.log('sets up tsconfig');
-        await TsConfigUtilities.updateTsConfig(
-            projectName,
-            {
-                extends: '../../tsconfig.base.json',
-                compilerOptions: {
-                    composite: true,
-                    declaration: true,
-                    outDir: './build',
-                    rootDir: './src'
-                },
-                include: undefined
+    private async updateBaseTsConfig(config: TsLibraryConfiguration, root: string): Promise<void> {
+        await TsConfigUtilities.updateBaseTsConfig({
+            compilerOptions: {
+                paths: {
+                    [`${config.scope}/${config.name}`]: [`${root}/src/index.ts`]
+                }
             }
-        );
+        });
     }
+
+    // private async setupTsConfig(projectName: string): Promise<void> {
+    //     // eslint-disable-next-line no-console
+    //     console.log('sets up tsconfig');
+    //     await TsConfigUtilities.updateTsConfig(
+    //         projectName,
+    //         {
+    //             extends: '../../tsconfig.base.json',
+    //             compilerOptions: {
+    //                 composite: true,
+    //                 declaration: true,
+    //                 outDir: './build',
+    //                 rootDir: './src'
+    //             },
+    //             include: undefined
+    //         }
+    //     );
+    // }
 
     private async createProject(config: TsLibraryConfiguration): Promise<string> {
         // eslint-disable-next-line no-console
@@ -102,7 +102,7 @@ export class AddTsLibraryCommand extends AddCommand<TsLibraryConfiguration> {
         CPUtilities.execSync(`cd ${LIBS_DIRECTORY_NAME} && npm create vite@latest ${config.name} -- --template vanilla-ts`);
         const libraryPath: string = path.join(LIBS_DIRECTORY_NAME, config.name);
         await FsUtilities.createFile(path.join(libraryPath, 'vite.config.ts'), [
-            'import { defineConfig } from \'vite\';',
+            'import { defineConfig, PluginOption } from \'vite\';',
             'import path from \'path\';',
             'import dts from \'vite-plugin-dts\';',
             '',
@@ -110,7 +110,7 @@ export class AddTsLibraryCommand extends AddCommand<TsLibraryConfiguration> {
             '\tplugins: [',
             '\t\tdts({',
             '\t\t\tinsertTypesEntry: true',
-            '\t\t})',
+            '\t\t}) as PluginOption',
             '\t],',
             '\tbuild: {',
             '\t\tlib: {',
@@ -121,6 +121,7 @@ export class AddTsLibraryCommand extends AddCommand<TsLibraryConfiguration> {
             '\t}',
             '});'
         ]);
+        // const originalPackageJson: PackageJson = await FsUtilities.parseFileAs(path.join(libraryPath, PACKAGE_JSON_FILE_NAME));
         await NpmUtilities.updatePackageJson(
             config.name,
             {
@@ -128,6 +129,9 @@ export class AddTsLibraryCommand extends AddCommand<TsLibraryConfiguration> {
                 files: ['dist'],
                 main: `./dist/${config.name}.umd.cjs`,
                 module: `./dist/${config.name}.js`,
+                scripts: {
+                    watch: 'tsc && vite build --watch'
+                },
                 exports: {
                     '.': {
                         types: './dist/index.d.ts',

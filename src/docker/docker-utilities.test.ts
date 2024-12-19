@@ -5,6 +5,7 @@ import { DockerUtilities } from './docker.utilities';
 import { fakeComposeService, FileMockUtilities, getMockConstants, MockConstants } from '../__testing__';
 import { FsUtilities } from '../encapsulation';
 import { ComposeDefinition, ComposeService } from './compose-file.model';
+import { EnvUtilities } from '../env';
 
 const mockConstants: MockConstants = getMockConstants('docker-utilities');
 
@@ -13,7 +14,8 @@ describe('DockerUtilities', () => {
         await FileMockUtilities.clearTemp(mockConstants);
 
         const fakeEmail: string = faker.internet.email();
-        await DockerUtilities.createDockerCompose(fakeEmail, mockConstants.DOCKER_COMPOSE_YAML);
+        await EnvUtilities.init(mockConstants.PROJECT_DIR);
+        await DockerUtilities.createDockerCompose(fakeEmail, mockConstants.PROJECT_DIR);
 
         const initialDockerComposeContent: string[] = await FsUtilities.readFileLines(mockConstants.DOCKER_COMPOSE_YAML);
         expect(initialDockerComposeContent).toEqual([
@@ -27,10 +29,10 @@ describe('DockerUtilities', () => {
             '            - --providers.docker.exposedbydefault=false',
             '            - --entryPoints.web.address=:80',
             '            - --entryPoints.websecure.address=:443',
-            '            - --certificatesresolvers.myresolver.acme.httpchallenge=true',
-            '            - --certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web',
-            `            - --certificatesresolvers.myresolver.acme.email=${fakeEmail}`,
-            '            - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json',
+            '            - --certificatesresolvers.${ssl_resolver:-placeholderresolver}.acme.httpchallenge=true',
+            '            - --certificatesresolvers.${ssl_resolver:-placeholderresolver}.acme.httpchallenge.entrypoint=web',
+            `            - --certificatesresolvers.\${ssl_resolver:-placeholderresolver}.acme.email=${fakeEmail}`,
+            '            - --certificatesresolvers.${ssl_resolver:-placeholderresolver}.acme.storage=/letsencrypt/acme.json',
             '        ports:',
             '            - 80:80',
             '            - 443:443',
@@ -42,7 +44,7 @@ describe('DockerUtilities', () => {
 
     test('createDockerCompose', async () => {
         const def: ComposeService = fakeComposeService();
-        await DockerUtilities.addServiceToCompose(def, undefined, mockConstants.DOCKER_COMPOSE_YAML);
+        await DockerUtilities.addServiceToCompose(def, 'test.de', mockConstants.PROJECT_DIR);
         const fileContent: ComposeDefinition = await DockerUtilities['yamlToComposeDefinition'](mockConstants.DOCKER_COMPOSE_YAML);
 
         const service: ComposeService = fileContent.services[1];

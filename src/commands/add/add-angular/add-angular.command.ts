@@ -6,6 +6,7 @@ import { AngularUtilities, NavElementTypes } from '../../../angular';
 import { ANGULAR_JSON_FILE_NAME, APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, GIT_IGNORE_FILE_NAME } from '../../../constants';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
+import { EnvUtilities } from '../../../env';
 import { EslintUtilities } from '../../../eslint';
 import { NpmPackage, NpmUtilities } from '../../../npm';
 import { TailwindUtilities } from '../../../tailwind';
@@ -19,6 +20,10 @@ import { AddConfiguration } from '../models/add-configuration.model';
  * Configuration for adding a new angular app.
  */
 type AddAngularConfiguration = AddConfiguration & {
+    /**
+     * The domain that the app should be reached under.
+     */
+    domain: string,
     /**
      * The port that should be used by the application.
      * @default 4200
@@ -41,6 +46,11 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
             required: true,
             default: 4200
         },
+        domain: {
+            type: 'input',
+            message: 'domain (eg. "admin.localhost" or "admin.test.com")',
+            required: true
+        },
         titleSuffix: {
             type: 'input',
             message: 'title suffix (eg. "| My Company")',
@@ -59,21 +69,25 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
             AngularUtilities.addPwaSupport(root, config.name),
             AngularUtilities.addNavigation(root, config.name),
             EslintUtilities.setupProjectEslint(root, true),
-            TailwindUtilities.setupProjectTailwind(root, true),
-            DockerUtilities.addServiceToCompose({
-                name: config.name,
-                build: {
-                    dockerfile: `./${root}/${DOCKER_FILE_NAME}`,
-                    context: '.'
+            TailwindUtilities.setupProjectTailwind(root),
+            DockerUtilities.addServiceToCompose(
+                {
+                    name: config.name,
+                    build: {
+                        dockerfile: `./${root}/${DOCKER_FILE_NAME}`,
+                        context: '.'
+                    },
+                    volumes: [{ path: `/${config.name}` }],
+                    labels: DockerUtilities.getTraefikLabels(config.name, 4000)
                 },
-                volumes: [{ path: `/${config.name}` }],
-                labels: DockerUtilities.getTraefikLabels(config.name)
-            }),
+                config.domain
+            ),
             NpmUtilities.install(config.name, [NpmPackage.NGX_PERSISTENCE_LOGGER]),
             AngularUtilities.updateAngularJson(
                 path.join(root, ANGULAR_JSON_FILE_NAME),
                 { $schema: '../../node_modules/@angular/cli/lib/config/schema.json' }
-            )
+            ),
+            EnvUtilities.setupProjectEnvironment(root, false)
         ]);
         await AngularUtilities.generatePage(
             root,

@@ -12,7 +12,7 @@ import { InitConfiguration } from './init-configuration.model';
 const initConfigQuestions: QuestionsFor<InitConfiguration> = {
     email: {
         type: 'input',
-        message: 'E-Mail (only ever used locally)',
+        message: 'E-Mail (needed for ssl certificates)',
         required: true
     }
 };
@@ -37,6 +37,8 @@ export async function runInit(): Promise<void> {
         NpmPackage.AUTOPREFIXER
     ], true);
 
+    await EnvUtilities.init();
+
     await Promise.all([
         WorkspaceUtilities.createConfig(),
         TsConfigUtilities.createBaseTsConfig(),
@@ -47,8 +49,7 @@ export async function runInit(): Promise<void> {
         FsUtilities.mkdir(LIBS_DIRECTORY_NAME),
         createGitIgnore(),
         createTailwindConfig(),
-        addNpmWorkspaces(),
-        EnvUtilities.init()
+        addNpmWorkspaces()
     ]);
     CPUtilities.execSync('git init');
 }
@@ -68,10 +69,10 @@ async function createGitIgnore(): Promise<void> {
         '# See http://help.github.com/ignore-files/ for more about ignoring files.',
         ENV_FILE_NAME,
         ENVIRONMENT_TS_FILE_NAME,
+        'letsencrypt',
         '# compiled output',
         'dist',
         'tmp',
-        'build',
         '/out-tsc',
         '.angular',
         'tsconfig.tsbuildinfo',

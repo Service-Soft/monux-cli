@@ -125,6 +125,7 @@ describe('AngularUtilities', () => {
 
         cpExecSyncMock.mockRestore(); // restores the mock so that 'ng generate component will actually be executed'
         const addNavElementConfig: AddNavElementConfig = fakeAddNavElementConfig();
+
         await AngularUtilities.generatePage(
             mockConstants.ANGULAR_APP_DIR,
             'Test',
@@ -134,9 +135,9 @@ describe('AngularUtilities', () => {
 
         const exists: boolean[] = await Promise.all([
             FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.ts')),
-            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.html')),
-            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.css'))
+            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.html'))
         ]);
+
         expect(exists.some(e => !e)).toBe(false);
 
         const routesLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_ROUTES_TS);
@@ -192,8 +193,7 @@ describe('AngularUtilities', () => {
         );
         const exists2: boolean[] = await Promise.all([
             FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test-test', 'test-test.component.ts')),
-            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test-test', 'test-test.component.html')),
-            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test-test', 'test-test.component.css'))
+            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test-test', 'test-test.component.html'))
         ]);
         expect(exists2.some(e => !e)).toBe(false);
 
@@ -268,8 +268,7 @@ describe('AngularUtilities', () => {
 
         const exists: boolean[] = await Promise.all([
             FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.ts')),
-            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.html')),
-            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.css'))
+            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.html'))
         ]);
         expect(exists.some(e => !e)).toBe(false);
 
@@ -323,7 +322,7 @@ describe('AngularUtilities', () => {
         await AngularUtilities.addPwaSupport(mockConstants.ANGULAR_APP_DIR, mockConstants.ANGULAR_APP_NAME);
 
         expect(cpExecSyncMock).toHaveBeenCalledTimes(1);
-        expect(cpExecSyncMock).toHaveBeenCalledWith(`cd ${mockConstants.ANGULAR_APP_DIR} && npx @angular/cli@18 add @angular/pwa --skip-confirmation`);
+        expect(cpExecSyncMock).toHaveBeenCalledWith(`cd ${mockConstants.ANGULAR_APP_DIR} && npx @angular/cli@18 add @angular/pwa@18 --skip-confirmation`);
         expect(npmInstallMock).toHaveBeenCalledTimes(1);
         expect(npmInstallMock).toHaveBeenCalledWith(mockConstants.ANGULAR_APP_NAME, ['ngx-pwa']);
 

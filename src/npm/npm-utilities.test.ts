@@ -38,7 +38,16 @@ describe('NpmUtilities', () => {
 
         const packageJson: PackageJson = await FsUtilities.parseFileAs(mockConstants.ROOT_PACKAGE_JSON);
         expect(packageJson.main).toEqual(updateData.main);
-        expect(packageJson.scripts).toEqual(updateData.scripts);
+        if (updateData.scripts == undefined) {
+            expect(packageJson.scripts).toEqual(updateData.scripts);
+        }
+        else {
+            expect(packageJson.scripts).toEqual({
+                ...updateData.scripts,
+                test: 'echo \"Error: no test specified\" && exit 1'
+            });
+        }
+
         expect(packageJson.workspaces).toEqual(updateData.workspaces);
     });
 });

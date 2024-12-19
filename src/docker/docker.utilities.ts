@@ -1,6 +1,8 @@
+import path from 'path';
+
 import yaml from 'js-yaml';
 
-import { DOCKER_COMPOSE_FILE_NAME } from '../constants';
+import { DOCKER_COMPOSE_FILE_NAME, TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE, TRAEFIK_WEB_SECURE_ENVIRONMENT_VARIABLE } from '../constants';
 import { FsUtilities } from '../encapsulation';
 import { ComposeBuild, ComposeDefinition, ComposePort, ComposeService, ComposeServiceEnvironment, ComposeServiceVolume } from './compose-file.model';
 import { EnvUtilities } from '../env';
@@ -51,40 +53,56 @@ export abstract class DockerUtilities {
     /**
      * Gets the docker compose labels for usage with the traefik reverse proxy.
      * @param projectName - The name of the project to get the labels for.
+     * @param port - The internal port of the service (eg. 4000 for angular ssr, 3000 for loopback api, etc.).
      * @returns The docker compose traefik labels as an string array.
      */
-    static getTraefikLabels(projectName: string): string[] {
-        const environmentVariable: string = `${toSnakeCase(projectName)}_domain`;
+    static getTraefikLabels(projectName: string, port: number): string[] {
+        const DOMAIN_ENVIRONMENT_VARIABLE: string = `${toSnakeCase(projectName)}_domain`;
         return [
             'traefik.enable=true',
-            `traefik.http.routers.whoami.rule=Host(\`\${${environmentVariable}}\`)`,
-            'traefik.http.routers.whoami.entrypoints=websecure',
-            'traefik.http.routers.whoami.tls.certresolver=myresolver'
+            `traefik.http.routers.${projectName}.rule=Host(\`\${${DOMAIN_ENVIRONMENT_VARIABLE}}\`)`,
+            `traefik.http.routers.${projectName}.entrypoints=\${${TRAEFIK_WEB_SECURE_ENVIRONMENT_VARIABLE}}`,
+            // eslint-disable-next-line stylistic/max-len
+            `\${${TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE}:+traefik.http.routers.${projectName}.tls.certresolver=\${${TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE}}}`,
+            `traefik.http.services.${projectName}.loadbalancer.server.port=${port}`
         ];
     }
 
     /**
      * Creates an empty docker compose file at the given path.
      * @param email - The email that should be used for the letsencrypt certificate.
-     * @param path - The path of where to create the file.
+     * @param rootPath - The path of the root where to create the file.
      * Defaults to "docker-compose.yaml" (which creates the file in the current directory).
      */
-    static async createDockerCompose(email: string, path: string = DOCKER_COMPOSE_FILE_NAME): Promise<void> {
+    static async createDockerCompose(email: string, rootPath: string = ''): Promise<void> {
+        await EnvUtilities.addVariable({
+            key: TRAEFIK_WEB_SECURE_ENVIRONMENT_VARIABLE,
+            required: true,
+            type: 'string',
+            value: 'web'
+        }, rootPath);
+        await EnvUtilities.addVariable({
+            key: TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE,
+            required: false,
+            type: 'string',
+            value: ''
+        }, rootPath);
         const compose: ComposeDefinition = {
             services: [
                 {
                     image: 'traefik:v3.2',
                     name: 'traefik',
                     command: [
-                        // '--api.insecure=true'
                         '--providers.docker=true',
                         '--providers.docker.exposedbydefault=false',
                         '--entryPoints.web.address=:80',
                         '--entryPoints.websecure.address=:443',
-                        '--certificatesresolvers.myresolver.acme.httpchallenge=true',
-                        '--certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web',
-                        `--certificatesresolvers.myresolver.acme.email=${email}`,
-                        '--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json'
+                        `--certificatesresolvers.\${${TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE}:-placeholderresolver}.acme.httpchallenge=true`,
+                        // eslint-disable-next-line stylistic/max-len
+                        `--certificatesresolvers.\${${TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE}:-placeholderresolver}.acme.httpchallenge.entrypoint=web`,
+                        `--certificatesresolvers.\${${TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE}:-placeholderresolver}.acme.email=${email}`,
+                        // eslint-disable-next-line stylistic/max-len
+                        `--certificatesresolvers.\${${TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE}:-placeholderresolver}.acme.storage=/letsencrypt/acme.json`
                     ],
                     ports: [
                         {
@@ -113,26 +131,30 @@ export abstract class DockerUtilities {
             networks: []
         };
         const yaml: string[] = this.composeDefinitionToYaml(compose);
-        await FsUtilities.createFile(path, yaml);
+        await FsUtilities.createFile(path.join(rootPath, DOCKER_COMPOSE_FILE_NAME), yaml);
     }
 
     /**
      * Adds the given compose service to the docker-compose.yaml.
      * @param service - The definition of the service to add.
      * @param domain - The domain of the service. Optional.
-     * @param composePath - The path of the compose file.
-     * Defaults to "docker-compose.yaml" (which creates the file in the current directory).
+     * @param rootPath - The path of the project root.
+     * Defaults to "" (which creates the file in the current directory).
      */
     static async addServiceToCompose(
         service: ComposeService,
-        domain?: string,
-        composePath: string = DOCKER_COMPOSE_FILE_NAME
+        domain: string,
+        rootPath: string = ''
     ): Promise<void> {
+        const composePath: string = path.join(rootPath, DOCKER_COMPOSE_FILE_NAME);
         const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
         definition.services.push(service);
         await FsUtilities.updateFile(composePath, this.composeDefinitionToYaml(definition), 'replace');
         if (domain) {
-            await EnvUtilities.addVariable({ key: `${toSnakeCase(service.name)}_domain`, value: domain, required: true, type: 'string' });
+            await EnvUtilities.addVariable(
+                { key: `${toSnakeCase(service.name)}_domain`, value: domain, required: true, type: 'string' },
+                rootPath
+            );
         }
     }
 
