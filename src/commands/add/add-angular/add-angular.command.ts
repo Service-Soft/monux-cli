@@ -8,7 +8,6 @@ import { DockerUtilities } from '../../../docker';
 import { FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
 import { EnvUtilities } from '../../../env';
 import { EslintUtilities } from '../../../eslint';
-import { NpmPackage, NpmUtilities } from '../../../npm';
 import { TailwindUtilities } from '../../../tailwind';
 import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
@@ -49,13 +48,14 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
         domain: {
             type: 'input',
             message: 'domain (eg. "admin.localhost" or "admin.test.com")',
-            required: true
+            required: true,
+            default: 'admin.localhost'
         },
         titleSuffix: {
             type: 'input',
             message: 'title suffix (eg. "| My Company")',
-            default: `| ${this.baseConfig.name}`,
-            required: true
+            required: true,
+            default: `| ${this.baseConfig.name}`
         }
     };
 
@@ -66,10 +66,9 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
             this.cleanUp(root),
             this.setupTsConfig(root, config.name),
             this.createDockerfile(root, config),
-            AngularUtilities.addPwaSupport(root, config.name),
-            AngularUtilities.addNavigation(root, config.name),
             EslintUtilities.setupProjectEslint(root, true),
             TailwindUtilities.setupProjectTailwind(root),
+            EnvUtilities.setupProjectEnvironment(root, false),
             DockerUtilities.addServiceToCompose(
                 {
                     name: config.name,
@@ -82,12 +81,15 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
                 },
                 config.domain
             ),
-            NpmUtilities.install(config.name, [NpmPackage.NGX_PERSISTENCE_LOGGER]),
+            AngularUtilities.setupLogger(config.name),
+            AngularUtilities.setupAuth(config.name),
+            AngularUtilities.setupChangeSets(config.name),
+            AngularUtilities.setupPwa(root, config.name),
+            AngularUtilities.setupNavigation(root, config.name),
             AngularUtilities.updateAngularJson(
                 path.join(root, ANGULAR_JSON_FILE_NAME),
                 { $schema: '../../node_modules/@angular/cli/lib/config/schema.json' }
-            ),
-            EnvUtilities.setupProjectEnvironment(root, false)
+            )
         ]);
         await AngularUtilities.generatePage(
             root,
@@ -104,7 +106,7 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
                             title: 'Home',
                             // @ts-ignore
                             // eslint-disable-next-line typescript/no-unsafe-return, typescript/no-unsafe-member-access
-                            loadComponent: () => import('./pages/imprint/imprint.component').then(m => m.ImprintComponent)
+                            loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent)
                         }
                     }
                 }

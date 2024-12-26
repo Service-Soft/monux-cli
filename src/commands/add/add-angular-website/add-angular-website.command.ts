@@ -52,7 +52,8 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
         domain: {
             type: 'input',
             message: 'domain (eg. "localhost" or "test.com")',
-            required: true
+            required: true,
+            default: 'localhost'
         },
         titleSuffix: {
             type: 'input',
@@ -72,11 +73,13 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
         const config: AddAngularWebsiteConfiguration = await this.getConfig();
         const root: string = await this.createProject(config);
 
+        await AngularUtilities.addSitemapAndRobots(root, config.name, config.domain);
+
         await Promise.all([
             this.cleanUp(root),
             this.setupTsConfig(root, config.name),
             this.createDockerfile(root, config),
-            AngularUtilities.addNavigation(root, config.name),
+            AngularUtilities.setupNavigation(root, config.name),
             EslintUtilities.setupProjectEslint(root, true),
             this.setupTailwind(root),
             DockerUtilities.addServiceToCompose(
@@ -95,7 +98,6 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
                 path.join(root, ANGULAR_JSON_FILE_NAME),
                 { $schema: '../../node_modules/@angular/cli/lib/config/schema.json' }
             ),
-            AngularUtilities.addSitemapAndRobots(root, config.name, config.domain),
             AngularUtilities.setupMaterial(root),
             EnvUtilities.setupProjectEnvironment(root, false)
         ]);
@@ -224,6 +226,7 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
         );
         const newProject: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
         const root: string = path.join(newProject.parentPath, newProject.name);
+        await FsUtilities.updateFile(path.join(root, 'src', 'app', 'app.component.html'), '', 'replace');
         await FsUtilities.updateFile(path.join(root, 'src', 'app', 'app.component.html'), '', 'replace');
         return root;
     }

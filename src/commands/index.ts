@@ -6,5 +6,7 @@ export * from './version';
 export * from './command.enum';
 export * from './exit-with-error.function';
 export * from './up';
-export * from './build-env';
 export * from './down';
+export * from './prepare';
+export * from './generate-page';
+export * from './up-dev';

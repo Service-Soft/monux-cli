@@ -91,7 +91,7 @@ export abstract class NpmUtilities {
      */
     static installInRoot(npmPackages: NpmPackage[], development: boolean = false): void {
         const installCommand: string = development ? 'npm i -D' : 'npm i';
-        CPUtilities.execSync(`${installCommand} ${npmPackages.join(' ')}`);
+        CPUtilities.execSync(`${installCommand} ${npmPackages.join(' ')}`, true);
     }
 
     /**

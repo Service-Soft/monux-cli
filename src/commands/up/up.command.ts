@@ -1,10 +1,10 @@
 import { CPUtilities } from '../../encapsulation';
-import { runBuildEnv } from '../build-env';
+import { runPrepare } from '../prepare';
 
 /**
  * Starts up the docker compose service.
  */
 export async function runUp(): Promise<void> {
-    await runBuildEnv();
+    await runPrepare();
     CPUtilities.execSync('docker compose up --build -d');
 }

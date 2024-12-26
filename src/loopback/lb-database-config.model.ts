@@ -1,7 +1,7 @@
 /**
  * Base configuration for all datasources.
  */
-interface BaseDbConfig {
+interface BaseLbDbConfig {
     /**
      * The name of the datasource used in loopback.
      */
@@ -39,7 +39,7 @@ interface BaseDbConfig {
 /**
  * Configuration options for a postgres database connection.
  */
-interface PostgresDbConfig extends BaseDbConfig {
+interface LbPostgresDbConfig extends BaseLbDbConfig {
     /**
      * The connector of the datasource, always 'postgres'.
      */
@@ -49,7 +49,7 @@ interface PostgresDbConfig extends BaseDbConfig {
 /**
  * Configuration options for a mysql database connection.
  */
-interface MySqlDbConfig extends BaseDbConfig {
+interface LbMySqlDbConfig extends BaseLbDbConfig {
     /**
      * The connector of the datasource, always 'mysql'.
      */
@@ -59,4 +59,4 @@ interface MySqlDbConfig extends BaseDbConfig {
 /**
  * Configuration for a loopback database.
  */
-export type LbDatabaseConfig = PostgresDbConfig | MySqlDbConfig;
+export type LbDatabaseConfig = LbPostgresDbConfig | LbMySqlDbConfig;

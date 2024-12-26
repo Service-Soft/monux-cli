@@ -1,17 +1,21 @@
+import { Dirent } from 'fs';
 import path from 'path';
 
+import { Provider, EnvironmentProviders } from '@angular/core';
 import type { FooterRow, NavbarRow } from 'ngx-material-navigation';
 
-import { CPUtilities, FileLine, FsUtilities, JsonUtilities } from '../encapsulation';
+import { CPUtilities, CustomTsValues, FileLine, FsUtilities, JsonUtilities } from '../encapsulation';
 import { NpmPackage, NpmUtilities } from '../npm';
-import { TsImportDefinition, TsUtilities } from '../ts';
+import { ArrayStartIdentifier, TsImportDefinition, TsUtilities } from '../ts';
 import { AngularJson, AngularJsonAssetPattern } from './angular-json.model';
 import { NgPackageJson } from './ng-package-json.model';
-import { ANGULAR_JSON_FILE_NAME, ANGULAR_ROUTES_FILE_NAME } from '../constants';
+import { ANGULAR_JSON_FILE_NAME, ANGULAR_ROUTES_FILE_NAME, APP_CONFIG_FILE_NAME, ROBOTS_FILE_NAME, SITEMAP_FILE_NAME } from '../constants';
 import { DeepPartial } from '../types';
 import { AddNavElementConfig } from './add-nav-element-config.model';
 import { mergeDeep, optionsToCliString } from '../utilities';
 import { NavElementTypes } from './nav-element-types.enum';
+import { RobotsUtilities } from '../robots';
+import { WorkspaceUtilities } from '../workspace';
 
 /**
  * The `ng new {}` command.
@@ -100,12 +104,54 @@ export abstract class AngularUtilities {
     private static readonly CLI_VERSION: number = 18;
 
     /**
+     * Sets up logging.
+     * @param name - Name of the project.
+     */
+    static async setupLogger(name: string): Promise<void> {
+        await NpmUtilities.install(name, [NpmPackage.NGX_PERSISTENCE_LOGGER]);
+        // TODO
+        // create logger service extends base logger service.
+        // provide logger service for NGX_LOGGER_SERVICE
+        // add global error handler
+    }
+
+    /**
+     * Sets up auth.
+     * @param name - Name of the project.
+     */
+    static async setupAuth(name: string): Promise<void> {
+        await NpmUtilities.install(name, [NpmPackage.NGX_MATERIAL_AUTH]);
+        // TODO
+        // create auth-service
+        // provide the auth service for NGX_AUTH_SERVICE
+        // provide the jwt interceptor and http interceptor
+        // add login page
+        // add forgot-password page
+        // add confirm-reset-password page
+    }
+
+    /**
+     * Sets up change sets.
+     * @param name - Name of the project.
+     */
+    static async setupChangeSets(name: string): Promise<void> {
+        await NpmUtilities.install(name, [NpmPackage.NGX_MATERIAL_CHANGE_SETS]);
+        // TODO
+        // create change-set-service
+        // provide the change set service for NGX_CHANGE_SET_SERVICE
+    }
+
+    /**
      * Sets up  angular material in the project with the provided root.
      * @param root - The root of the angular project to setup material for.
      */
     static async setupMaterial(root: string): Promise<void> {
         await Promise.all([
-            this.addProvideAnimations(root),
+            this.addProvider(
+                root,
+                'provideAnimations()',
+                [{ defaultImport: false, element: 'provideAnimations', path: '@angular/platform-browser/animations' }]
+            ),
             FsUtilities.updateFile(path.join(root, 'src', 'styles.css'), [
                 '@import "@angular/material/prebuilt-themes/indigo-pink.css";',
                 '',
@@ -123,21 +169,28 @@ export abstract class AngularUtilities {
         ]);
     }
 
-    private static async addProvideAnimations(root: string): Promise<void> {
-        const appConfigTs: string = path.join(root, 'src', 'app', 'app.config.ts');
+    private static async addProvider(
+        root: string,
+        provider: Provider | EnvironmentProviders | CustomTsValues,
+        imports: TsImportDefinition[]
+    ): Promise<void> {
+        const appConfigPath: string = path.join(root, 'src', 'app', APP_CONFIG_FILE_NAME);
 
-        const currentContent: string = await FsUtilities.readFile(appConfigTs);
-        if (currentContent.includes('provideAnimations') && currentContent.includes('@angular/platform-browser/animations')) {
-            return; // Is already configured;
-        }
+        const { result, contentString } = await TsUtilities.getArrayStartingWith(appConfigPath, 'providers: [');
 
-        await Promise.all([
-            FsUtilities.replaceInFile(appConfigTs, ']\n};', ', provideAnimations()]\n};'),
-            TsUtilities.addImportStatementsToFile(
-                appConfigTs,
-                [{ defaultImport: false, element: 'provideAnimations', path: '@angular/platform-browser/animations' }]
-            )
-        ]);
+        result.push(provider);
+
+        const stringifiedArray: string = ` ${JsonUtilities.stringifyAsTs(result, 4)}`;
+
+        await FsUtilities.replaceInFile(
+            appConfigPath,
+            contentString,
+            stringifiedArray
+        );
+        await TsUtilities.addImportStatementsToFile(
+            appConfigPath,
+            imports
+        );
     }
 
     /**
@@ -163,14 +216,13 @@ export abstract class AngularUtilities {
         navElement: AddNavElementConfig | undefined,
         domain: string | undefined
     ): Promise<void> {
-        const pagesDir: string = path.join(root, 'src', 'app', 'pages');
-        this.runCommand(pagesDir, `generate component ${pageName}`, { '--skip-tests': true, '--inline-style': true });
+        this.runCommand(root, `generate component pages/${pageName}`, { '--skip-tests': true, '--inline-style': true });
 
         if (navElement) {
             await this.addNavElement(root, navElement);
         }
 
-        const sitemapPath: string = path.join(root, 'src', 'sitemap.xml');
+        const sitemapPath: string = path.join(root, 'src', SITEMAP_FILE_NAME);
         const route: string | undefined = this.resolveInternalRoute(navElement);
         if (
             domain
@@ -205,27 +257,19 @@ export abstract class AngularUtilities {
 
     private static async addNavElement(projectPath: string, element: AddNavElementConfig): Promise<void> {
         const routesPath: string = path.join(projectPath, 'src', 'app', ANGULAR_ROUTES_FILE_NAME);
-        const lines: string[] = await FsUtilities.readFileLines(routesPath);
 
-        const startIdentifier: string = element.addTo === 'navbar' ? ': NavbarRow<NavRoute>[]' : ': FooterRow[]';
-        const firstLine: FileLine = FsUtilities.findLineWithContent(lines, startIdentifier);
-        const lastLine: FileLine = FsUtilities.findLineWithContent(lines, '];', firstLine.index);
-        const contentLines: FileLine[] = FsUtilities.getFileLines(lines, firstLine.index + 1, lastLine.index - 1);
-        const contentString: string = `[\n${contentLines.map(l => l.content).join('\n')}\n]`;
-        const content: (NavbarRow | FooterRow)[] = JsonUtilities.parseAsTs(contentString);
+        const startIdentifier: ArrayStartIdentifier = element.addTo === 'navbar' ? ': NavbarRow<NavRoute>[] = [' : ': FooterRow[] = [';
+        const { result, contentString } = await TsUtilities.getArrayStartingWith<NavbarRow | FooterRow>(routesPath, startIdentifier);
 
-        content[element.rowIndex].elements.push(element.element);
+        result[element.rowIndex].elements.push(element.element);
+        const stringifiedArray: string = ` ${JsonUtilities.stringifyAsTs(result)};`;
 
-        const stringifiedContent: string = JsonUtilities.stringifyAsTs(content);
-
+        const startIndex: number = (await FsUtilities.findLineWithContent(routesPath, startIdentifier)).index;
         await FsUtilities.replaceInFile(
             routesPath,
-            contentLines
-                .map(l => l.content)
-                .join('\n')
-                .slice(1),
-            stringifiedContent.slice(3, stringifiedContent.length - 2),
-            firstLine.index
+            contentString,
+            stringifiedArray,
+            startIndex
         );
     }
 
@@ -234,7 +278,7 @@ export abstract class AngularUtilities {
      * @param projectName - The name of the angular project to add tracking to.
      */
     static async addTracking(projectName: string): Promise<void> {
-        throw new Error('Not implemented');
+        throw new Error('Not implemented'); // TODO
         // eslint-disable-next-line no-console
         console.log('Adds tracking');
         await NpmUtilities.install(projectName, [NpmPackage.NGX_MATERIAL_TRACKING]);
@@ -247,13 +291,9 @@ export abstract class AngularUtilities {
      * @param domain - The domain of the project.
      */
     static async addSitemapAndRobots(root: string, projectName: string, domain: string): Promise<void> {
-        await FsUtilities.createFile(path.join(root, 'src', 'robots.txt'), [
-            'User-agent: *',
-            'Allow: /',
-            '',
-            `Sitemap: https://${domain}/sitemap.xml`
-        ]);
-        await FsUtilities.createFile(path.join(root, 'src', 'sitemap.xml'), [
+        const app: Dirent = await WorkspaceUtilities.findProjectOrFail(projectName);
+        await RobotsUtilities.createRobotsTxtForApp(app, domain, true);
+        await FsUtilities.createFile(path.join(root, 'src', SITEMAP_FILE_NAME), [
             '<?xml version="1.0" encoding="UTF-8"?>',
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">',
             '</urlset>'
@@ -271,8 +311,8 @@ export abstract class AngularUtilities {
                             options: {
                                 assets: [
                                     ...currentAssets,
-                                    'src/sitemap.xml',
-                                    'src/robots.txt'
+                                    `src/${SITEMAP_FILE_NAME}`,
+                                    `src/${ROBOTS_FILE_NAME}`
                                 ]
                             }
                         }
@@ -287,7 +327,7 @@ export abstract class AngularUtilities {
      * @param root - The directory of the angular project to setup the navigation for.
      * @param name - The name of the angular project to setup the navigation for.
      */
-    static async addNavigation(root: string, name: string): Promise<void> {
+    static async setupNavigation(root: string, name: string): Promise<void> {
         // eslint-disable-next-line no-console
         console.log('Adds navigation');
 
@@ -344,8 +384,8 @@ export abstract class AngularUtilities {
         ]);
 
         const tsLines: string[] = await FsUtilities.readFileLines(appComponentTs);
-        const componentLine: FileLine = this.getComponentImportLine(tsLines);
-        const classLine: FileLine = FsUtilities.findLineWithContent(tsLines, '{', componentLine.index);
+        const componentLine: FileLine = await this.getComponentImportLine(tsLines);
+        const classLine: FileLine = await FsUtilities.findLineWithContent(tsLines, '{', componentLine.index);
         const isLastLine: boolean = classLine.index === tsLines.length - 1;
         const content: string = isLastLine ? classLine.content.split('}')[0] : classLine.content;
         tsLines[classLine.index] = `${content}\n\tnavbarRows: NavbarRow[] = navbarRows;\n\tfooterRows: FooterRow[] = footerRows;`;
@@ -360,7 +400,7 @@ export abstract class AngularUtilities {
             routesTs
         );
         await FsUtilities.replaceAllInFile(
-            path.join(root, 'src', 'app', 'app.config.ts'),
+            path.join(root, 'src', 'app', APP_CONFIG_FILE_NAME),
             'import { routes } from \'./app.routes\';',
             'import { routes } from \'./routes\';'
         );
@@ -410,7 +450,7 @@ export abstract class AngularUtilities {
      * @param root - The directory of the angular project to setup the pwa support for.
      * @param name - The name of the angular project to setup the pwa support for.
      */
-    static async addPwaSupport(root: string, name: string): Promise<void> {
+    static async setupPwa(root: string, name: string): Promise<void> {
         // eslint-disable-next-line no-console
         console.log('Adds pwa support');
         this.runCommand(root, `add @angular/pwa@${this.CLI_VERSION}`, { '--skip-confirmation': true });
@@ -458,28 +498,28 @@ export abstract class AngularUtilities {
         await TsUtilities.addImportStatementsToFile(componentPath, imports);
         let lines: string[] = await FsUtilities.readFileLines(componentPath);
         for (const imp of imports) {
-            lines = this.addComponentImport(lines, imp);
+            lines = await this.addComponentImport(lines, imp);
         }
         await FsUtilities.updateFile(componentPath, lines, 'replace');
     }
 
-    private static addComponentImport(lines: string[], imp: TsImportDefinition): string[] {
-        const l: FileLine = this.getComponentImportLine(lines);
+    private static async addComponentImport(lines: string[], imp: TsImportDefinition): Promise<string[]> {
+        const l: FileLine = await this.getComponentImportLine(lines);
         if (l.content.includes(']')) {
             l.content = l.content.replace(']', `, ${imp.element}]`);
             lines[l.index] = l.content;
             return lines;
         }
-        const closingArrayLine: FileLine = FsUtilities.findLineWithContent(lines, ']', l.index);
+        const closingArrayLine: FileLine = await FsUtilities.findLineWithContent(lines, ']', l.index);
         lines[closingArrayLine.index - 1] = `${lines[closingArrayLine.index - 1]},\n\t\t${imp.element}`;
         return lines;
     }
 
-    private static getComponentImportLine(lines: string[]): FileLine {
+    private static async getComponentImportLine(lines: string[]): Promise<FileLine> {
         const componentLine: string | undefined = lines.find(l => l.includes('@Component'));
         if (!componentLine) {
             throw new Error('The file does not contain an @Component decorator');
         }
-        return FsUtilities.findLineWithContent(lines, 'imports:', lines.indexOf(componentLine));
+        return await FsUtilities.findLineWithContent(lines, 'imports:', lines.indexOf(componentLine));
     }
 }

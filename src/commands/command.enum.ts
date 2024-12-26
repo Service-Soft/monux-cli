@@ -10,10 +10,14 @@ export enum Command {
     I = 'i',
     ADD = 'add',
     A = 'a',
+    PREPARE = 'prepare',
+    P = 'p',
     UP = 'up',
     U = 'u',
-    BUILD_ENV = 'build-env',
-    B_ENV = 'b-env',
+    UP_DEV = 'up-dev',
+    UD = 'ud',
     DOWN = 'down',
-    D = 'd'
+    D = 'd',
+    GENERATE_PAGE = 'generatePage',
+    GP = 'gp'
 }

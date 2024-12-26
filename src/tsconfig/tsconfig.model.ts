@@ -16,7 +16,7 @@ export interface TsConfig {
     compilerOptions: TsCompilerOptions,
     exclude?: string[],
     compileOnSave?: boolean,
-    extends?: string,
+    extends?: string | string[],
     files?: string[],
     include?: string[],
     typeAcquisition?: TypeAcquisition

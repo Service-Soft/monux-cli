@@ -7,7 +7,7 @@ import { FsUtilities } from '../encapsulation';
 import { ComposeBuild, ComposeDefinition, ComposePort, ComposeService, ComposeServiceEnvironment, ComposeServiceVolume } from './compose-file.model';
 import { EnvUtilities } from '../env';
 import { OmitStrict } from '../types';
-import { toSnakeCase } from '../utilities/to-snake-case.function';
+import { toSnakeCase } from '../utilities';
 
 // eslint-disable-next-line jsdoc/require-jsdoc
 type ParsedDockerComposeEnvironment = { [key: string]: string } | string[];
@@ -72,7 +72,7 @@ export abstract class DockerUtilities {
      * Creates an empty docker compose file at the given path.
      * @param email - The email that should be used for the letsencrypt certificate.
      * @param rootPath - The path of the root where to create the file.
-     * Defaults to "docker-compose.yaml" (which creates the file in the current directory).
+     * Defaults to "" (which creates the file in the current directory).
      */
     static async createDockerCompose(email: string, rootPath: string = ''): Promise<void> {
         await EnvUtilities.addVariable({
@@ -140,13 +140,16 @@ export abstract class DockerUtilities {
      * @param domain - The domain of the service. Optional.
      * @param rootPath - The path of the project root.
      * Defaults to "" (which creates the file in the current directory).
+     * @param composeFileName - The name of the compose file.
+     * Defaults to docker-compose.yaml.
      */
     static async addServiceToCompose(
         service: ComposeService,
-        domain: string,
-        rootPath: string = ''
+        domain?: string,
+        rootPath: string = '',
+        composeFileName: string = DOCKER_COMPOSE_FILE_NAME
     ): Promise<void> {
-        const composePath: string = path.join(rootPath, DOCKER_COMPOSE_FILE_NAME);
+        const composePath: string = path.join(rootPath, composeFileName);
         const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
         definition.services.push(service);
         await FsUtilities.updateFile(composePath, this.composeDefinitionToYaml(definition), 'replace');
@@ -156,6 +159,34 @@ export abstract class DockerUtilities {
                 rootPath
             );
         }
+    }
+
+    /**
+     * Gets all services from the docker compose file.
+     * @param rootPath - The root path of the monorepo.
+     * @returns The parsed services.
+     */
+    static async getComposeServices(rootPath: string = ''): Promise<ComposeService[]> {
+        const composePath: string = path.join(rootPath, DOCKER_COMPOSE_FILE_NAME);
+        const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
+        return definition.services;
+    }
+
+    /**
+     * Adds a volume to the docker compose file.
+     * @param volume - The volume to add.
+     * @param rootPath - The root path of the monorepo.
+     * @param composeFileName - The name of the compose file.
+     */
+    static async addVolumeToCompose(
+        volume: string,
+        rootPath: string = '',
+        composeFileName: string = DOCKER_COMPOSE_FILE_NAME
+    ): Promise<void> {
+        const composePath: string = path.join(rootPath, composeFileName);
+        const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
+        definition.volumes.push(volume);
+        await FsUtilities.updateFile(composePath, this.composeDefinitionToYaml(definition), 'replace');
     }
 
     private static composeDefinitionToYaml(definition: ComposeDefinition): string[] {

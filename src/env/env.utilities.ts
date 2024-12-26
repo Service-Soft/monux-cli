@@ -1,7 +1,7 @@
 import { Dirent } from 'fs';
 import path from 'path';
 
-import { ENV_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME } from '../constants';
+import { ENV_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME, GlobalEnvironmentVariable } from '../constants';
 import { FileLine, FsUtilities, JsonUtilities } from '../encapsulation';
 import { KeyValue, OmitStrict } from '../types';
 import { WorkspaceUtilities } from '../workspace';
@@ -49,7 +49,12 @@ export abstract class EnvUtilities {
         await Promise.all(apps.map(a => this.buildEnvironmentFileForApp(a, rootPath)));
     }
 
-    private static async buildEnvironmentFileForApp(app: Dirent, rootPath: string): Promise<void> {
+    /**
+     * Builds an environment file for the provided app.
+     * @param app - The app to build the environment file for.
+     * @param rootPath - The root path of the monorepo.
+     */
+    static async buildEnvironmentFileForApp(app: Dirent, rootPath: string): Promise<void> {
         const environmentFolder: string = path.join(app.parentPath, app.name, 'src', 'environment');
         const variableKeys: string[] = await this.getProjectVariableKeys(path.join(environmentFolder, ENVIRONMENT_MODEL_TS_FILE_NAME));
 
@@ -59,11 +64,11 @@ export abstract class EnvUtilities {
 
     private static async getProjectVariableKeys(environmentModelPath: string): Promise<string[]> {
         const lines: string[] = await FsUtilities.readFileLines(environmentModelPath);
-        const firstLine: FileLine = FsUtilities.findLineWithContent(lines, 'defineVariables(');
-        const lastLine: FileLine = FsUtilities.findLineWithContent(lines, ']', firstLine.index);
+        const firstLine: FileLine = await FsUtilities.findLineWithContent(lines, 'defineVariables(');
+        const lastLine: FileLine = await FsUtilities.findLineWithContent(lines, ']', firstLine.index);
         if (firstLine.index === lastLine.index) {
             const content: string = firstLine.content.split('defineVariables([')[1].split(']')[0];
-            const tsArrayString: string = ` [${content}]`;
+            const tsArrayString: string = `[${content}]`;
             return await JsonUtilities.parseAsTs(tsArrayString);
         }
         const contentLines: FileLine[] = FsUtilities.getFileLines(lines, firstLine.index + 1, lastLine.index - 1);
@@ -158,6 +163,19 @@ export abstract class EnvUtilities {
     }
 
     /**
+     * Gets the value for the given environment variable.
+     * @param variable - The variable to get the value of.
+     * @param rootPath - The root path of the monorepo.
+     * @returns The value of the provided variable.
+     */
+    static async getEnvVariable<T extends EnvValue>(
+        variable: GlobalEnvironmentVariable | Omit<string, GlobalEnvironmentVariable >,
+        rootPath: string
+    ): Promise<T> {
+        return (await this.getEnvVariables([variable as string], rootPath))[0].value as T;
+    }
+
+    /**
      * Initializes environment variables inside the monorepo.
      * @param rootPath - The path to the root of the monorepo.
      */
@@ -215,8 +233,8 @@ export abstract class EnvUtilities {
 
     private static async getVariableDefinitions(globalEnvModelPath: string): Promise<OmitStrict<EnvVariable, 'value'>[]> {
         const lines: string[] = await FsUtilities.readFileLines(globalEnvModelPath);
-        const firstLine: FileLine = FsUtilities.findLineWithContent(lines, 'GlobalEnvironment = {');
-        const lastLine: FileLine = FsUtilities.findLineWithContent(lines, '}', firstLine.index);
+        const firstLine: FileLine = await FsUtilities.findLineWithContent(lines, 'GlobalEnvironment = {');
+        const lastLine: FileLine = await FsUtilities.findLineWithContent(lines, '}', firstLine.index);
 
         if (firstLine.index === lastLine.index) {
             return [];
@@ -259,8 +277,8 @@ export abstract class EnvUtilities {
         const environmentModelFilePath: string = path.join(rootPath, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
 
         const lines: string[] = await FsUtilities.readFileLines(environmentModelFilePath);
-        const firstLine: FileLine = FsUtilities.findLineWithContent(lines, 'GlobalEnvironment = {');
-        const lastLine: FileLine = FsUtilities.findLineWithContent(lines, '}', firstLine.index);
+        const firstLine: FileLine = await FsUtilities.findLineWithContent(lines, 'GlobalEnvironment = {');
+        const lastLine: FileLine = await FsUtilities.findLineWithContent(lines, '}', firstLine.index);
         const q: string = variable.required ? '' : '?';
 
         if (firstLine.index === lastLine.index) {

@@ -1,5 +1,5 @@
 
-import { APPS_DIRECTORY_NAME, ENV_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, ESLINT_CONFIG_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, TAILWIND_CONFIG_FILE_NAME, WORKSPACE_FILE_NAME } from '../../constants';
+import { APPS_DIRECTORY_NAME, DEV_DOCKER_COMPOSE_FILE_NAME, ENV_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, ESLINT_CONFIG_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, ROBOTS_FILE_NAME, TAILWIND_CONFIG_FILE_NAME, WORKSPACE_FILE_NAME } from '../../constants';
 import { DockerUtilities } from '../../docker';
 import { CPUtilities, FsUtilities, InquirerUtilities, QuestionsFor } from '../../encapsulation';
 import { EnvUtilities } from '../../env';
@@ -45,6 +45,7 @@ export async function runInit(): Promise<void> {
         createEslintConfig(),
         createCspellWords(),
         DockerUtilities.createDockerCompose(config.email),
+        FsUtilities.createFile(DEV_DOCKER_COMPOSE_FILE_NAME, ''),
         FsUtilities.mkdir(APPS_DIRECTORY_NAME),
         FsUtilities.mkdir(LIBS_DIRECTORY_NAME),
         createGitIgnore(),
@@ -69,6 +70,7 @@ async function createGitIgnore(): Promise<void> {
         '# See http://help.github.com/ignore-files/ for more about ignoring files.',
         ENV_FILE_NAME,
         ENVIRONMENT_TS_FILE_NAME,
+        ROBOTS_FILE_NAME,
         'letsencrypt',
         '# compiled output',
         'dist',

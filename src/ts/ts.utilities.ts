@@ -1,10 +1,76 @@
-import { FsUtilities } from '../encapsulation';
+import { FileLine, FsUtilities, JsonUtilities } from '../encapsulation';
 import { TsImportDefinition } from './ts-import-definition.model';
+
+/**
+ * The possible identifier strings for the start of an array.
+ */
+export type ArrayStartIdentifier = `${string}: [` | `${string} = [`;
+
+/**
+ * The result of the getArrayStartingWith method.
+ * Consists of the parsed array, as well as the old content string to use for replacement.
+ */
+type ParseArrayResult<T> = {
+    /**
+     * The parsed array.
+     */
+    result: T[],
+    /**
+     * The old content string.
+     */
+    contentString: string
+};
 
 /**
  * Utilities for handling typescript files.
  */
 export abstract class TsUtilities {
+
+    /**
+     * Reads an array from a file at the given path that starts with the provided startIdentifier.
+     * @param filePath - The path of the file to read the array from.
+     * @param startIdentifier - The identifier for the start of the array.
+     * @returns The parsed array as well as the string in the file.
+     */
+    static async getArrayStartingWith<T>(filePath: string, startIdentifier: ArrayStartIdentifier): Promise<ParseArrayResult<T>> {
+        const lines: string[] = await FsUtilities.readFileLines(filePath);
+        const firstLine: FileLine = await FsUtilities.findLineWithContent(lines, startIdentifier);
+
+        // Keep track of nested arrays
+        let openBrackets: number = 0;
+        let lastLineIndex: number = firstLine.index;
+
+        // Iterate through lines starting from the first line
+        for (let i: number = firstLine.index; i < lines.length; i++) {
+            const line: string = lines[i];
+
+            // Count array brackets
+            openBrackets += (line.match(/\[/g) ?? []).length; // Opening brackets
+            openBrackets -= (line.match(/]/g) ?? []).length; // Closing brackets
+
+            // When all brackets are closed, we found the end of the array
+            if (openBrackets === 0) {
+                lastLineIndex = i;
+                break;
+            }
+        }
+
+        if (firstLine.index === lastLineIndex) {
+            const content: string = firstLine.content.split(startIdentifier)[1].split(']')[0];
+            return {
+                result: await JsonUtilities.parseAsTs(`[${content}]`),
+                contentString: ` [${content}${firstLine.content.endsWith('];') ? '];' : ']'}`
+            };
+        }
+
+        const contentLines: FileLine[] = FsUtilities.getFileLines(lines, firstLine.index + 1, lastLineIndex - 1);
+        const content: string = contentLines.map(l => l.content).join('\n');
+
+        return {
+            result: await JsonUtilities.parseAsTs(`[${content}]`),
+            contentString: ` [\n${content}\n${lines[lastLineIndex]}`
+        };
+    }
 
     /**
      * Adds the given imports to the file at the given path.

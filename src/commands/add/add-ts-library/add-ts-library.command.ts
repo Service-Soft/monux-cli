@@ -104,7 +104,7 @@ export class AddTsLibraryCommand extends AddCommand<TsLibraryConfiguration> {
         await FsUtilities.createFile(path.join(libraryPath, 'vite.config.ts'), [
             'import { defineConfig, PluginOption } from \'vite\';',
             'import path from \'path\';',
-            'import dts from \'vite-plugin-dts\';',
+            `import dts from '${NpmPackage.VITE_PLUGIN_DTS}';`,
             '',
             'export default defineConfig({',
             '\tplugins: [',

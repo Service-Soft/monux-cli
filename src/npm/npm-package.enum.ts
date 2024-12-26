@@ -4,6 +4,8 @@
 export enum NpmPackage {
     TAILWIND = 'tailwindcss',
     NGX_PERSISTENCE_LOGGER = 'ngx-persistence-logger',
+    NGX_MATERIAL_AUTH = 'ngx-material-auth',
+    NGX_MATERIAL_CHANGE_SETS = 'ngx-material-change-sets',
     NGX_MATERIAL_TRACKING = 'ngx-material-tracking',
     NGX_MATERIAL_NAVIGATION = 'ngx-material-navigation',
     NGX_PWA = 'ngx-pwa',

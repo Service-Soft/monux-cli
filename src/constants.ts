@@ -31,6 +31,11 @@ export const LIBS_DIRECTORY_NAME: string = 'libs';
 export const DOCKER_COMPOSE_FILE_NAME: string = 'docker-compose.yaml';
 
 /**
+ * The name of the dev docker compose file.
+ */
+export const DEV_DOCKER_COMPOSE_FILE_NAME: string = 'dev.docker-compose.yaml';
+
+/**
  * The name of the docker compose file.
  */
 export const DOCKER_FILE_NAME: string = 'Dockerfile';
@@ -88,12 +93,35 @@ export const GIT_IGNORE_FILE_NAME: string = '.gitignore';
 /**
  * The environment variable for configuring if traefik should run as web or as websecure.
  */
-export const TRAEFIK_WEB_SECURE_ENVIRONMENT_VARIABLE: string = 'web_secure';
+// eslint-disable-next-line typescript/typedef
+export const TRAEFIK_WEB_SECURE_ENVIRONMENT_VARIABLE = 'web_secure';
 
 /**
  * The environment variable for the ssl resolver. If this is unset, the docker compose can run without ssl on localhost.
  */
-export const TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE: string = 'ssl_resolver';
+// eslint-disable-next-line typescript/typedef
+export const TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE = 'ssl_resolver';
+
+/**
+ * Whether or not the project is currently public.
+ */
+// eslint-disable-next-line typescript/typedef
+export const IS_PUBLIC_ENVIRONMENT_VARIABLE = 'is_public';
+
+/**
+ * The name of the robots txt file.
+ */
+export const ROBOTS_FILE_NAME: string = 'robots.txt';
+
+/**
+ * The name of the sitemap file.
+ */
+export const SITEMAP_FILE_NAME: string = 'sitemap.xml';
+
+/**
+ * The name of the angular app config file.
+ */
+export const APP_CONFIG_FILE_NAME: string = 'app.config.ts';
 
 /**
  * The message to notify the user of the help command.
@@ -101,3 +129,10 @@ export const TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE: string = 'ssl_resolver';
 export const MORE_INFORMATION_MESSAGE: string = `run ${ChalkUtilities.secondary(
     `${CLI_BASE_COMMAND} help` // TODO: Why is Command?.HELP undefined here?
 )} for more information.`;
+
+/**
+ * Default global environment variables.
+ */
+export type GlobalEnvironmentVariable = typeof TRAEFIK_WEB_SECURE_ENVIRONMENT_VARIABLE
+    | typeof TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE
+    | typeof IS_PUBLIC_ENVIRONMENT_VARIABLE;

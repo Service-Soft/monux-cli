@@ -42,19 +42,22 @@ export abstract class FsUtilities {
     /**
      * Tries to find a line inside the provided lines which contains the given content.
      * You can optionally filter to only search in a specified line range.
-     * @param lines - The lines to search in.
+     * @param linesOrPath - The lines or the path of the file to search in.
      * @param content - The content to search for.
      * @param fromIndex - At which line the search should start. Defaults to 0,.
      * @param untilIndex - At which line the search should end. Defaults to the end of the array.
      * @returns The found line.
      * @throws When no line could be found.
      */
-    static findLineWithContent(
-        lines: string[],
+    static async findLineWithContent(
+        linesOrPath: string | string[],
         content: string,
         fromIndex: number = 0,
-        untilIndex: number = lines.length - 1
-    ): FileLine {
+        untilIndex?: number
+    ): Promise<FileLine> {
+        const lines: string[] = typeof linesOrPath === 'string' ? await this.readFileLines(linesOrPath) : linesOrPath;
+        untilIndex = untilIndex ?? lines.length - 1;
+
         let line: FileLine = { index: fromIndex, content: lines[fromIndex] };
         while (!line.content.includes(content)) {
             const i: number = line.index + 1;
@@ -63,6 +66,7 @@ export abstract class FsUtilities {
             }
             line = { index: i, content: lines[i] };
         }
+
         return line;
     }
 

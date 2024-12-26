@@ -1,11 +1,11 @@
-import { AddAngularCommand } from './add-angular/add-angular.command';
-import { AddAngularLibraryCommand } from './add-angular-library/add-angular-library.command';
+import { AddAngularCommand } from './add-angular';
+import { AddAngularLibraryCommand } from './add-angular-library';
+import { AddAngularWebsiteCommand } from './add-angular-website';
+import { AddLoopbackCommand } from './add-loopback';
 import { AddTsLibraryCommand } from './add-ts-library';
 import { AddConfiguration, AddType } from './models/add-configuration.model';
 import { InquirerUtilities, QuestionsFor } from '../../encapsulation';
 import { WorkspaceUtilities } from '../../workspace';
-import { AddAngularWebsiteCommand } from './add-angular-website/add-angular-website.command';
-import { AddLoopbackCommand } from './add-loopback/add-loopback.command';
 
 const addConfigQuestions: QuestionsFor<AddConfiguration> = {
     name: {

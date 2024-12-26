@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { Command, runAdd, runBuildEnv, runDown, runHelp, runInit, runRun, runUp, runVersion } from './commands';
+import { Command, runAdd, runDown, runGeneratePage, runHelp, runInit, runPrepare, runRun, runUp, runUpDev, runVersion } from './commands';
 import { validateInput } from './commands/validate-input.function';
 import { DeathUtilities, FigletUtilities } from './encapsulation';
 
@@ -9,6 +9,8 @@ DeathUtilities.death();
 async function main(): Promise<void> {
     const [,, ...args] = process.argv;
 
+    FigletUtilities.displayLogo();
+
     await validateInput(args);
 
     if (args.length >= 2) {
@@ -17,8 +19,6 @@ async function main(): Promise<void> {
     }
 
     const command: Command = args[0] as Command;
-
-    FigletUtilities.displayLogo();
 
     switch (command) {
         case Command.H:
@@ -51,9 +51,20 @@ async function main(): Promise<void> {
             runDown();
             return;
         }
-        case Command.BUILD_ENV:
-        case Command.B_ENV: {
-            await runBuildEnv();
+        case Command.PREPARE:
+        case Command.P: {
+            await runPrepare();
+            return;
+        }
+        case Command.GENERATE_PAGE:
+        case Command.GP: {
+            await runGeneratePage();
+            return;
+        }
+        case Command.UP_DEV:
+        case Command.UD: {
+            await runUpDev();
+            return;
         }
     }
 }

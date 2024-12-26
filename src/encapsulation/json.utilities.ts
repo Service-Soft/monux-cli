@@ -1,22 +1,6 @@
 import json5 from 'json5';
 
-import { NavElementTypes } from '../angular/nav-element-types.enum';
-
-/**
- * Union of all enums.
- * Is used to create a record that is used in parsing/stringifying enums.
- */
-type AllEnums = NavElementTypes;
-
-const enumTranslations: Record<AllEnums, string> = {
-    internalLink: 'NavElementTypes.INTERNAL_LINK',
-    titleWithInternalLink: 'NavElementTypes.TITLE_WITH_INTERNAL_LINK'
-};
-
-const enumStringToEnum: Record<string, AllEnums> = {
-    'NavElementTypes.INTERNAL_LINK': NavElementTypes.INTERNAL_LINK,
-    'NavElementTypes.TITLE_WITH_INTERNAL_LINK': NavElementTypes.TITLE_WITH_INTERNAL_LINK
-};
+import { customTsStringToValue, CustomTsValues, customTsValueToString } from './custom-ts.resolver';
 
 /**
  * Utilities for parsing and stringifying json.
@@ -65,8 +49,8 @@ export abstract class JsonUtilities {
             return undefined as T;
         }
 
-        if (this.isEnum(strippedValue)) {
-            return enumStringToEnum[strippedValue] as T;
+        if (this.isCustomTsValue(strippedValue)) {
+            return customTsStringToValue[strippedValue] as T;
         }
 
         // Handle import functions
@@ -94,7 +78,7 @@ export abstract class JsonUtilities {
     /**
      * Stringifies the given value into a ts string.
      * @param value - The value to stringify.
-     * @param currentIndent - The current indentation level. Defaults to zero.
+     * @param currentIndent - The current indentation level in spaces. Defaults to zero.
      * @returns The ts string, formatted with 4 spaces.
      * @throws When the type of the given value is not known.
      */
@@ -280,8 +264,8 @@ export abstract class JsonUtilities {
     }
 
     private static stringToTsString(value: string): string {
-        if (this.isEnumString(value)) {
-            return enumTranslations[value];
+        if (this.isCustomTsString(value)) {
+            return customTsValueToString[value];
         }
         // Detect template literals
         if (/^`.*`$/.test(value)) {
@@ -290,11 +274,11 @@ export abstract class JsonUtilities {
         return `'${value.replaceAll('\'', '\\\'')}'`; // Escape single quotes in strings
     }
 
-    private static isEnumString(value: string): value is AllEnums {
-        return value in enumTranslations;
+    private static isCustomTsString(value: string): value is CustomTsValues {
+        return value in customTsValueToString;
     }
 
-    private static isEnum(value: string): boolean {
-        return Object.values(enumTranslations).includes(value);
+    private static isCustomTsValue(value: string): boolean {
+        return Object.values(customTsValueToString).includes(value);
     }
 }

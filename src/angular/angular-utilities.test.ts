@@ -46,8 +46,8 @@ describe('AngularUtilities', () => {
         ]);
     });
 
-    test('addNavigation', async () => {
-        await AngularUtilities.addNavigation(mockConstants.ANGULAR_APP_DIR, mockConstants.ANGULAR_APP_NAME);
+    test('setupNavigation', async () => {
+        await AngularUtilities.setupNavigation(mockConstants.ANGULAR_APP_DIR, mockConstants.ANGULAR_APP_NAME);
 
         expect(npmInstallMock).toHaveBeenCalledTimes(1);
         expect(npmInstallMock).toHaveBeenCalledWith(mockConstants.ANGULAR_APP_NAME, ['ngx-material-navigation']);
@@ -121,7 +121,7 @@ describe('AngularUtilities', () => {
     });
 
     test('generatePage for navbar', async () => {
-        await AngularUtilities.addNavigation(mockConstants.ANGULAR_APP_DIR, mockConstants.ANGULAR_APP_NAME);
+        await AngularUtilities.setupNavigation(mockConstants.ANGULAR_APP_DIR, mockConstants.ANGULAR_APP_NAME);
 
         cpExecSyncMock.mockRestore(); // restores the mock so that 'ng generate component will actually be executed'
         const addNavElementConfig: AddNavElementConfig = fakeAddNavElementConfig();
@@ -255,7 +255,7 @@ describe('AngularUtilities', () => {
     });
 
     test('generatePage for footer', async () => {
-        await AngularUtilities.addNavigation(mockConstants.ANGULAR_APP_DIR, mockConstants.ANGULAR_APP_NAME);
+        await AngularUtilities.setupNavigation(mockConstants.ANGULAR_APP_DIR, mockConstants.ANGULAR_APP_NAME);
 
         cpExecSyncMock.mockRestore(); // restores the mock so that 'ng generate component will actually be executed'
         const addNavElementConfig: AddNavElementConfig = fakeAddNavElementConfig('footer');
@@ -319,7 +319,7 @@ describe('AngularUtilities', () => {
     });
 
     test('addPwaSupport', async () => {
-        await AngularUtilities.addPwaSupport(mockConstants.ANGULAR_APP_DIR, mockConstants.ANGULAR_APP_NAME);
+        await AngularUtilities.setupPwa(mockConstants.ANGULAR_APP_DIR, mockConstants.ANGULAR_APP_NAME);
 
         expect(cpExecSyncMock).toHaveBeenCalledTimes(1);
         expect(cpExecSyncMock).toHaveBeenCalledWith(`cd ${mockConstants.ANGULAR_APP_DIR} && npx @angular/cli@18 add @angular/pwa@18 --skip-confirmation`);
@@ -343,6 +343,39 @@ describe('AngularUtilities', () => {
             '    styleUrl: \'./app.component.css\'',
             '})',
             'export class AppComponent {}'
+        ]);
+    });
+
+    test('addProvider', async () => {
+        await AngularUtilities['addProvider'](
+            mockConstants.ANGULAR_APP_DIR,
+            {
+                provide: 'test',
+                useValue: 42
+            },
+            []
+        );
+
+        const tsLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_APP_CONFIG_TS);
+
+        expect(tsLines).toEqual([
+            'import { ApplicationConfig, provideZoneChangeDetection } from \'@angular/core\';',
+            'import { provideClientHydration } from \'@angular/platform-browser\';',
+            'import { provideRouter } from \'@angular/router\';',
+            '',
+            'import { routes } from \'./app.routes\';',
+            '',
+            'export const appConfig: ApplicationConfig = {',
+            '    providers: [',
+            '        provideZoneChangeDetection({ eventCoalescing: true }),',
+            '        provideRouter(routes),',
+            '        provideClientHydration(),',
+            '        {',
+            '            provide: \'test\',',
+            '            useValue: 42',
+            '        }',
+            '    ]',
+            '};'
         ]);
     });
 

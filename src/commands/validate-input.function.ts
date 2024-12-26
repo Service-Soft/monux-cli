@@ -32,7 +32,7 @@ export async function validateInput(args: string[]): Promise<void> {
     if (!allKnownCommands.includes(command)) {
         exitWithError(`Error: Unknown command ${command}.`);
     }
-    if ([Command.ADD, Command.A, Command.BUILD_ENV, Command.B_ENV, Command.D, Command.DOWN, Command.U, Command.UP].includes(command)) {
+    if ([Command.ADD, Command.A, Command.PREPARE, Command.P, Command.D, Command.DOWN, Command.U, Command.UP].includes(command)) {
         await validateInsideWorkspace();
     }
 }

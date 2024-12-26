@@ -50,6 +50,10 @@ export type PackageJson = {
      */
     main: string,
     /**
+     * Path to the type definition file.
+     */
+    types?: string,
+    /**
      * Dependencies of the package.
      */
     dependencies: Record<string, string>,
