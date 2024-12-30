@@ -7,9 +7,9 @@ interface BaseLbDbConfig {
      */
     readonly name: string,
     /**
-     * The connector of the datasource, always 'postgres'.
+     * The connector of the datasource, always 'postgresql'.
      */
-    readonly connector: 'postgres' | 'mysql',
+    readonly connector: 'postgresql' | 'mysql',
     /**
      * The url of the connection (eg: mysql://user:pass@host/db).
      */
@@ -41,9 +41,9 @@ interface BaseLbDbConfig {
  */
 interface LbPostgresDbConfig extends BaseLbDbConfig {
     /**
-     * The connector of the datasource, always 'postgres'.
+     * The connector of the datasource, always 'postgresql'.
      */
-    readonly connector: 'postgres'
+    readonly connector: 'postgresql'
 }
 
 /**

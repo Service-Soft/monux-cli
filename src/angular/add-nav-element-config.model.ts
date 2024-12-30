@@ -1,9 +1,23 @@
-import type { NavElement, NavFooterElement } from 'ngx-material-navigation';
+import type { NavElement, NavFooterElement, NavRoute } from 'ngx-material-navigation';
 
 /**
  * Configuration for adding a new navigation element.
  */
-export type AddNavElementConfig = AddNavbarElementConfig | AddFooterElementConfig;
+export type AddNavElementConfig = AddNavbarElementConfig | AddFooterElementConfig | AddElementConfig;
+
+/**
+ * Configuration for adding a new navigation element to the navbar.
+ */
+export interface AddElementConfig {
+    /**
+     * Where to add the element to.
+     */
+    addTo: 'array',
+    /**
+     * The actual element to add.
+     */
+    element: NavRoute
+}
 
 /**
  * Configuration for adding a new navigation element to the navbar.

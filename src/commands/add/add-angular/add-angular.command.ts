@@ -3,14 +3,16 @@ import { Dirent } from 'fs';
 import path from 'path';
 
 import { AngularUtilities, NavElementTypes } from '../../../angular';
-import { ANGULAR_JSON_FILE_NAME, APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, GIT_IGNORE_FILE_NAME } from '../../../constants';
+import { ANGULAR_JSON_FILE_NAME, APP_CONFIG_FILE_NAME, APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, GIT_IGNORE_FILE_NAME } from '../../../constants';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
 import { EnvUtilities } from '../../../env';
 import { EslintUtilities } from '../../../eslint';
+import { NpmPackage, NpmUtilities } from '../../../npm';
 import { TailwindUtilities } from '../../../tailwind';
 import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
+import { toPascalCase, toSnakeCase } from '../../../utilities';
 import { WorkspaceUtilities } from '../../../workspace';
 import { AddCommand } from '../models/add-command.class';
 import { AddConfiguration } from '../models/add-configuration.model';
@@ -23,6 +25,14 @@ type AddAngularConfiguration = AddConfiguration & {
      * The domain that the app should be reached under.
      */
     domain: string,
+    /**
+     *
+     */
+    baseUrl: string,
+    /**
+     * Name of the api used by this app.
+     */
+    apiName: string,
     /**
      * The port that should be used by the application.
      * @default 4200
@@ -47,15 +57,27 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
         },
         domain: {
             type: 'input',
-            message: 'domain (eg. "admin.localhost" or "admin.test.com")',
+            message: 'domain (eg. "localhost:4200" or "admin.test.com")',
             required: true,
-            default: 'admin.localhost'
+            default: 'localhost:4200'
+        },
+        baseUrl: {
+            type: 'input',
+            message: 'base url',
+            default: 'http://localhost:4200',
+            required: true
         },
         titleSuffix: {
             type: 'input',
             message: 'title suffix (eg. "| My Company")',
             required: true,
-            default: `| ${this.baseConfig.name}`
+            default: `| ${toPascalCase(this.baseConfig.name)}`
+        },
+        apiName: {
+            type: 'input',
+            message: 'name of the api to use',
+            required: true,
+            default: 'api'
         }
     };
 
@@ -67,7 +89,7 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
             this.setupTsConfig(root, config.name),
             this.createDockerfile(root, config),
             EslintUtilities.setupProjectEslint(root, true),
-            TailwindUtilities.setupProjectTailwind(root),
+            this.setupTailwind(root),
             EnvUtilities.setupProjectEnvironment(root, false),
             DockerUtilities.addServiceToCompose(
                 {
@@ -79,18 +101,44 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
                     volumes: [{ path: `/${config.name}` }],
                     labels: DockerUtilities.getTraefikLabels(config.name, 4000)
                 },
-                config.domain
+                config.domain,
+                config.baseUrl
             ),
-            AngularUtilities.setupLogger(config.name),
-            AngularUtilities.setupAuth(config.name),
-            AngularUtilities.setupChangeSets(config.name),
-            AngularUtilities.setupPwa(root, config.name),
-            AngularUtilities.setupNavigation(root, config.name),
             AngularUtilities.updateAngularJson(
                 path.join(root, ANGULAR_JSON_FILE_NAME),
                 { $schema: '../../node_modules/@angular/cli/lib/config/schema.json' }
-            )
+            ),
+            AngularUtilities.setupMaterial(root)
         ]);
+
+        await AngularUtilities.setupNavigation(root, config.name);
+        await AngularUtilities.setupLogging(root, config.name, config.apiName);
+        await AngularUtilities.setupAuth(root, config.name, config.apiName, config.domain, config.titleSuffix);
+        await AngularUtilities.setupChangeSets(root, config.name, config.apiName);
+        await AngularUtilities.setupPwa(root, config.name);
+        await FsUtilities.replaceInFile(
+            path.join(root, 'src', 'app', APP_CONFIG_FILE_NAME),
+            '\'ALLOWED_DOMAINS_PLACEHOLDER\'',
+            `environment.${toSnakeCase(config.apiName)}_domain`
+        );
+        await NpmUtilities.install(config.name, [NpmPackage.NGX_MATERIAL_ENTITY]);
+
+        await this.createDefaultPages(root, config);
+
+        const app: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
+        await EnvUtilities.buildEnvironmentFileForApp(app, '', false);
+    }
+
+    private async setupTailwind(root: string): Promise<void> {
+        await TailwindUtilities.setupProjectTailwind(root);
+        await FsUtilities.updateFile(path.join(root, 'src', 'styles.css'), [
+            '@tailwind base;',
+            '@tailwind components;',
+            '@tailwind utilities;'
+        ], 'append');
+    }
+
+    private async createDefaultPages(root: string, config: AddAngularConfiguration): Promise<void> {
         await AngularUtilities.generatePage(
             root,
             'Home',
@@ -99,16 +147,20 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
                 rowIndex: 0,
                 element: {
                     type: NavElementTypes.TITLE_WITH_INTERNAL_LINK,
-                    title: `Home ${config.titleSuffix}`,
+                    title: 'Home',
                     link: {
                         route: {
                             path: '',
-                            title: 'Home',
+                            title: `Home ${config.titleSuffix}`,
                             // @ts-ignore
                             // eslint-disable-next-line typescript/no-unsafe-return, typescript/no-unsafe-member-access
-                            loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent)
+                            loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent),
+                            canActivate: ['JwtLoggedInGuard']
                         }
-                    }
+                    },
+                    position: 'center',
+                    // @ts-ignore
+                    condition: 'isLoggedIn'
                 }
             },
             undefined
@@ -146,6 +198,10 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
         const newProject: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
         const root: string = path.join(newProject.parentPath, newProject.name);
         await FsUtilities.updateFile(path.join(root, 'src', 'app', 'app.component.html'), '', 'replace');
+        await AngularUtilities.addProvider(root, 'provideHttpClient(withInterceptorsFromDi(), withFetch())', [
+            { defaultImport: false, element: 'provideHttpClient', path: '@angular/common/http' },
+            { defaultImport: false, element: 'withInterceptorsFromDi', path: '@angular/common/http' }
+        ]);
         return root;
     }
 

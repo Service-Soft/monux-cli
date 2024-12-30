@@ -1,18 +1,18 @@
 import { Dirent } from 'fs';
 import path from 'path';
 
-import { APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, GIT_IGNORE_FILE_NAME, TS_CONFIG_FILE_NAME } from '../../../constants';
+import { APPS_DIRECTORY_NAME, DOCKER_COMPOSE_FILE_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, GIT_IGNORE_FILE_NAME, TS_CONFIG_FILE_NAME } from '../../../constants';
 import { DbUtilities, PostgresDbConfig, postgresDbConfigQuestions } from '../../../db';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, InquirerUtilities, QuestionsFor } from '../../../encapsulation';
 import { EnvUtilities } from '../../../env';
 import { EslintUtilities } from '../../../eslint';
 import { LbDatabaseConfig, LoopbackUtilities } from '../../../loopback';
-import { NpmUtilities } from '../../../npm';
+import { NpmPackage, NpmUtilities } from '../../../npm';
 import { TsUtilities } from '../../../ts';
 import { TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
-import { toKebabCase, toSnakeCase } from '../../../utilities';
+import { toKebabCase, toPascalCase, toSnakeCase } from '../../../utilities';
 import { WorkspaceUtilities } from '../../../workspace';
 import { AddCommand } from '../models';
 import { AddConfiguration } from '../models/add-configuration.model';
@@ -30,20 +30,32 @@ type DbConfig = {
 /**
  * Configuration for adding a new loopback api.
  */
-type AddLoopbackConfiguration = AddConfiguration & {
+export type AddLoopbackConfiguration = AddConfiguration & {
     /**
      * The domain that the website should be reached under.
      */
     domain: string,
     /**
-     * Whether or not to add lbx-change-sets.
+     *
      */
-    addChangeHistory: boolean,
+    baseUrl: string,
+    /**
+     *
+     */
+    frontendName: string,
     /**
      * The port that should be used by the application.
      * @default 3000
      */
-    port: number
+    port: number,
+    /**
+     *
+     */
+    defaultUserEmail: string,
+    /**
+     *
+     */
+    defaultUserPassword: string
 };
 
 /**
@@ -59,15 +71,32 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
         },
         domain: {
             type: 'input',
-            message: 'domain (eg. "api.localhost" or "api.test.com")',
-            default: 'api.localhost',
+            message: 'domain',
+            default: 'localhost:3000',
             required: true
         },
-        addChangeHistory: {
-            type: 'select',
-            message: 'Add change history?',
-            choices: [{ value: true, name: 'Yes' }, { value: false, name: 'No' }],
-            default: true
+        baseUrl: {
+            type: 'input',
+            message: 'base url',
+            default: 'http://localhost:3000',
+            required: true
+        },
+        defaultUserEmail: {
+            type: 'input',
+            message: 'Email of the default user',
+            required: true,
+            default: async () => (await FsUtilities.readFile(DOCKER_COMPOSE_FILE_NAME)).split('.acme.email=')[1].split('\n')[0]
+        },
+        defaultUserPassword: {
+            type: 'input',
+            message: 'Password of the default user',
+            required: true,
+            validate: (v) => v.length >= 12
+        },
+        frontendName: {
+            type: 'input',
+            message: 'Name of the frontend where the reset password ui is implemented',
+            required: true
         }
     };
 
@@ -77,7 +106,7 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
         const dbName: string = await this.configureDb();
         const root: string = await this.createProject(config);
         await EnvUtilities.setupProjectEnvironment(root, false);
-        await this.createLoopbackDatasource(dbName, root);
+        await this.createLoopbackDatasource(dbName, root, config.name);
 
         await Promise.all([
             this.setupTsConfig(config.name),
@@ -95,12 +124,17 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
                     volumes: [{ path: `/${config.name}` }],
                     labels: DockerUtilities.getTraefikLabels(config.name, 3000)
                 },
-                config.domain
+                config.domain,
+                config.baseUrl
             )
         ]);
 
+        await LoopbackUtilities.setupAuth(root, config, dbName);
+        await LoopbackUtilities.setupLogging(root, config.name);
+        await LoopbackUtilities.setupChangeSets(root, config.name);
+
         const app: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
-        await EnvUtilities.buildEnvironmentFileForApp(app, '');
+        await EnvUtilities.buildEnvironmentFileForApp(app, '', false);
     }
 
     private async updateIndexTs(root: string): Promise<void> {
@@ -144,7 +178,7 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
             'BootMixin(RestApplication)',
             'BootMixin(ServiceMixin(RepositoryMixin(RestApplication)))'
         );
-        await TsUtilities.addImportStatementsToFile(
+        await TsUtilities.addImportStatements(
             applicationPath,
             [
                 { defaultImport: false, element: 'ServiceMixin', path: '@loopback/service-proxy' },
@@ -153,19 +187,20 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
         );
     }
 
-    private async createLoopbackDatasource(dbName: string, root: string): Promise<void> {
+    private async createLoopbackDatasource(dbName: string, root: string, name: string): Promise<void> {
         const lbDatabaseConfig: LbDatabaseConfig = {
             name: dbName,
-            connector: 'postgres'
+            connector: 'postgresql'
         } as LbDatabaseConfig;
-        LoopbackUtilities.runCommand(root, `datasource ${dbName}`, { '--config': lbDatabaseConfig, '--yes': true });
+        await NpmUtilities.install(name, [NpmPackage.LOOPBACK_CONNECTOR_POSTGRES]);
+        await LoopbackUtilities.runCommand(root, `datasource ${dbName}`, { '--config': lbDatabaseConfig, '--yes': true });
 
         const PASSWORD_ENV_VARIABLE: string = `${toSnakeCase(dbName)}_password`;
         const USER_ENV_VARIABLE: string = `${toSnakeCase(dbName)}_user`;
         const DATABASE_ENV_VARIABLE: string = `${toSnakeCase(dbName)}_database`;
         const HOST_ENV_VARIABLE: string = `${toSnakeCase(dbName)}_host`;
         const dataSourcePath: string = path.join(root, 'src', 'datasources', `${toKebabCase(dbName)}.datasource.ts`);
-        await TsUtilities.addImportStatementsToFile(
+        await TsUtilities.addImportStatements(
             dataSourcePath,
             [{ defaultImport: false, element: 'environment', path: '../environment/environment' }]
         );
@@ -198,12 +233,12 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
             `  constructor(\n    @inject('datasources.config.${dbName}', {optional: true})\n    dsConfig: object = config,\n  ) {\n    super(dsConfig);\n  }`,
             '    constructor() {\n        super(config);\n    }'
         );
-        await FsUtilities.replaceInFile(
-            path.join(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
-            'const variables = defineVariables([',
-            // eslint-disable-next-line stylistic/max-len
-            `const variables = defineVariables(['${PASSWORD_ENV_VARIABLE}', '${USER_ENV_VARIABLE}', '${DATABASE_ENV_VARIABLE}', '${HOST_ENV_VARIABLE}'`
-        );
+        const environmentModel: string = path.join(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
+
+        await EnvUtilities.addProjectVariableKey(name, environmentModel, PASSWORD_ENV_VARIABLE, true);
+        await EnvUtilities.addProjectVariableKey(name, environmentModel, USER_ENV_VARIABLE, true);
+        await EnvUtilities.addProjectVariableKey(name, environmentModel, DATABASE_ENV_VARIABLE, true);
+        await EnvUtilities.addProjectVariableKey(name, environmentModel, HOST_ENV_VARIABLE, true);
     }
 
     private async configureDb(): Promise<string> {
@@ -225,7 +260,7 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
     }
 
     private async createProject(config: AddLoopbackConfiguration): Promise<string> {
-        LoopbackUtilities.runCommand(APPS_DIRECTORY_NAME, `new ${config.name}`, {
+        await LoopbackUtilities.runCommand(APPS_DIRECTORY_NAME, `new ${config.name}`, {
             '--yes': true,
             '--config': {
                 docker: true,
@@ -245,6 +280,32 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
             FsUtilities.rm(path.join(root, 'src', 'controllers', 'ping.controller.ts')),
             FsUtilities.updateFile(path.join(root, 'src', 'controllers', 'index.ts'), '', 'replace')
         ]);
+        const indexTs: string = path.join(root, 'src', 'index.ts');
+        await FsUtilities.replaceInFile(
+            indexTs,
+            'async function main(options: ApplicationConfig = {})',
+            `async function main(options: ApplicationConfig = {}): Promise<${toPascalCase(config.name)}Application>`
+        );
+        await FsUtilities.replaceInFile(
+            indexTs,
+            'const app = new ',
+            `const app: ${toPascalCase(config.name)}Application = new `
+        );
+        await FsUtilities.replaceInFile(
+            indexTs,
+            'const url = app.restServer.url;',
+            'const url: string | undefined = app.restServer.url;'
+        );
+        await FsUtilities.replaceInFile(
+            indexTs,
+            'const config = {',
+            'const config: ApplicationConfig = {'
+        );
+        await FsUtilities.replaceInFile(
+            indexTs,
+            '|| \'127.0.0.1\'',
+            '?? \'127.0.0.1\''
+        );
         return root;
     }
 

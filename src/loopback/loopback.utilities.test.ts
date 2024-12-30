@@ -17,7 +17,7 @@ describe('LoopbackUtilities', () => {
     });
 
     test('run new command', async () => {
-        LoopbackUtilities.runCommand(mockConstants.APPS_DIR, 'new api', {
+        await LoopbackUtilities.runCommand(mockConstants.APPS_DIR, 'new api', {
             '--yes': true,
             '--config': {
                 docker: true,

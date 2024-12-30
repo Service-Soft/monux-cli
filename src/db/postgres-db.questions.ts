@@ -1,4 +1,5 @@
 import { QuestionsFor } from '../encapsulation';
+import { WorkspaceUtilities } from '../workspace';
 
 /**
  * Configuration for creating a postgres db.
@@ -21,11 +22,13 @@ export const postgresDbConfigQuestions: QuestionsFor<PostgresDbConfig> = {
     name: {
         type: 'input',
         message: 'Name',
-        required: true
+        required: true,
+        default: 'db'
     },
     database: {
         type: 'input',
         message: 'Database',
-        required: true
+        required: true,
+        default: async () => (await WorkspaceUtilities.getConfig())?.name
     }
 };

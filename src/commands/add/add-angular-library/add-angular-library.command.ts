@@ -51,10 +51,19 @@ export class AddAngularLibraryCommand extends AddCommand<AddAngularLibraryConfig
             this.updateAngularJson(result.root, config.name),
             this.setupTsConfig(result.root, config.name),
             this.updatePackageJson(result, config.name),
-            TailwindUtilities.setupProjectTailwind(result.root),
+            this.setupTailwind(result.root),
             EslintUtilities.setupProjectEslint(result.root, false)
         ]);
         await FsUtilities.rm(path.join(result.root, 'projects'));
+    }
+
+    private async setupTailwind(root: string): Promise<void> {
+        await TailwindUtilities.setupProjectTailwind(root);
+        await FsUtilities.updateFile(path.join(root, 'src', 'styles.css'), [
+            '@tailwind base;',
+            '@tailwind components;',
+            '@tailwind utilities;'
+        ], 'append');
     }
 
     private async updatePackageJson(result: CreateResult, name: string): Promise<void> {

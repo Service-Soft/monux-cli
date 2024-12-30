@@ -4,7 +4,7 @@ import { TsImportDefinition } from './ts-import-definition.model';
 /**
  * The possible identifier strings for the start of an array.
  */
-export type ArrayStartIdentifier = `${string}: [` | `${string} = [`;
+export type ArrayStartIdentifier = `${string}: [` | `${string} = [` | `${string}, [`;
 
 /**
  * The result of the getArrayStartingWith method.
@@ -21,10 +21,127 @@ type ParseArrayResult<T> = {
     contentString: string
 };
 
+const constructorLineIdentifier: string = 'constructor(';
+
 /**
  * Utilities for handling typescript files.
  */
 export abstract class TsUtilities {
+
+    /**
+     *
+     * @param path
+     * @param content
+     */
+    static async addToStartOfClass(path: string, content: string[]): Promise<void> {
+        const lines: string[] = await FsUtilities.readFileLines(path);
+        const classStart: FileLine = await FsUtilities.findLineWithContent(lines, 'class ');
+        const classEnd: string | undefined = lines.find(l => l === '}' && lines.indexOf(l) >= classStart.index);
+        if (classEnd == undefined) {
+            throw new Error(`Could not find the end of the class "${classStart.content}"`);
+        }
+        await FsUtilities.replaceInFile(
+            path,
+            classStart.content,
+            `${classStart.content}\n${content.join('\n')}`,
+            classStart.index
+        );
+    }
+
+    /**
+     *
+     * @param path
+     * @param content
+     */
+    static async addToEndOfClass(path: string, content: string[]): Promise<void> {
+        const lines: string[] = await FsUtilities.readFileLines(path);
+        const classStart: FileLine = await FsUtilities.findLineWithContent(lines, 'class ');
+        const classEnd: string | undefined = lines.find(l => l === '}' && lines.indexOf(l) >= classStart.index);
+        if (classEnd == undefined) {
+            throw new Error(`Could not find the end of the class "${classStart.content}"`);
+        }
+        await FsUtilities.replaceInFile(path, classEnd, `${content.join('\n')}\n${classEnd}`, lines.indexOf(classEnd));
+    }
+
+    /**
+     *
+     * @param path
+     * @param content
+     */
+    static async addToConstructorBody(path: string, content: string): Promise<void> {
+        const lines: string[] = await FsUtilities.readFileLines(path);
+        const superLine: string | undefined = lines.find(l => l.includes(' super('));
+        const constructorLine: FileLine = await FsUtilities.findLineWithContent(lines, constructorLineIdentifier);
+        if (superLine) {
+            await FsUtilities.replaceInFile(
+                path,
+                superLine,
+                `${superLine}\n        ${content}`
+            );
+            return;
+        }
+        if (constructorLine.content.endsWith(') {}')) {
+            await FsUtilities.replaceInFile(
+                path,
+                constructorLine.content,
+                `${constructorLine.content.slice(0, -1)}\n        ${content}\n    }`
+            );
+            return;
+        }
+        if (constructorLine.content.endsWith(') {')) {
+            await FsUtilities.replaceInFile(
+                path,
+                constructorLine.content,
+                `${constructorLine.content}\n        ${content}`
+            );
+            return;
+        }
+        if (constructorLine.content.endsWith('(')) {
+            const line: FileLine = await FsUtilities.findLineWithContent(lines, ') {', constructorLine.index);
+            await FsUtilities.replaceInFile(
+                path,
+                line.content,
+                `${line.content}\n        ${content}`
+            );
+            return;
+        }
+        throw new Error('Unknown constructorLine');
+    }
+
+    /**
+     *
+     * @param path
+     * @param content
+     */
+    static async addToConstructorHeader(path: string, content: string): Promise<void> {
+        const lines: string[] = await FsUtilities.readFileLines(path);
+        const constructorLine: FileLine = await FsUtilities.findLineWithContent(lines, constructorLineIdentifier);
+        if (constructorLine.content.includes('constructor()')) {
+            await FsUtilities.replaceInFile(path, 'constructor()', `constructor(${content})`);
+            return;
+        }
+        if (constructorLine.content.includes(') {')) {
+            await FsUtilities.replaceInFile(path, constructorLineIdentifier, `constructor(${content}, `);
+            return;
+        }
+        await FsUtilities.replaceInFile(path, constructorLineIdentifier, `constructor(\n        ${content},`);
+    }
+
+    /**
+     *
+     * @param path
+     * @param content
+     */
+    static async addBelowImports(path: string, content: string[]): Promise<void> {
+        const lines: string[] = await FsUtilities.readFileLines(path);
+        let replaceContent: string = '';
+        for (let i: number = lines.length - 1; i >= 0; i--) {
+            if (lines[i].startsWith('import ')) {
+                replaceContent = lines[i];
+            }
+        }
+        await FsUtilities.replaceInFile(path, replaceContent, `${replaceContent}\n\n${content.join('\n')}`);
+    }
 
     /**
      * Reads an array from a file at the given path that starts with the provided startIdentifier.
@@ -77,7 +194,7 @@ export abstract class TsUtilities {
      * @param path - The path of the ts file to add the imports to.
      * @param imports - The imports to add.
      */
-    static async addImportStatementsToFile(path: string, imports: TsImportDefinition[]): Promise<void> {
+    static async addImportStatements(path: string, imports: TsImportDefinition[]): Promise<void> {
         for (const imp of imports) {
             let lines: string[] = await FsUtilities.readFileLines(path);
             lines = this.addImportStatement(lines, imp);

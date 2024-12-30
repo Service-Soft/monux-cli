@@ -1,7 +1,7 @@
 import { Dirent } from 'fs';
 import path from 'path';
 
-import { CPUtilities } from '../../encapsulation';
+import { ChalkUtilities, CPUtilities } from '../../encapsulation';
 import { NativeNpmCommands, NpmUtilities } from '../../npm';
 import { WorkspaceUtilities } from '../../workspace';
 
@@ -13,6 +13,8 @@ export async function runRun(...args: string[]): Promise<void> {
     const projectName: string = args[0];
     const npmScript: string = args[1];
     const nativeCommand: boolean = Object.values(NativeNpmCommands).includes(args[1] as NativeNpmCommands);
+
+    console.debug(ChalkUtilities.secondary('Runs the command'), npmScript);
 
     if (!nativeCommand) {
         await NpmUtilities.run(projectName, npmScript);

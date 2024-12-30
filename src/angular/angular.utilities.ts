@@ -2,20 +2,23 @@ import { Dirent } from 'fs';
 import path from 'path';
 
 import { Provider, EnvironmentProviders } from '@angular/core';
-import type { FooterRow, NavbarRow } from 'ngx-material-navigation';
+import { NavbarRow, NavRoute } from 'ngx-material-navigation';
 
 import { CPUtilities, CustomTsValues, FileLine, FsUtilities, JsonUtilities } from '../encapsulation';
 import { NpmPackage, NpmUtilities } from '../npm';
 import { ArrayStartIdentifier, TsImportDefinition, TsUtilities } from '../ts';
 import { AngularJson, AngularJsonAssetPattern } from './angular-json.model';
 import { NgPackageJson } from './ng-package-json.model';
-import { ANGULAR_JSON_FILE_NAME, ANGULAR_ROUTES_FILE_NAME, APP_CONFIG_FILE_NAME, ROBOTS_FILE_NAME, SITEMAP_FILE_NAME } from '../constants';
+import { ANGULAR_APP_COMPONENT_FILE_NAME, ANGULAR_JSON_FILE_NAME, ANGULAR_ROUTES_FILE_NAME, APP_CONFIG_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ROBOTS_FILE_NAME, SITEMAP_FILE_NAME } from '../constants';
+import { EnvUtilities } from '../env';
 import { DeepPartial } from '../types';
 import { AddNavElementConfig } from './add-nav-element-config.model';
-import { mergeDeep, optionsToCliString } from '../utilities';
+import { mergeDeep, optionsToCliString, toSnakeCase } from '../utilities';
 import { NavElementTypes } from './nav-element-types.enum';
 import { RobotsUtilities } from '../robots';
 import { WorkspaceUtilities } from '../workspace';
+import { adminsPageTsContent, getAdminModelContent, getAdminServiceContent, baseEntityModelContent, changeSetServiceContent, changeSetsComponentHtmlContent, changeSetsComponentTsContent, lodashUtilitiesContent } from './content';
+import { offlineServiceContent } from './content/offline-service.content';
 
 /**
  * The `ng new {}` command.
@@ -105,40 +108,385 @@ export abstract class AngularUtilities {
 
     /**
      * Sets up logging.
+     * @param root - The project root.
      * @param name - Name of the project.
+     * @param apiName - Name of the api where the logging endpoint is.
      */
-    static async setupLogger(name: string): Promise<void> {
+    static async setupLogging(root: string, name: string, apiName: string): Promise<void> {
         await NpmUtilities.install(name, [NpmPackage.NGX_PERSISTENCE_LOGGER]);
-        // TODO
-        // create logger service extends base logger service.
-        // provide logger service for NGX_LOGGER_SERVICE
-        // add global error handler
+        await FsUtilities.createFile(
+            path.join(root, 'src', 'app', 'services', 'logger.service.ts'),
+            [
+                'import { HttpClient } from \'@angular/common/http\';',
+                'import { Injectable } from \'@angular/core\';',
+                'import { BaseLoggerService } from \'ngx-persistence-logger\';',
+                'import { environment } from \'../../environment/environment\';',
+                '',
+                '@Injectable({ providedIn: \'root\' })',
+                'export class LoggerService extends BaseLoggerService {',
+                `\tprotected override readonly LOG_URL: string = \`\${environment.${toSnakeCase(apiName)}_base_url}/logs\`;`,
+                `\tprotected override readonly APPLICATION_NAME: string = '${name}';`,
+                '',
+                '\tconstructor(http: HttpClient) {',
+                '\t\tsuper(http);',
+                '\t}',
+                '}'
+            ]
+        );
+        const appComponentPath: string = path.join(root, 'src', 'app', ANGULAR_APP_COMPONENT_FILE_NAME);
+        await TsUtilities.addImportStatements(
+            appComponentPath,
+            [{ defaultImport: false, element: 'LoggerService', path: './services/logger.service' }]
+        );
+        await TsUtilities.addBelowImports(appComponentPath, ['export let logger: LoggerService;']);
+        await FsUtilities.replaceInFile(appComponentPath, 'AppComponent {', 'AppComponent {\n\n    constructor() {}\n');
+        await TsUtilities.addToConstructorHeader(appComponentPath, 'loggerService: LoggerService');
+        await TsUtilities.addToConstructorBody(appComponentPath, 'logger = loggerService;');
+        await this.addProvider(
+            root,
+            { provide: 'NGX_LOGGER_SERVICE', useExisting: 'LoggerService' },
+            [
+                { defaultImport: false, element: 'NGX_LOGGER_SERVICE', path: NpmPackage.NGX_PERSISTENCE_LOGGER },
+                { defaultImport: false, element: 'LoggerService', path: './services/logger.service' }
+            ]
+        );
+        await this.addProvider(
+            root,
+            // eslint-disable-next-line typescript/no-unsafe-assignment, typescript/no-explicit-any
+            { provide: 'ErrorHandler', useClass: 'GlobalErrorHandler' as any },
+            [{ defaultImport: false, element: 'GlobalErrorHandler', path: NpmPackage.NGX_PERSISTENCE_LOGGER }]
+        );
     }
 
     /**
      * Sets up auth.
+     * @param root - The root of the project.
      * @param name - Name of the project.
+     * @param apiName - The name of the api that the angular project should use.
+     * @param domain - The domain of the project.
+     * @param titleSuffix - The suffix after the title.
      */
-    static async setupAuth(name: string): Promise<void> {
+    static async setupAuth(root: string, name: string, apiName: string, domain: string, titleSuffix: string): Promise<void> {
         await NpmUtilities.install(name, [NpmPackage.NGX_MATERIAL_AUTH]);
-        // TODO
-        // create auth-service
-        // provide the auth service for NGX_AUTH_SERVICE
-        // provide the jwt interceptor and http interceptor
-        // add login page
-        // add forgot-password page
-        // add confirm-reset-password page
+        const apiBaseUrlVariableName: string = `${toSnakeCase(apiName)}_base_url`;
+        await EnvUtilities.addProjectVariableKey(
+            name,
+            path.join(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
+            apiBaseUrlVariableName,
+            false
+        );
+        await EnvUtilities.addProjectVariableKey(
+            name,
+            path.join(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
+            `${toSnakeCase(apiName)}_domain`,
+            false
+        );
+        const authServicePath: string = path.join(root, 'src', 'app', 'services', 'auth.service.ts');
+        await FsUtilities.createFile(authServicePath, [
+            'import { HttpClient } from \'@angular/common/http\';',
+            'import { Injectable, NgZone } from \'@angular/core\';',
+            'import { MatDialog } from \'@angular/material/dialog\';',
+            'import { MatSnackBar } from \'@angular/material/snack-bar\';',
+            'import { Router } from \'@angular/router\';',
+            'import { BaseAuthData, BaseRole, BaseToken, JwtAuthService } from \'ngx-material-auth\';',
+            'import { environment } from \'../../environment/environment\';',
+            '',
+            '/**',
+            ' * Provides information about a user role.',
+            ' */',
+            'export type Role = BaseRole<Roles>; // TODO: Provide Roles enum',
+            '',
+            '/**',
+            ' * The structure of a jwt.',
+            ' */',
+            'export type Token = BaseToken;',
+            '',
+            '/**',
+            ' * The data that is stored about a user.',
+            ' */',
+            'export type AuthData = BaseAuthData<Token, Roles, Role>;',
+            '',
+            '/**',
+            ' * Handles authentication and authorization of users.',
+            ' */',
+            '@Injectable({ providedIn: \'root\' })',
+            'export class AuthService extends JwtAuthService<AuthData, Roles, Role, Token> {',
+            `    override readonly API_TURN_ON_TWO_FACTOR_URL: string = \`\${environment.${apiBaseUrlVariableName}}/2fa/turn-on\`;`,
+            // eslint-disable-next-line stylistic/max-len
+            `    override readonly API_CONFIRM_TURN_ON_TWO_FACTOR_URL: string = \`\${environment.${apiBaseUrlVariableName}}/2fa/confirm-turn-on\`;`,
+            `    override readonly API_TURN_OFF_TWO_FACTOR_URL: string = \`\${environment.${apiBaseUrlVariableName}}/2fa/turn-off\`;`,
+            `    override readonly API_LOGIN_URL: string = \`\${environment.${apiBaseUrlVariableName}}/login\`;`,
+            `    override readonly API_LOGOUT_URL: string = \`\${environment.${apiBaseUrlVariableName}}/logout\`;`,
+            `    override readonly API_REFRESH_TOKEN_URL: string = \`\${environment.${apiBaseUrlVariableName}}/refresh-token\`;`,
+            // eslint-disable-next-line stylistic/max-len
+            `    override readonly API_REQUEST_RESET_PASSWORD_URL: string = \`\${environment.${apiBaseUrlVariableName}}/request-reset-password\`;`,
+            // eslint-disable-next-line stylistic/max-len
+            `    override readonly API_CONFIRM_RESET_PASSWORD_URL: string = \`\${environment.${apiBaseUrlVariableName}}/confirm-reset-password\`;`,
+            // eslint-disable-next-line stylistic/max-len
+            `    override readonly API_VERIFY_RESET_PASSWORD_TOKEN_URL: string = \`\${environment.${apiBaseUrlVariableName}}/verify-password-reset-token\`;`,
+            // eslint-disable-next-line stylistic/max-len
+            `    override readonly API_REGISTER_BIOMETRIC_CREDENTIAL: string = \`\${environment.${apiBaseUrlVariableName}}/biometric/register\`;`,
+            // eslint-disable-next-line stylistic/max-len
+            `    override readonly API_CONFIRM_REGISTER_BIOMETRIC_CREDENTIAL: string = \`\${environment.${apiBaseUrlVariableName}}/biometric/confirm-register\`;`,
+            // eslint-disable-next-line stylistic/max-len
+            `    override readonly API_GENERATE_BIOMETRIC_AUTHENTICATION_OPTIONS: string = \`\${environment.${apiBaseUrlVariableName}}/biometric/authentication-options\`;`,
+            // eslint-disable-next-line stylistic/max-len
+            `    override readonly API_CANCEL_REGISTER_BIOMETRIC_CREDENTIAL: string = \`\${environment.${apiBaseUrlVariableName}}/biometric/cancel-register\`;`,
+            '',
+            '    constructor(http: HttpClient, snackbar: MatSnackBar, zone: NgZone, router: Router, dialog: MatDialog) {',
+            '        super(http, snackbar, zone, router, dialog);',
+            '    }',
+            '}'
+        ]);
+        await this.addProvider(
+            root,
+            { provide: 'NGX_AUTH_SERVICE', useExisting: 'AuthService' },
+            [
+                { defaultImport: false, element: 'NGX_AUTH_SERVICE', path: NpmPackage.NGX_MATERIAL_AUTH },
+                { defaultImport: false, element: 'AuthService', path: './services/auth.service' }
+            ]
+        );
+        await this.addProvider(
+            root,
+            { provide: 'NGX_JWT_INTERCEPTOR_ALLOWED_DOMAINS', useValue: ['ALLOWED_DOMAINS_PLACEHOLDER'] },
+            [
+                { defaultImport: false, element: 'NGX_JWT_INTERCEPTOR_ALLOWED_DOMAINS', path: NpmPackage.NGX_MATERIAL_AUTH },
+                { defaultImport: false, element: 'environment', path: '../environment/environment' }
+            ]
+        );
+        const appConfigPath: string = path.join(root, 'src', 'app', APP_CONFIG_FILE_NAME);
+        await TsUtilities.addImportStatements(
+            appConfigPath,
+            [
+                { defaultImport: false, element: 'HTTP_INTERCEPTORS', path: '@angular/common/http' },
+                { defaultImport: false, element: 'ErrorHandler', path: '@angular/core' }
+            ]
+        );
+        await this.addProvider(
+            root,
+            // eslint-disable-next-line typescript/no-unsafe-assignment, typescript/no-explicit-any
+            { provide: 'HTTP_INTERCEPTORS', useClass: 'JwtInterceptor' as any, multi: true },
+            [{ defaultImport: false, element: 'JwtInterceptor', path: NpmPackage.NGX_MATERIAL_AUTH }]
+        );
+        await this.addProvider(
+            root,
+            // eslint-disable-next-line typescript/no-unsafe-assignment, typescript/no-explicit-any
+            { provide: 'HTTP_INTERCEPTORS', useClass: 'HttpErrorInterceptor' as any, multi: true },
+            [{ defaultImport: false, element: 'HttpErrorInterceptor', path: NpmPackage.NGX_MATERIAL_AUTH }]
+        );
+
+        await TsUtilities.addImportStatements(
+            path.join(root, 'src', 'app', ANGULAR_ROUTES_FILE_NAME),
+            [
+                { defaultImport: false, element: 'JwtNotLoggedInGuard', path: NpmPackage.NGX_MATERIAL_AUTH },
+                { defaultImport: false, element: 'JwtLoggedInGuard', path: NpmPackage.NGX_MATERIAL_AUTH }
+            ]
+        );
+        await this.generatePage(
+            root,
+            'Login',
+            {
+                addTo: 'array',
+                element: {
+                    path: 'login',
+                    title: `Login ${titleSuffix}`,
+                    // @ts-ignore
+                    // eslint-disable-next-line typescript/no-unsafe-return, typescript/no-unsafe-member-access
+                    loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent),
+                    canActivate: ['JwtNotLoggedInGuard']
+                }
+            },
+            domain
+        );
+        const pagesPath: string = path.join(root, 'src', 'app', 'pages');
+        const loginPageTs: string = path.join(pagesPath, 'login', 'login.component.ts');
+        const loginPageHtml: string = path.join(pagesPath, 'login', 'login.component.html');
+        await this.addComponentImports(
+            loginPageTs,
+            [{ defaultImport: false, element: 'NgxMatAuthLoginComponent', path: NpmPackage.NGX_MATERIAL_AUTH }]
+        );
+        await FsUtilities.updateFile(
+            loginPageHtml,
+            [
+                // eslint-disable-next-line sonar/no-duplicate-string
+                '<div class="flex items-center justify-center h-screen w-screen">',
+                '\t<ngx-mat-auth-login></ngx-mat-auth-login>',
+                '<div>'
+            ],
+            'replace'
+        );
+
+        await this.generatePage(
+            root,
+            'RequestResetPassword',
+            {
+                addTo: 'array',
+                element: {
+                    path: 'request-reset-password',
+                    title: `Reset Password ${titleSuffix}`,
+                    // @ts-ignore
+                    // eslint-disable-next-line stylistic/max-len, typescript/no-unsafe-return, typescript/no-unsafe-member-access
+                    loadComponent: () => import('./pages/request-reset-password/request-reset-password.component').then(m => m.RequestResetPasswordComponent),
+                    canActivate: ['JwtNotLoggedInGuard']
+                }
+            },
+            domain
+        );
+        const requestResetPasswordPageTs: string = path.join(pagesPath, 'request-reset-password', 'request-reset-password.component.ts');
+        // eslint-disable-next-line stylistic/max-len
+        const requestResetPasswordPageHtml: string = path.join(pagesPath, 'request-reset-password', 'request-reset-password.component.html');
+        await this.addComponentImports(
+            requestResetPasswordPageTs,
+            [{ defaultImport: false, element: 'NgxMatAuthRequestResetPasswordComponent', path: NpmPackage.NGX_MATERIAL_AUTH }]
+        );
+        await FsUtilities.updateFile(
+            requestResetPasswordPageHtml,
+            [
+                '<div class="flex items-center justify-center h-screen w-screen">',
+                '\t<ngx-mat-auth-request-reset-password></ngx-mat-auth-request-reset-password>',
+                '<div>'
+            ],
+            'replace'
+        );
+
+        await this.generatePage(
+            root,
+            'ConfirmResetPassword',
+            {
+                addTo: 'array',
+                element: {
+                    path: 'confirm-reset-password/:token',
+                    title: `Confirm Reset Password ${titleSuffix}`,
+                    // @ts-ignore
+                    // eslint-disable-next-line stylistic/max-len, typescript/no-unsafe-return, typescript/no-unsafe-member-access
+                    loadComponent: () => import('./pages/confirm-reset-password/confirm-reset-password.component').then(m => m.ConfirmResetPasswordComponent),
+                    canActivate: ['JwtNotLoggedInGuard']
+                }
+            },
+            domain
+        );
+        const confirmResetPasswordPageTs: string = path.join(pagesPath, 'confirm-reset-password', 'confirm-reset-password.component.ts');
+        // eslint-disable-next-line stylistic/max-len
+        const confirmResetPasswordPageHtml: string = path.join(pagesPath, 'confirm-reset-password', 'confirm-reset-password.component.html');
+        await this.addComponentImports(
+            confirmResetPasswordPageTs,
+            [{ defaultImport: false, element: 'NgxMatAuthConfirmResetPasswordComponent', path: NpmPackage.NGX_MATERIAL_AUTH }]
+        );
+        await FsUtilities.updateFile(
+            confirmResetPasswordPageHtml,
+            [
+                '<div class="flex items-center justify-center h-screen w-screen">',
+                '\t<ngx-mat-auth-confirm-reset-password></ngx-mat-auth-confirm-reset-password>',
+                '<div>'
+            ],
+            'replace'
+        );
+
+        await this.generatePage(
+            root,
+            'Admins',
+            {
+                addTo: 'navbar',
+                rowIndex: 0,
+                element: {
+                    type: NavElementTypes.INTERNAL_LINK,
+                    name: 'Admins',
+                    route: {
+                        path: 'admins',
+                        title: `Admins ${titleSuffix}`,
+                        // @ts-ignore
+                        // eslint-disable-next-line typescript/no-unsafe-return, typescript/no-unsafe-member-access
+                        loadComponent: () => import('./pages/admins/admins.component').then(m => m.AdminsComponent),
+                        canActivate: ['JwtLoggedInGuard']
+                    },
+                    position: 'center',
+                    // @ts-ignore
+                    condition: 'isLoggedIn'
+                }
+            },
+            domain
+        );
+        const adminsPageTs: string = path.join(pagesPath, 'admins', 'admins.component.ts');
+        const adminsPageHtml: string = path.join(pagesPath, 'admins', 'admins.component.html');
+        await FsUtilities.updateFile(
+            adminsPageTs,
+            adminsPageTsContent,
+            'replace'
+        );
+        await FsUtilities.updateFile(
+            adminsPageHtml,
+            [
+                '<div class="container mx-auto p-6">',
+                '\t<ngx-mat-entity-table [tableData]="tableConfig"></ngx-mat-entity-table>',
+                '<div>'
+            ],
+            'replace'
+        );
+        const routesTs: string = path.join(root, 'src', 'app', ANGULAR_ROUTES_FILE_NAME);
+        await TsUtilities.addImportStatements(
+            routesTs,
+            [
+                { defaultImport: false, element: 'AuthService', path: './services/auth.service' },
+                { defaultImport: false, element: 'inject', path: '@angular/core' }
+            ]
+        );
+        await FsUtilities.updateFile(
+            routesTs,
+            [
+                'function isLoggedIn(): boolean {',
+                '    return !!inject(AuthService).authData;',
+                '}'
+            ],
+            'append'
+        );
     }
 
     /**
      * Sets up change sets.
+     * @param root - The root path of the project.
      * @param name - Name of the project.
+     * @param apiName
      */
-    static async setupChangeSets(name: string): Promise<void> {
+    static async setupChangeSets(root: string, name: string, apiName: string): Promise<void> {
         await NpmUtilities.install(name, [NpmPackage.NGX_MATERIAL_CHANGE_SETS]);
-        // TODO
-        // create change-set-service
-        // provide the change set service for NGX_CHANGE_SET_SERVICE
+        await FsUtilities.createFile(
+            path.join(root, 'src', 'app', 'services', 'change-set.service.ts'),
+            changeSetServiceContent
+        );
+        await this.addProvider(
+            root,
+            { provide: 'NGX_CHANGE_SET_SERVICE', useExisting: 'ChangeSetService' },
+            [
+                { defaultImport: false, element: 'ChangeSetService', path: './services/change-set.service' },
+                { defaultImport: false, element: 'NGX_CHANGE_SET_SERVICE', path: NpmPackage.NGX_MATERIAL_CHANGE_SETS }
+            ]
+        );
+        await FsUtilities.createFile(
+            path.join(root, 'src', 'app', 'services', 'entities', 'admin.service.ts'),
+            getAdminServiceContent(apiName)
+        );
+        await FsUtilities.createFile(
+            path.join(root, 'src', 'app', 'models', 'admin.model.ts'),
+            getAdminModelContent(apiName)
+        );
+        await FsUtilities.createFile(
+            path.join(root, 'src', 'app', 'models', 'base-entity.model.ts'),
+            baseEntityModelContent
+        );
+        await FsUtilities.createFile(
+            path.join(root, 'src', 'app', 'components', 'change-sets-input', 'change-sets-input.component.ts'),
+            changeSetsComponentTsContent
+        );
+        await FsUtilities.createFile(
+            path.join(root, 'src', 'app', 'components', 'change-sets-input', 'change-sets-input.component.html'),
+            changeSetsComponentHtmlContent
+        );
+        await NpmUtilities.install(name, [NpmPackage.LODASH]);
+        await NpmUtilities.install(name, [NpmPackage.LODASH_TYPES], true);
+        await FsUtilities.createFile(
+            path.join(root, 'src', 'app', 'utilities', 'lodash.utilities.ts'),
+            lodashUtilitiesContent
+        );
     }
 
     /**
@@ -169,7 +517,13 @@ export abstract class AngularUtilities {
         ]);
     }
 
-    private static async addProvider(
+    /**
+     *
+     * @param root
+     * @param provider
+     * @param imports
+     */
+    static async addProvider(
         root: string,
         provider: Provider | EnvironmentProviders | CustomTsValues,
         imports: TsImportDefinition[]
@@ -187,7 +541,7 @@ export abstract class AngularUtilities {
             contentString,
             stringifiedArray
         );
-        await TsUtilities.addImportStatementsToFile(
+        await TsUtilities.addImportStatements(
             appConfigPath,
             imports
         );
@@ -242,6 +596,9 @@ export abstract class AngularUtilities {
         if (!navElement?.element) {
             return;
         }
+        if (navElement.addTo === 'array') {
+            return navElement.element.path;
+        }
         switch (navElement?.element.type) {
             case NavElementTypes.TITLE_WITH_INTERNAL_LINK: {
                 return typeof navElement.element.link.route === 'string' ? undefined : navElement.element.link.route.path;
@@ -258,11 +615,17 @@ export abstract class AngularUtilities {
     private static async addNavElement(projectPath: string, element: AddNavElementConfig): Promise<void> {
         const routesPath: string = path.join(projectPath, 'src', 'app', ANGULAR_ROUTES_FILE_NAME);
 
-        const startIdentifier: ArrayStartIdentifier = element.addTo === 'navbar' ? ': NavbarRow<NavRoute>[] = [' : ': FooterRow[] = [';
-        const { result, contentString } = await TsUtilities.getArrayStartingWith<NavbarRow | FooterRow>(routesPath, startIdentifier);
+        const startIdentifier: ArrayStartIdentifier = this.getStartIdentifierForAddingNavElement(element);
+        const { result, contentString } = await TsUtilities.getArrayStartingWith<typeof element.element>(routesPath, startIdentifier);
 
-        result[element.rowIndex].elements.push(element.element);
-        const stringifiedArray: string = ` ${JsonUtilities.stringifyAsTs(result)};`;
+        if (element.addTo === 'array') {
+            result.unshift(element.element);
+        }
+        else {
+            (result as NavbarRow<NavRoute>[])[element.rowIndex].elements.push(element.element);
+        }
+
+        const stringifiedArray: string = ` ${JsonUtilities.stringifyAsTs(result)}${element.addTo === 'array' ? ');' : ';'}`;
 
         const startIndex: number = (await FsUtilities.findLineWithContent(routesPath, startIdentifier)).index;
         await FsUtilities.replaceInFile(
@@ -273,15 +636,29 @@ export abstract class AngularUtilities {
         );
     }
 
+    private static getStartIdentifierForAddingNavElement(element: AddNavElementConfig): ArrayStartIdentifier {
+        switch (element.addTo) {
+            case 'navbar': {
+                return ': NavbarRow<NavRoute>[] = [';
+            }
+            case 'footer': {
+                return ': FooterRow[] = [';
+            }
+            case 'array': {
+                return 'NavUtilities.getAngularRoutes(navbarRows, footerRows, [';
+            }
+        }
+    }
+
     /**
      * Adds tracking to the angular project with the given name.
      * @param projectName - The name of the angular project to add tracking to.
      */
-    static async addTracking(projectName: string): Promise<void> {
-        throw new Error('Not implemented'); // TODO
+    static async setupTracking(projectName: string): Promise<void> {
         // eslint-disable-next-line no-console
         console.log('Adds tracking');
         await NpmUtilities.install(projectName, [NpmPackage.NGX_MATERIAL_TRACKING]);
+        // TODO
     }
 
     /**
@@ -344,7 +721,7 @@ export abstract class AngularUtilities {
             ],
             'append'
         );
-        const appComponentTs: string = path.join(root, 'src', 'app', 'app.component.ts');
+        const appComponentTs: string = path.join(root, 'src', 'app', ANGULAR_APP_COMPONENT_FILE_NAME);
         await this.addComponentImports(
             appComponentTs,
             [
@@ -360,7 +737,7 @@ export abstract class AngularUtilities {
                 }
             ]
         );
-        await TsUtilities.addImportStatementsToFile(appComponentTs, [
+        await TsUtilities.addImportStatements(appComponentTs, [
             {
                 element: 'footerRows',
                 path: './routes',
@@ -461,7 +838,7 @@ export abstract class AngularUtilities {
             'prepend'
         );
         await this.addComponentImports(
-            path.join(root, 'src', 'app', 'app.component.ts'),
+            path.join(root, 'src', 'app', ANGULAR_APP_COMPONENT_FILE_NAME),
             [
                 {
                     element: 'NgxPwaOfflineStatusBarComponent',
@@ -470,6 +847,24 @@ export abstract class AngularUtilities {
                 }
             ]
         );
+        await FsUtilities.createFile(
+            path.join(root, 'src', 'app', 'services', 'offline.service.ts'),
+            offlineServiceContent
+        );
+        await this.addProvider(
+            root,
+            { provide: 'NGX_PWA_OFFLINE_SERVICE', useExisting: 'OfflineService' as any },
+            [
+                { defaultImport: false, element: 'NGX_PWA_OFFLINE_SERVICE', path: NpmPackage.NGX_PWA },
+                { defaultImport: false, element: 'OfflineService', path: './services/offline.service' }
+            ]
+        );
+        // TODO: enable
+        // await this.addProvider(
+        //     root,
+        //     { provide: 'HTTP_INTERCEPTORS', useClass: 'OfflineRequestInterceptor' as any, multi: true },
+        //     [{ defaultImport: false, element: 'OfflineRequestInterceptor', path: NpmPackage.NGX_PWA }]
+        // );
     }
 
     /**
@@ -495,7 +890,7 @@ export abstract class AngularUtilities {
     }
 
     private static async addComponentImports(componentPath: string, imports: TsImportDefinition[]): Promise<void> {
-        await TsUtilities.addImportStatementsToFile(componentPath, imports);
+        await TsUtilities.addImportStatements(componentPath, imports);
         let lines: string[] = await FsUtilities.readFileLines(componentPath);
         for (const imp of imports) {
             lines = await this.addComponentImport(lines, imp);
@@ -505,6 +900,11 @@ export abstract class AngularUtilities {
 
     private static async addComponentImport(lines: string[], imp: TsImportDefinition): Promise<string[]> {
         const l: FileLine = await this.getComponentImportLine(lines);
+        if (l.content.includes('imports: []')) {
+            l.content = l.content.replace('imports: []', `imports: [${imp.element}]`);
+            lines[l.index] = l.content;
+            return lines;
+        }
         if (l.content.includes(']')) {
             l.content = l.content.replace(']', `, ${imp.element}]`);
             lines[l.index] = l.content;

@@ -1,7 +1,7 @@
 import { Dirent } from 'fs';
 import path from 'path';
 
-import { CPUtilities, FsUtilities, JsonUtilities } from '../encapsulation';
+import { ChalkUtilities, CPUtilities, FsUtilities, JsonUtilities } from '../encapsulation';
 import { WorkspaceUtilities } from '../workspace';
 import { PackageJson } from './package-json.model';
 import { PACKAGE_JSON_FILE_NAME } from '../constants';
@@ -67,6 +67,7 @@ export abstract class NpmUtilities {
     static async run(projectName: string, npmScript: NpmScript): Promise<void> {
         const project: Dirent = await WorkspaceUtilities.findProjectOrFail(projectName);
         const projectPath: string = path.join(project.parentPath, project.name);
+        console.debug(ChalkUtilities.secondary('Calls'), `cd ${projectPath} && npm run ${npmScript}`);
         CPUtilities.execSync(`cd ${projectPath} && npm run ${npmScript}`);
     }
 

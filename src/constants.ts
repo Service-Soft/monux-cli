@@ -1,3 +1,4 @@
+import { Command } from './commands/command.enum';
 import { ChalkUtilities } from './encapsulation';
 
 /**
@@ -86,6 +87,11 @@ export const ANGULAR_JSON_FILE_NAME: string = 'angular.json';
 export const ANGULAR_ROUTES_FILE_NAME: string = 'routes.ts';
 
 /**
+ * The name of the angular app component file.
+ */
+export const ANGULAR_APP_COMPONENT_FILE_NAME: string = 'app.component.ts';
+
+/**
  * Name of the .gitignore file.
  */
 export const GIT_IGNORE_FILE_NAME: string = '.gitignore';
@@ -127,7 +133,7 @@ export const APP_CONFIG_FILE_NAME: string = 'app.config.ts';
  * The message to notify the user of the help command.
  */
 export const MORE_INFORMATION_MESSAGE: string = `run ${ChalkUtilities.secondary(
-    `${CLI_BASE_COMMAND} help` // TODO: Why is Command?.HELP undefined here?
+    `${CLI_BASE_COMMAND} ${Command.HELP}`
 )} for more information.`;
 
 /**

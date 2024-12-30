@@ -62,7 +62,7 @@ export abstract class FsUtilities {
         while (!line.content.includes(content)) {
             const i: number = line.index + 1;
             if (i > untilIndex) {
-                throw new Error(`Could not find line with content ${content} in the lines ${fromIndex}-${untilIndex}`);
+                throw new Error(`Could not find line with content "${content}" in the lines ${fromIndex}-${untilIndex}`);
             }
             line = { index: i, content: lines[i] };
         }

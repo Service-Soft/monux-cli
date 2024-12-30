@@ -69,6 +69,7 @@ export abstract class DbUtilities {
             },
             undefined,
             undefined,
+            undefined,
             DEV_DOCKER_COMPOSE_FILE_NAME
         );
         await DockerUtilities.addVolumeToCompose(`${toKebabCase(name)}-data`, undefined, DEV_DOCKER_COMPOSE_FILE_NAME);

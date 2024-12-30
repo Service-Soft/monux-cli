@@ -8,16 +8,16 @@ import { InquirerUtilities, QuestionsFor } from '../../encapsulation';
 import { WorkspaceUtilities } from '../../workspace';
 
 const addConfigQuestions: QuestionsFor<AddConfiguration> = {
+    type: {
+        type: 'select',
+        choices: Object.values(AddType),
+        message: 'type'
+    },
     name: {
         type: 'input',
         message: 'name',
         required: true,
         validate: async (input: string) => await WorkspaceUtilities.findProject(input) == undefined
-    },
-    type: {
-        type: 'select',
-        choices: Object.values(AddType),
-        message: 'type'
     }
 };
 

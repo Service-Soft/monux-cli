@@ -46,20 +46,46 @@ export abstract class EnvUtilities {
      */
     static async buildEnvironmentFiles(rootPath: string = ''): Promise<void> {
         const apps: Dirent[] = await WorkspaceUtilities.getProjects('apps');
-        await Promise.all(apps.map(a => this.buildEnvironmentFileForApp(a, rootPath)));
+        await Promise.all(apps.map(a => this.buildEnvironmentFileForApp(a, rootPath, true)));
     }
 
     /**
      * Builds an environment file for the provided app.
      * @param app - The app to build the environment file for.
      * @param rootPath - The root path of the monorepo.
+     * @param failOnMissingVariable
      */
-    static async buildEnvironmentFileForApp(app: Dirent, rootPath: string): Promise<void> {
+    static async buildEnvironmentFileForApp(app: Dirent, rootPath: string, failOnMissingVariable: boolean): Promise<void> {
         const environmentFolder: string = path.join(app.parentPath, app.name, 'src', 'environment');
         const variableKeys: string[] = await this.getProjectVariableKeys(path.join(environmentFolder, ENVIRONMENT_MODEL_TS_FILE_NAME));
 
         await FsUtilities.rm(path.join(environmentFolder, ENVIRONMENT_TS_FILE_NAME));
-        await this.createProjectEnvironmentFile(path.join(app.parentPath, app.name), variableKeys, rootPath);
+        await this.createProjectEnvironmentFile(path.join(app.parentPath, app.name), variableKeys, rootPath, failOnMissingVariable);
+    }
+
+    /**
+     *
+     * @param environmentModelPath
+     * @param name
+     * @param variable
+     * @param failOnMissingVariable
+     */
+    static async addProjectVariableKey(
+        name: string,
+        environmentModelPath: string,
+        variable: string,
+        failOnMissingVariable: boolean
+    ): Promise<void> {
+        const lines: string[] = await FsUtilities.readFileLines(environmentModelPath);
+        const firstLine: FileLine = await FsUtilities.findLineWithContent(lines, 'defineVariables(');
+
+        const oldValue: string = firstLine.content.includes('defineVariables([]') ? 'defineVariables([]' : 'defineVariables([';
+        // eslint-disable-next-line stylistic/max-len
+        const newValue: string = firstLine.content.includes('defineVariables([]') ? `defineVariables(['${variable}']` : `defineVariables(['${variable}', `;
+        await FsUtilities.replaceInFile(environmentModelPath, oldValue, newValue);
+
+        const app: Dirent = await WorkspaceUtilities.findProjectOrFail(name);
+        await this.buildEnvironmentFileForApp(app, '', failOnMissingVariable);
     }
 
     private static async getProjectVariableKeys(environmentModelPath: string): Promise<string[]> {
@@ -101,11 +127,16 @@ export abstract class EnvUtilities {
                 '}'
             ]
         );
-        await this.createProjectEnvironmentFile(projectPath, [], rootPath);
+        await this.createProjectEnvironmentFile(projectPath, [], rootPath, true);
     }
 
-    private static async createProjectEnvironmentFile(projectPath: string, variableKeys: string[], rootPath: string): Promise<void> {
-        const variables: EnvVariable[] = await this.getEnvVariables(variableKeys, rootPath);
+    private static async createProjectEnvironmentFile(
+        projectPath: string,
+        variableKeys: string[],
+        rootPath: string,
+        failOnMissingVariable: boolean
+    ): Promise<void> {
+        const variables: EnvVariable[] = await this.getEnvVariables(variableKeys, rootPath, failOnMissingVariable);
         await FsUtilities.createFile(
             path.join(projectPath, 'src', 'environment', ENVIRONMENT_TS_FILE_NAME),
             [
@@ -123,7 +154,8 @@ export abstract class EnvUtilities {
 
     private static async getEnvVariables(
         variableKeys: string[] | undefined,
-        rootPath: string
+        rootPath: string,
+        failOnMissingVariable: boolean
     ): Promise<EnvVariable[]> {
         const lines: string[] = await FsUtilities.readFileLines(path.join(rootPath, ENV_FILE_NAME));
         const variableDefinitions: OmitStrict<EnvVariable, 'value'>[] = await this.getVariableDefinitions(
@@ -140,7 +172,7 @@ export abstract class EnvUtilities {
             if (def == undefined) {
                 throw new Error(`Could not find definition for variable "${key}"`);
             }
-            if (!def.required && (!v || v == 'undefined')) {
+            if (!def.required && (!v || v === 'undefined')) {
                 res.push({ key, value: undefined, type: def.type, required: def.required });
                 continue;
             }
@@ -156,7 +188,7 @@ export abstract class EnvUtilities {
         }
         const foundVariableKeys: string[] = res.map(v => v.key);
         const missingVariable: string | undefined = variableKeys?.find(k => !foundVariableKeys.includes(k));
-        if (missingVariable) {
+        if (missingVariable && failOnMissingVariable) {
             throw new Error(`Could not find variable ${missingVariable}`);
         }
         return res;
@@ -172,7 +204,7 @@ export abstract class EnvUtilities {
         variable: GlobalEnvironmentVariable | Omit<string, GlobalEnvironmentVariable >,
         rootPath: string
     ): Promise<T> {
-        return (await this.getEnvVariables([variable as string], rootPath))[0].value as T;
+        return (await this.getEnvVariables([variable as string], rootPath, false))[0].value as T;
     }
 
     /**
@@ -207,7 +239,7 @@ export abstract class EnvUtilities {
             ];
         }
 
-        const envValues: EnvVariable[] = await this.getEnvVariables(undefined, rootPath);
+        const envValues: EnvVariable[] = await this.getEnvVariables(undefined, rootPath, true);
 
         const variableDefinitions: OmitStrict<EnvVariable, 'value'>[] = await this.getVariableDefinitions(
             path.join(rootPath, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME)

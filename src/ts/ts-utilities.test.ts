@@ -13,7 +13,7 @@ describe('TsUtilities', () => {
     });
 
     test('addImportStatementsToFile', async () => {
-        await TsUtilities.addImportStatementsToFile(mockConstants.ANGULAR_COMPONENT_TS, [
+        await TsUtilities.addImportStatements(mockConstants.ANGULAR_COMPONENT_TS, [
             {
                 defaultImport: true,
                 element: 'path',
@@ -30,14 +30,14 @@ describe('TsUtilities', () => {
     });
 
     test('add import to existing import statement', async () => {
-        await TsUtilities.addImportStatementsToFile(mockConstants.ANGULAR_COMPONENT_TS, [
+        await TsUtilities.addImportStatements(mockConstants.ANGULAR_COMPONENT_TS, [
             {
                 defaultImport: false,
                 element: 'join',
                 path: 'path'
             }
         ]);
-        await TsUtilities.addImportStatementsToFile(mockConstants.ANGULAR_COMPONENT_TS, [
+        await TsUtilities.addImportStatements(mockConstants.ANGULAR_COMPONENT_TS, [
             {
                 defaultImport: true,
                 element: 'path',

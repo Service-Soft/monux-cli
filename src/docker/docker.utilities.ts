@@ -138,6 +138,7 @@ export abstract class DockerUtilities {
      * Adds the given compose service to the docker-compose.yaml.
      * @param service - The definition of the service to add.
      * @param domain - The domain of the service. Optional.
+     * @param baseUrl
      * @param rootPath - The path of the project root.
      * Defaults to "" (which creates the file in the current directory).
      * @param composeFileName - The name of the compose file.
@@ -146,6 +147,7 @@ export abstract class DockerUtilities {
     static async addServiceToCompose(
         service: ComposeService,
         domain?: string,
+        baseUrl?: string,
         rootPath: string = '',
         composeFileName: string = DOCKER_COMPOSE_FILE_NAME
     ): Promise<void> {
@@ -156,6 +158,10 @@ export abstract class DockerUtilities {
         if (domain) {
             await EnvUtilities.addVariable(
                 { key: `${toSnakeCase(service.name)}_domain`, value: domain, required: true, type: 'string' },
+                rootPath
+            );
+            await EnvUtilities.addVariable(
+                { key: `${toSnakeCase(service.name)}_base_url`, value: baseUrl, required: true, type: 'string' },
                 rootPath
             );
         }

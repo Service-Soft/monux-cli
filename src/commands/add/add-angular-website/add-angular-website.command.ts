@@ -10,6 +10,7 @@ import { EslintUtilities } from '../../../eslint';
 import { TailwindUtilities } from '../../../tailwind';
 import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
+import { toPascalCase } from '../../../utilities';
 import { WorkspaceUtilities } from '../../../workspace';
 import { AddCommand } from '../models';
 import { AddConfiguration } from '../models/add-configuration.model';
@@ -27,6 +28,10 @@ type AddAngularWebsiteConfiguration = AddConfiguration & {
      * The domain that the website should be reached under.
      */
     domain: string,
+    /**
+     *
+     */
+    baseUrl: string,
     /**
      * Suffix for the html title (eg. "| My Company").
      */
@@ -51,14 +56,20 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
         },
         domain: {
             type: 'input',
-            message: 'domain (eg. "localhost" or "test.com")',
+            message: 'domain (eg. "localhost:4200" or "test.com")',
             required: true,
-            default: 'localhost'
+            default: 'localhost:4200'
+        },
+        baseUrl: {
+            type: 'input',
+            message: 'base url',
+            default: 'http://localhost:4200',
+            required: true
         },
         titleSuffix: {
             type: 'input',
             message: 'title suffix (eg. "| My Company")',
-            default: `| ${this.baseConfig.name}`,
+            default: `| ${toPascalCase(this.baseConfig.name)}`,
             required: true
         },
         addTracking: {
@@ -92,7 +103,8 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
                     volumes: [{ path: `/${config.name}` }],
                     labels: DockerUtilities.getTraefikLabels(config.name, 4000)
                 },
-                config.domain
+                config.domain,
+                config.baseUrl
             ),
             AngularUtilities.updateAngularJson(
                 path.join(root, ANGULAR_JSON_FILE_NAME),
@@ -101,6 +113,15 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
             AngularUtilities.setupMaterial(root),
             EnvUtilities.setupProjectEnvironment(root, false)
         ]);
+        await this.createDefaultPages(root, config);
+        if (config.addTracking) {
+            await AngularUtilities.setupTracking(config.name);
+        }
+        const app: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
+        await EnvUtilities.buildEnvironmentFileForApp(app, '', true);
+    }
+
+    private async createDefaultPages(root: string, config: AddAngularWebsiteConfiguration): Promise<void> {
         await AngularUtilities.generatePage(root, 'Home', {
             addTo: 'navbar',
             rowIndex: 0,
@@ -148,9 +169,6 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
                 }
             }
         }, config.domain);
-        if (config.addTracking) {
-            await AngularUtilities.addTracking(config.name);
-        }
     }
 
     private async setupTailwind(root: string): Promise<void> {
@@ -159,7 +177,7 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
             '@tailwind base;',
             '@tailwind components;',
             '@tailwind utilities;'
-        ], 'prepend');
+        ], 'append');
     }
 
     private async createDockerfile(root: string, config: AddAngularWebsiteConfiguration): Promise<void> {
@@ -227,7 +245,11 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
         const newProject: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
         const root: string = path.join(newProject.parentPath, newProject.name);
         await FsUtilities.updateFile(path.join(root, 'src', 'app', 'app.component.html'), '', 'replace');
-        await FsUtilities.updateFile(path.join(root, 'src', 'app', 'app.component.html'), '', 'replace');
+        await AngularUtilities.addProvider(root, 'provideHttpClient(withInterceptorsFromDi(), withFetch())', [
+            { defaultImport: false, element: 'provideHttpClient', path: '@angular/common/http' },
+            { defaultImport: false, element: 'withInterceptorsFromDi', path: '@angular/common/http' },
+            { defaultImport: false, element: 'withFetch', path: '@angular/common/http' }
+        ]);
         return root;
     }
 }

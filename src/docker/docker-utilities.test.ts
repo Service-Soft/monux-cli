@@ -44,7 +44,7 @@ describe('DockerUtilities', () => {
 
     test('createDockerCompose', async () => {
         const def: ComposeService = fakeComposeService();
-        await DockerUtilities.addServiceToCompose(def, 'test.de', mockConstants.PROJECT_DIR);
+        await DockerUtilities.addServiceToCompose(def, 'test.de', 'https://www.test.de', mockConstants.PROJECT_DIR);
         const fileContent: ComposeDefinition = await DockerUtilities['yamlToComposeDefinition'](mockConstants.DOCKER_COMPOSE_YAML);
 
         const service: ComposeService = fileContent.services[1];

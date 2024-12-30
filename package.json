@@ -15,7 +15,7 @@
     "scripts": {
         "start": "npm run build && cd sandbox && node ../dist/index.js",
         "build": "tsc",
-        "clear": "rm -rf sandbox && mkdir sandbox",
+        "clear": "rm -rf sandbox && mkdir sandbox && npm run start i",
         "test": "jest",
         "lint": "eslint . --max-warnings=0"
     },

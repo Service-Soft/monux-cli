@@ -45,7 +45,7 @@ export abstract class JsonUtilities {
             // eslint-disable-next-line unicorn/no-null
             return null as T;
         }
-        if (strippedValue === 'undefined') {
+        if (strippedValue === 'undefined' || strippedValue === '') {
             return undefined as T;
         }
 
