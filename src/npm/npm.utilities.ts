@@ -1,7 +1,7 @@
 import { Dirent } from 'fs';
 import path from 'path';
 
-import { ChalkUtilities, CPUtilities, FsUtilities, JsonUtilities } from '../encapsulation';
+import { CPUtilities, FsUtilities, JsonUtilities } from '../encapsulation';
 import { WorkspaceUtilities } from '../workspace';
 import { PackageJson } from './package-json.model';
 import { PACKAGE_JSON_FILE_NAME } from '../constants';
@@ -67,7 +67,6 @@ export abstract class NpmUtilities {
     static async run(projectName: string, npmScript: NpmScript): Promise<void> {
         const project: Dirent = await WorkspaceUtilities.findProjectOrFail(projectName);
         const projectPath: string = path.join(project.parentPath, project.name);
-        console.debug(ChalkUtilities.secondary('Calls'), `cd ${projectPath} && npm run ${npmScript}`);
         CPUtilities.execSync(`cd ${projectPath} && npm run ${npmScript}`);
     }
 
@@ -103,7 +102,7 @@ export abstract class NpmUtilities {
     static async updatePackageJson(projectName: string, data: Partial<PackageJson>): Promise<void> {
         const project: Dirent = await WorkspaceUtilities.findProjectOrFail(projectName);
         const packageJsonPath: string = path.join(project.parentPath, project.name, PACKAGE_JSON_FILE_NAME);
-        await this.update(packageJsonPath, data);
+        await this.updatePackageJsonFile(packageJsonPath, data);
     }
 
     /**
@@ -111,10 +110,15 @@ export abstract class NpmUtilities {
      * @param data - The data to update the package.json with.
      */
     static async updateRootPackageJson(data: Partial<PackageJson>): Promise<void> {
-        await this.update(PACKAGE_JSON_FILE_NAME, data);
+        await this.updatePackageJsonFile(PACKAGE_JSON_FILE_NAME, data);
     }
 
-    private static async update(path: string, data: Partial<PackageJson>): Promise<void> {
+    /**
+     * Updates the package.json at the given path.
+     * @param path - The path of the package.json to update.
+     * @param data - The data to update the package.json with.
+     */
+    static async updatePackageJsonFile(path: string, data: Partial<PackageJson>): Promise<void> {
         const oldPackageJson: PackageJson = await FsUtilities.parseFileAs(path);
         const packageJson: PackageJson = mergeDeep(oldPackageJson, data);
         await FsUtilities.updateFile(path, JsonUtilities.stringify(packageJson), 'replace', false);

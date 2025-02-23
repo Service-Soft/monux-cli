@@ -3,7 +3,8 @@ import { AddAngularLibraryCommand } from './add-angular-library';
 import { AddAngularWebsiteCommand } from './add-angular-website';
 import { AddLoopbackCommand } from './add-loopback';
 import { AddTsLibraryCommand } from './add-ts-library';
-import { AddConfiguration, AddType } from './models/add-configuration.model';
+import { AddWordpressCommand } from './add-wordpress';
+import { AddConfiguration, AddType } from './models';
 import { InquirerUtilities, QuestionsFor } from '../../encapsulation';
 import { WorkspaceUtilities } from '../../workspace';
 
@@ -46,6 +47,10 @@ export async function runAdd(): Promise<void> {
         }
         case AddType.TS_LIBRARY: {
             await new AddTsLibraryCommand(config).run();
+            return;
+        }
+        case AddType.WORDPRESS: {
+            await new AddWordpressCommand(config).run();
             return;
         }
     }

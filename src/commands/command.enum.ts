@@ -18,6 +18,8 @@ export enum Command {
     UD = 'ud',
     DOWN = 'down',
     D = 'd',
+    DOWN_DEV = 'down-dev',
+    DD = 'dd',
     GENERATE_PAGE = 'generatePage',
     GP = 'gp'
 }

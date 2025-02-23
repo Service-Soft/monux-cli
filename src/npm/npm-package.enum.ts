@@ -25,5 +25,6 @@ export enum NpmPackage {
     LOOPBACK_CONNECTOR_POSTGRES = 'loopback-connector-postgresql',
     NODEMAILER_TYPES = '@types/nodemailer',
     LODASH = 'lodash',
-    LODASH_TYPES = '@types/lodash'
+    LODASH_TYPES = '@types/lodash',
+    TSC_WATCH = 'tsc-watch'
 }

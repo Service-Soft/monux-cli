@@ -40,12 +40,9 @@ export class AddTsLibraryCommand extends AddCommand<TsLibraryConfiguration> {
     override async run(): Promise<void> {
         const config: TsLibraryConfiguration = await this.getConfig();
         const root: string = await this.createProject(config);
-        // await FsUtilities.mkdir(path.join(root, 'src'));
-        // await FsUtilities.createFile(path.join(root, 'src', 'index.ts'), '');
 
         await Promise.all([
             EslintUtilities.setupProjectEslint(root, false, true, TS_CONFIG_FILE_NAME),
-            // this.setupTsConfig(config.name),
             this.updateBaseTsConfig(config, root),
             FsUtilities.rm(path.join(root, GIT_IGNORE_FILE_NAME)),
             FsUtilities.rm(path.join(root, 'index.html')),

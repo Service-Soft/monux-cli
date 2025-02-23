@@ -38,6 +38,20 @@ type CliModel = `model ${string}`;
 type CliRepository = `repository ${string}`;
 
 /**
+ * The base configuration shared by all commands.
+ */
+type BaseConfig = {
+    /**
+     * Whether or not to skip the npm install step.
+     */
+    '--skip-install'?: boolean,
+    /**
+     * Whether or not to select all default values for which no configuration has been provided.
+     */
+    '--yes'?: boolean
+};
+
+/**
  * Configuration options for generating a new loopback application.
  */
 type NewConfig = {
@@ -82,21 +96,13 @@ type NewOptions = {
     /**
      * A configuration object.
      */
-    '--config'?: NewConfig,
-    /**
-     * Whether or not to skip the npm install step.
-     */
-    '--skip-install'?: boolean,
-    /**
-     * Whether or not to select all default values for which no configuration has been provided.
-     */
-    '--yes'?: boolean
+    '--config'?: NewConfig
 };
 
 /**
  * Options for the generate datasource command of the loopback cli.
  */
-type GenerateDbOptions = {
+type GenerateDbOptions = BaseConfig & {
     /**
      * A configuration object.
      */
@@ -104,55 +110,30 @@ type GenerateDbOptions = {
 };
 
 /**
- *
+ * Options for generating a service via the loopback cli.
  */
-type ServiceOptions = {
+type ServiceOptions = BaseConfig & {
     /**
-     *
+     * The type of the service to generate.
      */
-    '--type'?: 'proxy' | 'class' | 'provider',
-    /**
-     * Whether or not to skip the npm install step.
-     */
-    '--skip-install'?: boolean,
-    /**
-     * Whether or not to select all default values for which no configuration has been provided.
-     */
-    '--yes'?: boolean
+    '--type'?: 'proxy' | 'class' | 'provider'
 };
 
 /**
- *
+ * Options for generating a model via the loopback cli.
  */
-type ModelOptions = {
-    /**
-     * Whether or not to skip the npm install step.
-     */
-    '--skip-install'?: boolean,
-    /**
-     * Whether or not to select all default values for which no configuration has been provided.
-     */
-    '--yes'?: boolean
-};
+type ModelOptions = BaseConfig;
 
 /**
- *
+ * Options for generating a repository via the loopback cli.
  */
-type RepositoryOptions = {
+type RepositoryOptions = BaseConfig & {
     /**
-     * Whether or not to skip the npm install step.
-     */
-    '--skip-install'?: boolean,
-    /**
-     * Whether or not to select all default values for which no configuration has been provided.
-     */
-    '--yes'?: boolean,
-    /**
-     *
+     * The name of the model to generate the repository for.
      */
     '--model': string,
     /**
-     *
+     * The name of the datasource that the repository should access.
      */
     '--datasource': string
 };
@@ -201,10 +182,10 @@ export abstract class LoopbackUtilities {
     }
 
     /**
-     *
-     * @param root
-     * @param config
-     * @param dbName
+     * Sets up authentication and authorization.
+     * @param root - The root of the loopback app.
+     * @param config - The configuration options.
+     * @param dbName - The name of the database used by the api.
      */
     static async setupAuth(root: string, config: AddLoopbackConfiguration, dbName: string): Promise<void> {
         await NpmUtilities.install(config.name, [
@@ -227,7 +208,7 @@ export abstract class LoopbackUtilities {
     }
 
     private static async createBiometricCredentialsService(root: string, config: AddLoopbackConfiguration): Promise<void> {
-        await this.runCommand(root, 'service biometric-credentials', { '--skip-install': true, '--type': 'class', '--yes': true });
+        await this.runCommand(root, 'service BiometricCredentials', { '--skip-install': true, '--type': 'class', '--yes': true });
         const servicePath: string = path.join(root, 'src', 'services', 'biometric-credentials.service.ts');
         await TsUtilities.addImportStatements(
             servicePath,
@@ -266,6 +247,7 @@ export abstract class LoopbackUtilities {
         ]);
         await TsUtilities.addImportStatements(adminModelTs, [
             { defaultImport: false, element: 'ChangeSetEntity', path: NpmPackage.LBX_CHANGE_SETS },
+            // eslint-disable-next-line sonar/no-duplicate-string
             { defaultImport: false, element: 'belongsTo', path: '@loopback/repository' },
             { defaultImport: false, element: 'BaseUser', path: NpmPackage.LBX_JWT }
         ]);
@@ -412,6 +394,7 @@ export abstract class LoopbackUtilities {
         await EnvUtilities.addProjectVariableKey(config.name, environmentModel, `${toSnakeCase(config.frontendName)}_base_url`, false);
         await EnvUtilities.addProjectVariableKey(config.name, environmentModel, `${toSnakeCase(config.name)}_base_url`, false);
         await EnvUtilities.addProjectVariableKey(config.name, environmentModel, TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE, false);
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, `${toSnakeCase(config.frontendName)}_domain`, false);
     }
 
     private static async applyAuthToIndexTs(
@@ -451,6 +434,7 @@ export abstract class LoopbackUtilities {
     }
 
     private static async applyAuthToApplicationTs(root: string): Promise<void> {
+        // eslint-disable-next-line sonar/no-duplicate-string
         const applicationTs: string = path.join(root, 'src', 'application.ts');
         await TsUtilities.addImportStatements(
             applicationTs,
@@ -510,9 +494,9 @@ export abstract class LoopbackUtilities {
     }
 
     /**
-     *
-     * @param root
-     * @param name
+     * Sets up logging.
+     * @param root - The root folder of the loopback app.
+     * @param name - The name of the loopback app.
      */
     static async setupLogging(root: string, name: string): Promise<void> {
         await NpmUtilities.install(name, [NpmPackage.LBX_PERSISTENCE_LOGGER, NpmPackage.LOOPBACK_CRON]);
@@ -580,9 +564,9 @@ export abstract class LoopbackUtilities {
     }
 
     /**
-     *
-     * @param root
-     * @param name
+     * Sets up change sets.
+     * @param root - THe root of the loopback app.
+     * @param name - The name of the loopback app.
      */
     static async setupChangeSets(root: string, name: string): Promise<void> {
         await NpmUtilities.install(name, [NpmPackage.LBX_CHANGE_SETS]);

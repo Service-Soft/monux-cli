@@ -10,7 +10,7 @@ const mockConstants: MockConstants = getMockConstants('env-utilities');
 
 describe('EnvUtilities', () => {
     beforeEach(async () => {
-        await FileMockUtilities.clearTemp(mockConstants);
+        await FileMockUtilities.setup(mockConstants);
         await EnvUtilities.init(mockConstants.PROJECT_DIR);
     });
 

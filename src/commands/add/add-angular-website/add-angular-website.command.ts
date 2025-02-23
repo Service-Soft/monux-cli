@@ -7,6 +7,7 @@ import { DockerUtilities } from '../../../docker';
 import { FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
 import { EnvUtilities } from '../../../env';
 import { EslintUtilities } from '../../../eslint';
+import { NpmUtilities } from '../../../npm';
 import { TailwindUtilities } from '../../../tailwind';
 import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
@@ -29,7 +30,7 @@ type AddAngularWebsiteConfiguration = AddConfiguration & {
      */
     domain: string,
     /**
-     *
+     * The base url that the website should be reached under.
      */
     baseUrl: string,
     /**
@@ -117,6 +118,7 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
         if (config.addTracking) {
             await AngularUtilities.setupTracking(config.name);
         }
+        await NpmUtilities.updatePackageJson(config.name, { scripts: { start: `ng serve --port ${config.port}` } });
         const app: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
         await EnvUtilities.buildEnvironmentFileForApp(app, '', true);
     }
@@ -246,6 +248,7 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
         const root: string = path.join(newProject.parentPath, newProject.name);
         await FsUtilities.updateFile(path.join(root, 'src', 'app', 'app.component.html'), '', 'replace');
         await AngularUtilities.addProvider(root, 'provideHttpClient(withInterceptorsFromDi(), withFetch())', [
+            // eslint-disable-next-line sonar/no-duplicate-string
             { defaultImport: false, element: 'provideHttpClient', path: '@angular/common/http' },
             { defaultImport: false, element: 'withInterceptorsFromDi', path: '@angular/common/http' },
             { defaultImport: false, element: 'withFetch', path: '@angular/common/http' }

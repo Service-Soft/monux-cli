@@ -17,7 +17,8 @@
         "build": "tsc",
         "clear": "rm -rf sandbox && mkdir sandbox && npm run start i",
         "test": "jest",
-        "lint": "eslint . --max-warnings=0"
+        "lint": "eslint . --max-warnings=0",
+        "lint:fix": "eslint . --max-warnings=0 --fix"
     },
     "dependencies": {
         "chalk": "^4.1.2",

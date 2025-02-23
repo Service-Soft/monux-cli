@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { Command, runAdd, runDown, runGeneratePage, runHelp, runInit, runPrepare, runRun, runUp, runUpDev, runVersion } from './commands';
+import { Command, runAdd, runDown, runDownDev, runGeneratePage, runHelp, runInit, runPrepare, runRun, runUp, runUpDev, runVersion } from './commands';
 import { validateInput } from './commands/validate-input.function';
 import { DeathUtilities, FigletUtilities } from './encapsulation';
 
@@ -12,11 +12,6 @@ async function main(): Promise<void> {
     FigletUtilities.displayLogo();
 
     await validateInput(args);
-
-    if (args.length >= 2) {
-        await runRun(...args);
-        return;
-    }
 
     const command: Command = args[0] as Command;
 
@@ -65,6 +60,14 @@ async function main(): Promise<void> {
         case Command.UD: {
             await runUpDev();
             return;
+        }
+        case Command.DOWN_DEV:
+        case Command.DD: {
+            runDownDev();
+            return;
+        }
+        default: {
+            await runRun(...args);
         }
     }
 }

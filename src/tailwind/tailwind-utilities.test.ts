@@ -11,7 +11,7 @@ const mockConstants: MockConstants = getMockConstants('tailwind-utilities');
 
 describe('TailwindUtilities', () => {
     beforeEach(async () => {
-        await FileMockUtilities.clearTemp(mockConstants);
+        await FileMockUtilities.setup(mockConstants);
     });
 
     test('setupProjectTailwind', async () => {

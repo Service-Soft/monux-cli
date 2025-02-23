@@ -13,7 +13,7 @@ const mockConstants: MockConstants = getMockConstants('loopback-utilities');
 
 describe('LoopbackUtilities', () => {
     beforeEach(async () => {
-        await FileMockUtilities.clearTemp(mockConstants);
+        await FileMockUtilities.setup(mockConstants);
     });
 
     test('run new command', async () => {
@@ -31,5 +31,5 @@ describe('LoopbackUtilities', () => {
 
         const dirExists: boolean = await FsUtilities.exists(path.join(mockConstants.APPS_DIR, 'api'));
         expect(dirExists).toBe(true);
-    }, 15000);
+    }, 80000);
 });

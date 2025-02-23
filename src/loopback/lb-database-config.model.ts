@@ -7,11 +7,7 @@ interface BaseLbDbConfig {
      */
     readonly name: string,
     /**
-     * The connector of the datasource, always 'postgresql'.
-     */
-    readonly connector: 'postgresql' | 'mysql',
-    /**
-     * The url of the connection (eg: mysql://user:pass@host/db).
+     * The url of the connection.
      */
     readonly url: string,
     /**
@@ -47,16 +43,6 @@ interface LbPostgresDbConfig extends BaseLbDbConfig {
 }
 
 /**
- * Configuration options for a mysql database connection.
- */
-interface LbMySqlDbConfig extends BaseLbDbConfig {
-    /**
-     * The connector of the datasource, always 'mysql'.
-     */
-    readonly connector: 'mysql'
-}
-
-/**
  * Configuration for a loopback database.
  */
-export type LbDatabaseConfig = LbPostgresDbConfig | LbMySqlDbConfig;
+export type LbDatabaseConfig = LbPostgresDbConfig;

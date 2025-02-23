@@ -1,11 +1,89 @@
 /* eslint-disable jsdoc/require-jsdoc */
-import { MockConstants } from './constants';
+import { MockConstants, FileMockConstants, DirMockConstants } from './constants';
 import { AngularJson } from '../../angular';
 import { CPUtilities, FsUtilities, JsonUtilities } from '../../encapsulation';
 
 export abstract class FileMockUtilities {
 
-    static async createAngularJson(mockConstants: MockConstants): Promise<void> {
+    private static readonly mockMethodForFile: Record<
+        keyof FileMockConstants,
+        (mockConstants: MockConstants, entry: keyof MockConstants) => (void | Promise<void>)
+    > = {
+            DOCKER_COMPOSE_YAML: this.createEmptyFile,
+            DEV_DOCKER_COMPOSE_YAML: this.createEmptyFile,
+            ANGULAR_ESLINT_CONFIG_JS: this.createEmptyFile,
+            ANGULAR_PACKAGE_JSON: this.createAngularPackageJson,
+            ANGULAR_APP_COMPONENT_TS: this.createAppComponentTsFile,
+            ANGULAR_APP_COMPONENT_HTML: this.createEmptyFile,
+            ANGULAR_APP_ROUTES_TS: this.createAppRoutesTs,
+            ANGULAR_ROUTES_TS: this.createEmptyFile,
+            ANGULAR_APP_CONFIG_TS: this.createAppConfig,
+            ANGULAR_JSON: this.createAngularJson,
+            ANGULAR_ENVIRONMENT_MODEL: this.createEmptyFile,
+            ANGULAR_ENVIRONMENT: this.createEmptyFile,
+            TS_LIBRARY_PACKAGE_JSON: this.createEmptyFile,
+            ROOT_PACKAGE_JSON: this.createRootPackageJson,
+            ENV: this.createEmptyFile,
+            GLOBAL_ENV_MODEL: this.createGlobalEnvModel
+        };
+
+    static async setup(
+        mockConstants: MockConstants,
+        filesToMock: (keyof FileMockConstants)[] = [],
+        contentOverrides: Partial<Record<keyof FileMockConstants, string | string[]>> = {}
+    ): Promise<void> {
+        await FsUtilities.rm(mockConstants.PROJECT_DIR);
+        await this.mockFolders(mockConstants);
+        await this.mockFiles(filesToMock, contentOverrides, mockConstants);
+        CPUtilities['cwd'] = mockConstants.PROJECT_DIR;
+    }
+
+    private static async mockFolders(mockConstants: MockConstants): Promise<void> {
+        const dirMockConstants: DirMockConstants = {
+            ANGULAR_APP_DIR: mockConstants.ANGULAR_APP_DIR,
+            APPS_DIR: mockConstants.APPS_DIR,
+            LIBS_DIR: mockConstants.LIBS_DIR,
+            PROJECT_DIR: mockConstants.PROJECT_DIR,
+            TS_LIBRARY_DIR: mockConstants.TS_LIBRARY_DIR,
+            GITHUB_WORKFLOW_DIR: mockConstants.GITHUB_WORKFLOW_DIR
+        };
+        for (const entry of Object.values(dirMockConstants)) {
+            await FsUtilities.mkdir(entry, true, false);
+        }
+    }
+
+    private static async mockFiles(
+        filesToMock: (keyof FileMockConstants)[],
+        contentOverrides: Partial<Record<keyof FileMockConstants, string | string[]>>,
+        mockConstants: MockConstants
+    ): Promise<void> {
+        for (const entry of filesToMock) {
+            const hasContentOverride: boolean = Object.keys(contentOverrides).includes(entry);
+            const content: string | string[] | undefined = hasContentOverride
+                ? contentOverrides[entry]
+                : undefined;
+            await this.mockFile(mockConstants, entry, hasContentOverride, content);
+        }
+    }
+
+    private static async mockFile(
+        mockConstants: MockConstants,
+        entry: keyof FileMockConstants,
+        hasContentOverride: boolean,
+        content: string | string[] | undefined
+    ): Promise<void> {
+        if (hasContentOverride) {
+            await FsUtilities.createFile(mockConstants[entry], content ?? '', true, false);
+            return;
+        }
+        await this.mockMethodForFile[entry](mockConstants, entry);
+    }
+
+    private static async createEmptyFile(mockConstants: MockConstants, entry: keyof MockConstants): Promise<void> {
+        await FsUtilities.createFile(mockConstants[entry], '', true, false);
+    }
+
+    private static async createAngularJson(mockConstants: MockConstants): Promise<void> {
         const data: AngularJson = {
             $schema: '',
             version: 1,
@@ -27,7 +105,11 @@ export abstract class FileMockUtilities {
         await FsUtilities.createFile(mockConstants.ANGULAR_JSON, JsonUtilities.stringify(data));
     }
 
-    static async createPackageJson(mockConstants: MockConstants): Promise<void> {
+    private static async createAngularPackageJson(mockConstants: MockConstants): Promise<void> {
+        await FsUtilities.createFile(mockConstants.ANGULAR_PACKAGE_JSON, '{}', true, false);
+    }
+
+    private static async createRootPackageJson(mockConstants: MockConstants): Promise<void> {
         await FsUtilities.createFile(mockConstants.ROOT_PACKAGE_JSON, [
             '{',
             '    "name": "@library/library",',
@@ -44,8 +126,8 @@ export abstract class FileMockUtilities {
         ], true, false);
     }
 
-    static async createAppComponentTsFile(mockConstants: MockConstants): Promise<void> {
-        await FsUtilities.createFile(mockConstants.ANGULAR_COMPONENT_TS, [
+    private static async createAppComponentTsFile(mockConstants: MockConstants): Promise<void> {
+        await FsUtilities.createFile(mockConstants.ANGULAR_APP_COMPONENT_TS, [
             'import { Component } from \'@angular/core\';',
             'import { RouterOutlet } from \'@angular/router\';',
             '',
@@ -60,11 +142,7 @@ export abstract class FileMockUtilities {
         ], true, false);
     }
 
-    static async createAppComponentHtmlFile(mockConstants: MockConstants): Promise<void> {
-        await FsUtilities.createFile(mockConstants.ANGULAR_COMPONENT_HTML, [''], true, false);
-    }
-
-    static async createAppRoutesTs(mockConstants: MockConstants): Promise<void> {
+    private static async createAppRoutesTs(mockConstants: MockConstants): Promise<void> {
         await FsUtilities.createFile(mockConstants.ANGULAR_APP_ROUTES_TS, [
             'import { Routes } from \'@angular/router\';',
             '',
@@ -72,7 +150,7 @@ export abstract class FileMockUtilities {
         ], true, false);
     }
 
-    static async createAppConfig(mockConstants: MockConstants): Promise<void> {
+    private static async createAppConfig(mockConstants: MockConstants): Promise<void> {
         await FsUtilities.createFile(mockConstants.ANGULAR_APP_CONFIG_TS, [
             'import { ApplicationConfig, provideZoneChangeDetection } from \'@angular/core\';',
             'import { provideClientHydration } from \'@angular/platform-browser\';',
@@ -90,10 +168,7 @@ export abstract class FileMockUtilities {
         ], true, false);
     }
 
-    static async clearTemp(mockConstants: MockConstants): Promise<void> {
-        await FsUtilities.rm(mockConstants.PROJECT_DIR);
-        await FsUtilities.mkdir(mockConstants.ANGULAR_APP_DIR, true, false);
-        await FsUtilities.mkdir(mockConstants.TS_LIBRARY_DIR, true, false);
-        CPUtilities['cwd'] = mockConstants.PROJECT_DIR;
+    private static async createGlobalEnvModel(mockConstants: MockConstants): Promise<void> {
+        await FsUtilities.createFile(mockConstants.GLOBAL_ENV_MODEL, 'export type GlobalEnvironment = {}', true, false);
     }
 }

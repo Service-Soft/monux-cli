@@ -18,6 +18,7 @@ import { NavElementTypes } from './nav-element-types.enum';
 import { RobotsUtilities } from '../robots';
 import { WorkspaceUtilities } from '../workspace';
 import { adminsPageTsContent, getAdminModelContent, getAdminServiceContent, baseEntityModelContent, changeSetServiceContent, changeSetsComponentHtmlContent, changeSetsComponentTsContent, lodashUtilitiesContent } from './content';
+import { authServiceContent } from './content/auth-service.content';
 import { offlineServiceContent } from './content/offline-service.content';
 
 /**
@@ -182,62 +183,7 @@ export abstract class AngularUtilities {
             false
         );
         const authServicePath: string = path.join(root, 'src', 'app', 'services', 'auth.service.ts');
-        await FsUtilities.createFile(authServicePath, [
-            'import { HttpClient } from \'@angular/common/http\';',
-            'import { Injectable, NgZone } from \'@angular/core\';',
-            'import { MatDialog } from \'@angular/material/dialog\';',
-            'import { MatSnackBar } from \'@angular/material/snack-bar\';',
-            'import { Router } from \'@angular/router\';',
-            'import { BaseAuthData, BaseRole, BaseToken, JwtAuthService } from \'ngx-material-auth\';',
-            'import { environment } from \'../../environment/environment\';',
-            '',
-            '/**',
-            ' * Provides information about a user role.',
-            ' */',
-            'export type Role = BaseRole<Roles>; // TODO: Provide Roles enum',
-            '',
-            '/**',
-            ' * The structure of a jwt.',
-            ' */',
-            'export type Token = BaseToken;',
-            '',
-            '/**',
-            ' * The data that is stored about a user.',
-            ' */',
-            'export type AuthData = BaseAuthData<Token, Roles, Role>;',
-            '',
-            '/**',
-            ' * Handles authentication and authorization of users.',
-            ' */',
-            '@Injectable({ providedIn: \'root\' })',
-            'export class AuthService extends JwtAuthService<AuthData, Roles, Role, Token> {',
-            `    override readonly API_TURN_ON_TWO_FACTOR_URL: string = \`\${environment.${apiBaseUrlVariableName}}/2fa/turn-on\`;`,
-            // eslint-disable-next-line stylistic/max-len
-            `    override readonly API_CONFIRM_TURN_ON_TWO_FACTOR_URL: string = \`\${environment.${apiBaseUrlVariableName}}/2fa/confirm-turn-on\`;`,
-            `    override readonly API_TURN_OFF_TWO_FACTOR_URL: string = \`\${environment.${apiBaseUrlVariableName}}/2fa/turn-off\`;`,
-            `    override readonly API_LOGIN_URL: string = \`\${environment.${apiBaseUrlVariableName}}/login\`;`,
-            `    override readonly API_LOGOUT_URL: string = \`\${environment.${apiBaseUrlVariableName}}/logout\`;`,
-            `    override readonly API_REFRESH_TOKEN_URL: string = \`\${environment.${apiBaseUrlVariableName}}/refresh-token\`;`,
-            // eslint-disable-next-line stylistic/max-len
-            `    override readonly API_REQUEST_RESET_PASSWORD_URL: string = \`\${environment.${apiBaseUrlVariableName}}/request-reset-password\`;`,
-            // eslint-disable-next-line stylistic/max-len
-            `    override readonly API_CONFIRM_RESET_PASSWORD_URL: string = \`\${environment.${apiBaseUrlVariableName}}/confirm-reset-password\`;`,
-            // eslint-disable-next-line stylistic/max-len
-            `    override readonly API_VERIFY_RESET_PASSWORD_TOKEN_URL: string = \`\${environment.${apiBaseUrlVariableName}}/verify-password-reset-token\`;`,
-            // eslint-disable-next-line stylistic/max-len
-            `    override readonly API_REGISTER_BIOMETRIC_CREDENTIAL: string = \`\${environment.${apiBaseUrlVariableName}}/biometric/register\`;`,
-            // eslint-disable-next-line stylistic/max-len
-            `    override readonly API_CONFIRM_REGISTER_BIOMETRIC_CREDENTIAL: string = \`\${environment.${apiBaseUrlVariableName}}/biometric/confirm-register\`;`,
-            // eslint-disable-next-line stylistic/max-len
-            `    override readonly API_GENERATE_BIOMETRIC_AUTHENTICATION_OPTIONS: string = \`\${environment.${apiBaseUrlVariableName}}/biometric/authentication-options\`;`,
-            // eslint-disable-next-line stylistic/max-len
-            `    override readonly API_CANCEL_REGISTER_BIOMETRIC_CREDENTIAL: string = \`\${environment.${apiBaseUrlVariableName}}/biometric/cancel-register\`;`,
-            '',
-            '    constructor(http: HttpClient, snackbar: MatSnackBar, zone: NgZone, router: Router, dialog: MatDialog) {',
-            '        super(http, snackbar, zone, router, dialog);',
-            '    }',
-            '}'
-        ]);
+        await FsUtilities.createFile(authServicePath, authServiceContent);
         await this.addProvider(
             root,
             { provide: 'NGX_AUTH_SERVICE', useExisting: 'AuthService' },
@@ -322,6 +268,7 @@ export abstract class AngularUtilities {
             {
                 addTo: 'array',
                 element: {
+                    // eslint-disable-next-line sonar/no-duplicate-string
                     path: 'request-reset-password',
                     title: `Reset Password ${titleSuffix}`,
                     // @ts-ignore
@@ -445,7 +392,7 @@ export abstract class AngularUtilities {
      * Sets up change sets.
      * @param root - The root path of the project.
      * @param name - Name of the project.
-     * @param apiName
+     * @param apiName - The name of the api.
      */
     static async setupChangeSets(root: string, name: string, apiName: string): Promise<void> {
         await NpmUtilities.install(name, [NpmPackage.NGX_MATERIAL_CHANGE_SETS]);
@@ -518,10 +465,10 @@ export abstract class AngularUtilities {
     }
 
     /**
-     *
-     * @param root
-     * @param provider
-     * @param imports
+     * Adds a provider to the app config array.
+     * @param root - The root of the angular project where the provider should be added.
+     * @param provider - The definition of the provider.
+     * @param imports - The imports to add.
      */
     static async addProvider(
         root: string,
@@ -853,7 +800,7 @@ export abstract class AngularUtilities {
         );
         await this.addProvider(
             root,
-            { provide: 'NGX_PWA_OFFLINE_SERVICE', useExisting: 'OfflineService' as any },
+            { provide: 'NGX_PWA_OFFLINE_SERVICE', useExisting: 'OfflineService' as unknown },
             [
                 { defaultImport: false, element: 'NGX_PWA_OFFLINE_SERVICE', path: NpmPackage.NGX_PWA },
                 { defaultImport: false, element: 'OfflineService', path: './services/offline.service' }

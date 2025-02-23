@@ -2,7 +2,7 @@ import path from 'path';
 
 import yaml from 'js-yaml';
 
-import { DOCKER_COMPOSE_FILE_NAME, TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE, TRAEFIK_WEB_SECURE_ENVIRONMENT_VARIABLE } from '../constants';
+import { DEV_DOCKER_COMPOSE_FILE_NAME, DOCKER_COMPOSE_FILE_NAME, TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE, TRAEFIK_WEB_SECURE_ENVIRONMENT_VARIABLE } from '../constants';
 import { FsUtilities } from '../encapsulation';
 import { ComposeBuild, ComposeDefinition, ComposePort, ComposeService, ComposeServiceEnvironment, ComposeServiceVolume } from './compose-file.model';
 import { EnvUtilities } from '../env';
@@ -66,6 +66,31 @@ export abstract class DockerUtilities {
             `\${${TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE}:+traefik.http.routers.${projectName}.tls.certresolver=\${${TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE}}}`,
             `traefik.http.services.${projectName}.loadbalancer.server.port=${port}`
         ];
+    }
+
+    /**
+     * Creates the dev docker compose file.
+     * @param rootPath - The root path where the dev compose file resides.
+     */
+    static async createDevDockerCompose(rootPath: string = ''): Promise<void> {
+        const compose: ComposeDefinition = {
+            services: [
+                {
+                    image: 'adminer',
+                    name: 'adminer',
+                    ports: [
+                        {
+                            internal: 8080,
+                            external: 8080
+                        }
+                    ]
+                }
+            ],
+            volumes: [],
+            networks: []
+        };
+        const yaml: string[] = this.composeDefinitionToYaml(compose);
+        await FsUtilities.createFile(path.join(rootPath, DEV_DOCKER_COMPOSE_FILE_NAME), yaml);
     }
 
     /**
@@ -138,7 +163,7 @@ export abstract class DockerUtilities {
      * Adds the given compose service to the docker-compose.yaml.
      * @param service - The definition of the service to add.
      * @param domain - The domain of the service. Optional.
-     * @param baseUrl
+     * @param baseUrl - The base url of the service. Optional.
      * @param rootPath - The path of the project root.
      * Defaults to "" (which creates the file in the current directory).
      * @param composeFileName - The name of the compose file.

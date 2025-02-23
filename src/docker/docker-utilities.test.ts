@@ -11,7 +11,7 @@ const mockConstants: MockConstants = getMockConstants('docker-utilities');
 
 describe('DockerUtilities', () => {
     beforeEach(async () => {
-        await FileMockUtilities.clearTemp(mockConstants);
+        await FileMockUtilities.setup(mockConstants);
 
         const fakeEmail: string = faker.internet.email();
         await EnvUtilities.init(mockConstants.PROJECT_DIR);

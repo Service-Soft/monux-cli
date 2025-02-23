@@ -6,7 +6,8 @@ export enum AddType {
     ANGULAR_WEBSITE = 'angular-website',
     ANGULAR_LIBRARY = 'angular-library',
     LOOPBACK = 'loopback',
-    TS_LIBRARY = 'ts-library'
+    TS_LIBRARY = 'ts-library',
+    WORDPRESS = 'wordpress'
 }
 
 /**

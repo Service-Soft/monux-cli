@@ -26,7 +26,7 @@ type AddAngularConfiguration = AddConfiguration & {
      */
     domain: string,
     /**
-     *
+     * The base url that the app should be reached under.
      */
     baseUrl: string,
     /**
@@ -124,6 +124,8 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
         await NpmUtilities.install(config.name, [NpmPackage.NGX_MATERIAL_ENTITY]);
 
         await this.createDefaultPages(root, config);
+
+        await NpmUtilities.updatePackageJson(config.name, { scripts: { start: `ng serve --port ${config.port}` } });
 
         const app: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
         await EnvUtilities.buildEnvironmentFileForApp(app, '', false);

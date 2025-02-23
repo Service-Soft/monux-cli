@@ -27,6 +27,11 @@ export const APPS_DIRECTORY_NAME: string = 'apps';
 export const LIBS_DIRECTORY_NAME: string = 'libs';
 
 /**
+ * The databases directory. Used to store startup configuration.
+ */
+export const DATABASES_DIRECTORY_NAME: string = 'databases';
+
+/**
  * The name of the docker compose file.
  */
 export const DOCKER_COMPOSE_FILE_NAME: string = 'docker-compose.yaml';

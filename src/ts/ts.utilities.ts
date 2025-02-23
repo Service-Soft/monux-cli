@@ -29,9 +29,9 @@ const constructorLineIdentifier: string = 'constructor(';
 export abstract class TsUtilities {
 
     /**
-     *
-     * @param path
-     * @param content
+     * Adds the given content to the start of a class.
+     * @param path - The path of the ts file with a class in it.
+     * @param content - The content to add.
      */
     static async addToStartOfClass(path: string, content: string[]): Promise<void> {
         const lines: string[] = await FsUtilities.readFileLines(path);
@@ -49,9 +49,9 @@ export abstract class TsUtilities {
     }
 
     /**
-     *
-     * @param path
-     * @param content
+     * Adds the given content to the end of a class.
+     * @param path - The path of the ts file with a class in it.
+     * @param content - The content to add.
      */
     static async addToEndOfClass(path: string, content: string[]): Promise<void> {
         const lines: string[] = await FsUtilities.readFileLines(path);
@@ -64,9 +64,9 @@ export abstract class TsUtilities {
     }
 
     /**
-     *
-     * @param path
-     * @param content
+     * Adds the given content to the body of the constructor.
+     * @param path - The path of the file where the content should be added.
+     * @param content - The content that should be added. Must include indentation already.
      */
     static async addToConstructorBody(path: string, content: string): Promise<void> {
         const lines: string[] = await FsUtilities.readFileLines(path);
@@ -109,9 +109,9 @@ export abstract class TsUtilities {
     }
 
     /**
-     *
-     * @param path
-     * @param content
+     * Adds the given content to the header of the constructor.
+     * @param path - The path of the file where the content should be added.
+     * @param content - The content that should be added. Must include indentation already.
      */
     static async addToConstructorHeader(path: string, content: string): Promise<void> {
         const lines: string[] = await FsUtilities.readFileLines(path);
@@ -128,9 +128,9 @@ export abstract class TsUtilities {
     }
 
     /**
-     *
-     * @param path
-     * @param content
+     * Add the given content below the imports inside a ts file.
+     * @param path - The path of the ts file to add the content to.
+     * @param content - The content to add. Each entry is a line.
      */
     static async addBelowImports(path: string, content: string[]): Promise<void> {
         const lines: string[] = await FsUtilities.readFileLines(path);

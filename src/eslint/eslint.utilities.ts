@@ -1,7 +1,8 @@
 import path from 'path';
 
-import { ESLINT_CONFIG_FILE_NAME } from '../constants';
+import { ESLINT_CONFIG_FILE_NAME, PACKAGE_JSON_FILE_NAME } from '../constants';
 import { FsUtilities } from '../encapsulation';
+import { NpmUtilities } from '../npm';
 
 /**
  * Utilities for eslint.
@@ -22,6 +23,15 @@ export abstract class EslintUtilities {
         eslintTsConfigPath: string = 'tsconfig.eslint.json',
         baseEslintConfigPath: string = '../../eslint.config'
     ): Promise<void> {
+        await NpmUtilities.updatePackageJsonFile(
+            path.join(root, PACKAGE_JSON_FILE_NAME),
+            {
+                scripts: {
+                    lint: 'eslint . --max-warnings 0',
+                    'lint:fix': 'eslint . --max-warnings 0 --fix'
+                }
+            }
+        );
         await FsUtilities.createFile(
             path.join(root, ESLINT_CONFIG_FILE_NAME),
             [

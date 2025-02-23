@@ -12,7 +12,7 @@ const mockConstants: MockConstants = getMockConstants('tsconfig-utilities');
 
 describe('TsConfigUtilities', () => {
     beforeEach(async () => {
-        await FileMockUtilities.clearTemp(mockConstants);
+        await FileMockUtilities.setup(mockConstants);
     });
 
     test('init', async () => {

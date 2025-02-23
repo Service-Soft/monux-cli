@@ -13,3 +13,9 @@ exposedbydefault
 httpchallenge
 placeholderresolver
 loadbalancer
+adminer
+initdb
+rolname
+plpgsql
+datname
+psql

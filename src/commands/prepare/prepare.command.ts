@@ -1,4 +1,5 @@
 /* eslint-disable jsdoc/require-jsdoc */
+import { DbUtilities } from '../../db';
 import { EnvUtilities, EnvValidationErrorMessage } from '../../env';
 import { RobotsUtilities } from '../../robots';
 import { KeyValue } from '../../types';
@@ -10,6 +11,11 @@ import { exitWithError } from '../exit-with-error.function';
 export async function runPrepare(): Promise<void> {
     await buildEnv();
     await buildRobotsTxtFiles();
+    await buildDbInitFiles();
+}
+
+async function buildDbInitFiles(): Promise<void> {
+    await DbUtilities.createInitFiles();
 }
 
 async function buildEnv(): Promise<void> {

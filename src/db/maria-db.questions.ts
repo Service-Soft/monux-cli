@@ -4,15 +4,15 @@ import { WorkspaceUtilities } from '../workspace';
 import { DbType } from './db-type.enum';
 
 /**
- * Configuration for creating a postgres db.
+ * Configuration for creating a maria db.
  */
-export type PostgresDbConfig = {
+export type MariaDbConfig = {
     /**
-     * The type of the database.
+     * The type of the databases.
      */
-    type: DbType.POSTGRES,
+    type: DbType.MARIADB,
     /**
-     * The name of the postgres service.
+     * The name of the mariadb service.
      */
     name: string,
     /**
@@ -22,9 +22,9 @@ export type PostgresDbConfig = {
 };
 
 /**
- * Questions for getting a postgres db config.
+ * Questions for getting a maria db config.
  */
-export const postgresDbConfigQuestions: QuestionsFor<OmitStrict<PostgresDbConfig, 'type'>> = {
+export const mariaDbConfigQuestions: QuestionsFor<OmitStrict<MariaDbConfig, 'type'>> = {
     name: {
         type: 'input',
         message: 'Name',

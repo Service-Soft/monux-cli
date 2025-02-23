@@ -20,19 +20,34 @@ export async function validateInput(args: string[]): Promise<void> {
     }
 
     const command: Command = args[0] as Command;
-    if (!allKnownCommands.includes(command) && args.length >= 2) {
+    if (!allKnownCommands.includes(command) && args.length > 1) {
         await validateRunInput(...args);
         return;
-    }
-
-    if (args.length > 1) {
-        exitWithError('Error parsing the command: Too many arguments.');
     }
 
     if (!allKnownCommands.includes(command)) {
         exitWithError(`Error: Unknown command ${command}.`);
     }
-    if ([Command.ADD, Command.A, Command.PREPARE, Command.P, Command.D, Command.DOWN, Command.U, Command.UP].includes(command)) {
+
+    if (args.length > 1 && !args[1].startsWith('-')) {
+        exitWithError('Error parsing the command: Too many arguments.');
+    }
+
+    if ([
+        Command.ADD,
+        Command.A,
+        Command.PREPARE,
+        Command.P,
+        Command.D,
+        Command.DOWN,
+        Command.DD,
+        Command.DOWN_DEV,
+        Command.U,
+        Command.UP,
+        Command.UD,
+        Command.UP_DEV,
+        Command.GENERATE_PAGE
+    ].includes(command)) {
         await validateInsideWorkspace();
     }
 }

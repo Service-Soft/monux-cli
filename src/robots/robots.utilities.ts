@@ -4,7 +4,7 @@ import path from 'path';
 import { ENV_FILE_NAME, IS_PUBLIC_ENVIRONMENT_VARIABLE, ROBOTS_FILE_NAME, SITEMAP_FILE_NAME } from '../constants';
 import { FsUtilities } from '../encapsulation';
 import { EnvUtilities } from '../env';
-import { toSnakeCase } from '../utilities';
+import { filterAsync, toSnakeCase } from '../utilities';
 import { WorkspaceUtilities } from '../workspace';
 
 /**
@@ -23,7 +23,7 @@ export abstract class RobotsUtilities {
         }
 
         // Only projects that have a sitemap file get a robots.txt file.
-        const apps: Dirent[] = (await WorkspaceUtilities.getProjects('apps')).filter(async a => {
+        const apps: Dirent[] = await filterAsync(await WorkspaceUtilities.getProjects('apps'), async a => {
             const sitemapPath: string = path.join(a.parentPath, a.name, 'src', SITEMAP_FILE_NAME);
             return await FsUtilities.exists(sitemapPath);
         });

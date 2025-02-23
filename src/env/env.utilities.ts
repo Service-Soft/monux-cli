@@ -53,7 +53,7 @@ export abstract class EnvUtilities {
      * Builds an environment file for the provided app.
      * @param app - The app to build the environment file for.
      * @param rootPath - The root path of the monorepo.
-     * @param failOnMissingVariable
+     * @param failOnMissingVariable - Whether or not the build should fail when a variable is missing.
      */
     static async buildEnvironmentFileForApp(app: Dirent, rootPath: string, failOnMissingVariable: boolean): Promise<void> {
         const environmentFolder: string = path.join(app.parentPath, app.name, 'src', 'environment');
@@ -64,11 +64,11 @@ export abstract class EnvUtilities {
     }
 
     /**
-     *
-     * @param environmentModelPath
-     * @param name
-     * @param variable
-     * @param failOnMissingVariable
+     * Adds a variable key to a project.
+     * @param name - The name of the project to add the key to.
+     * @param environmentModelPath - The path of the projects environment model.
+     * @param variable - The variable to add.
+     * @param failOnMissingVariable - Whether or not the build should fail when a variable is missing.
      */
     static async addProjectVariableKey(
         name: string,
@@ -79,6 +79,7 @@ export abstract class EnvUtilities {
         const lines: string[] = await FsUtilities.readFileLines(environmentModelPath);
         const firstLine: FileLine = await FsUtilities.findLineWithContent(lines, 'defineVariables(');
 
+        // eslint-disable-next-line sonar/no-duplicate-string
         const oldValue: string = firstLine.content.includes('defineVariables([]') ? 'defineVariables([]' : 'defineVariables([';
         // eslint-disable-next-line stylistic/max-len
         const newValue: string = firstLine.content.includes('defineVariables([]') ? `defineVariables(['${variable}']` : `defineVariables(['${variable}', `;
@@ -152,6 +153,7 @@ export abstract class EnvUtilities {
         return `\n\t${v.key}: ${q}${v.value}${q}`;
     }
 
+    // eslint-disable-next-line sonar/cognitive-complexity
     private static async getEnvVariables(
         variableKeys: string[] | undefined,
         rootPath: string,

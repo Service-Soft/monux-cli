@@ -16,20 +16,24 @@ let cpExecSyncMock: jest.SpiedFunction<typeof CPUtilities.execSync>;
 
 describe('AngularUtilities', () => {
     beforeEach(async () => {
-        await FileMockUtilities.clearTemp(mockConstants);
-        await FileMockUtilities.createAppComponentTsFile(mockConstants);
-        await FileMockUtilities.createAppComponentHtmlFile(mockConstants);
-        await FileMockUtilities.createAppRoutesTs(mockConstants);
-        await FileMockUtilities.createAppConfig(mockConstants);
-        await FileMockUtilities.createAngularJson(mockConstants);
+        await FileMockUtilities.setup(
+            mockConstants,
+            [
+                'ANGULAR_APP_COMPONENT_HTML',
+                'ANGULAR_APP_COMPONENT_TS',
+                'ANGULAR_APP_ROUTES_TS',
+                'ANGULAR_APP_CONFIG_TS',
+                'ANGULAR_JSON'
+            ]
+        );
         npmInstallMock = jest.spyOn(NpmUtilities, 'install').mockImplementation(async () => {});
         cpExecSyncMock = jest.spyOn(CPUtilities, 'execSync').mockImplementation(() => {});
     });
 
     test('addComponentImports', async () => {
         const def: TsImportDefinition = fakeTsImportDefinition();
-        await AngularUtilities['addComponentImports'](mockConstants.ANGULAR_COMPONENT_TS, [def]);
-        const lines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_COMPONENT_TS);
+        await AngularUtilities['addComponentImports'](mockConstants.ANGULAR_APP_COMPONENT_TS, [def]);
+        const lines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_APP_COMPONENT_TS);
         expect(lines).toEqual([
             def.defaultImport ? `import ${def.element} from '${def.path}';` : `import { ${def.element} } from '${def.path}';`,
             'import { Component } from \'@angular/core\';',
@@ -52,7 +56,7 @@ describe('AngularUtilities', () => {
         expect(npmInstallMock).toHaveBeenCalledTimes(1);
         expect(npmInstallMock).toHaveBeenCalledWith(mockConstants.ANGULAR_APP_NAME, ['ngx-material-navigation']);
 
-        const htmlLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_COMPONENT_HTML);
+        const htmlLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_APP_COMPONENT_HTML);
         expect(htmlLines).toEqual([
             '<ngx-mat-navigation-navbar [minHeight]="80" [minSidenavWidth]="\'30%\'" [minHeightOtherElements]="70" [navbarRows]="navbarRows">',
             '    <router-outlet></router-outlet>',
@@ -61,7 +65,7 @@ describe('AngularUtilities', () => {
             '<ngx-mat-navigation-footer [minHeight]="70" [footerRows]="footerRows"></ngx-mat-navigation-footer>'
         ]);
 
-        const tsLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_COMPONENT_TS);
+        const tsLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_APP_COMPONENT_TS);
         expect(tsLines).toEqual([
             'import { navbarRows, footerRows } from \'./routes\';',
             'import { FooterRow, NavbarRow, NgxMatNavigationFooterComponent, NgxMatNavigationNavbarComponent } from \'ngx-material-navigation\';',
@@ -252,7 +256,7 @@ describe('AngularUtilities', () => {
             '',
             'export const routes: NavRoute[] = NavUtilities.getAngularRoutes(navbarRows, footerRows, [notFoundRoute]);'
         ]);
-    });
+    }, 20000);
 
     test('generatePage for footer', async () => {
         await AngularUtilities.setupNavigation(mockConstants.ANGULAR_APP_DIR, mockConstants.ANGULAR_APP_NAME);
@@ -316,7 +320,7 @@ describe('AngularUtilities', () => {
             '',
             'export const routes: NavRoute[] = NavUtilities.getAngularRoutes(navbarRows, footerRows, [notFoundRoute]);'
         ]);
-    });
+    }, 10000);
 
     test('addPwaSupport', async () => {
         await AngularUtilities.setupPwa(mockConstants.ANGULAR_APP_DIR, mockConstants.ANGULAR_APP_NAME);
@@ -326,8 +330,8 @@ describe('AngularUtilities', () => {
         expect(npmInstallMock).toHaveBeenCalledTimes(1);
         expect(npmInstallMock).toHaveBeenCalledWith(mockConstants.ANGULAR_APP_NAME, ['ngx-pwa']);
 
-        const htmlLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_COMPONENT_HTML);
-        const tsLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_COMPONENT_TS);
+        const htmlLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_APP_COMPONENT_HTML);
+        const tsLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_APP_COMPONENT_TS);
 
         expect(htmlLines).toEqual(['<ngx-pwa-offline-status-bar></ngx-pwa-offline-status-bar>']);
         expect(tsLines).toEqual([

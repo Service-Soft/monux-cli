@@ -9,8 +9,7 @@ const mockConstants: MockConstants = getMockConstants('npm-utilities');
 
 describe('NpmUtilities', () => {
     beforeEach(async () => {
-        await FileMockUtilities.clearTemp(mockConstants);
-        await FileMockUtilities.createPackageJson(mockConstants);
+        await FileMockUtilities.setup(mockConstants, ['ROOT_PACKAGE_JSON']);
     });
 
     test('init', async () => {
@@ -32,9 +31,9 @@ describe('NpmUtilities', () => {
         ]);
     });
 
-    test('update', async () => {
+    test('updatePackageJsonFile', async () => {
         const updateData: Partial<PackageJson> = fakeUpdatePackageJsonData();
-        await NpmUtilities['update'](mockConstants.ROOT_PACKAGE_JSON, updateData);
+        await NpmUtilities.updatePackageJsonFile(mockConstants.ROOT_PACKAGE_JSON, updateData);
 
         const packageJson: PackageJson = await FsUtilities.parseFileAs(mockConstants.ROOT_PACKAGE_JSON);
         expect(packageJson.main).toEqual(updateData.main);
