@@ -75,24 +75,6 @@ export class AddTsLibraryCommand extends AddCommand<TsLibraryConfiguration> {
         });
     }
 
-    // private async setupTsConfig(projectName: string): Promise<void> {
-    //     // eslint-disable-next-line no-console
-    //     console.log('sets up tsconfig');
-    //     await TsConfigUtilities.updateTsConfig(
-    //         projectName,
-    //         {
-    //             extends: '../../tsconfig.base.json',
-    //             compilerOptions: {
-    //                 composite: true,
-    //                 declaration: true,
-    //                 outDir: './build',
-    //                 rootDir: './src'
-    //             },
-    //             include: undefined
-    //         }
-    //     );
-    // }
-
     private async createProject(config: TsLibraryConfiguration): Promise<string> {
         // eslint-disable-next-line no-console
         console.log('Creates the library');

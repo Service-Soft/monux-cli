@@ -19,3 +19,4 @@ rolname
 plpgsql
 datname
 psql
+packagr

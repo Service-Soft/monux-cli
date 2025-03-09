@@ -26,5 +26,7 @@ export enum NpmPackage {
     NODEMAILER_TYPES = '@types/nodemailer',
     LODASH = 'lodash',
     LODASH_TYPES = '@types/lodash',
-    TSC_WATCH = 'tsc-watch'
+    TSC_WATCH = 'tsc-watch',
+    NG_PACKAGR = 'ng-packagr',
+    TSLIB = 'tslib'
 }

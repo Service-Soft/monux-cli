@@ -135,6 +135,11 @@ export const SITEMAP_FILE_NAME: string = 'sitemap.xml';
 export const APP_CONFIG_FILE_NAME: string = 'app.config.ts';
 
 /**
+ * The name of the angular ng package file.
+ */
+export const NG_PACKAGE_FILE_NAME: string = 'ng-package.json';
+
+/**
  * The message to notify the user of the help command.
  */
 export const MORE_INFORMATION_MESSAGE: string = `run ${ChalkUtilities.secondary(
