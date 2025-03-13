@@ -1,6 +1,6 @@
 {
     "name": "monux-cli",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "license": "ISC",
     "main": "index.js",
     "engines": {
@@ -18,7 +18,8 @@
         "clear": "rm -rf sandbox && mkdir sandbox && npm run start i",
         "test": "jest",
         "lint": "eslint . --max-warnings=0",
-        "lint:fix": "eslint . --max-warnings=0 --fix"
+        "lint:fix": "eslint . --max-warnings=0 --fix",
+        "prepublishOnly": "npm run build"
     },
     "dependencies": {
         "chalk": "^4.1.2",
