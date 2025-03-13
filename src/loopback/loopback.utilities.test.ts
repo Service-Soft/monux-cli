@@ -1,10 +1,10 @@
-import path from 'path';
 
 import { beforeEach, describe, expect, test } from '@jest/globals';
 
 import { FileMockUtilities, getMockConstants, MockConstants } from '../__testing__';
 import { LoopbackUtilities } from './loopback.utilities';
 import { FsUtilities } from '../encapsulation';
+import { getPath } from '../utilities';
 
 const mockConstants: MockConstants = getMockConstants('loopback-utilities');
 
@@ -29,7 +29,7 @@ describe('LoopbackUtilities', () => {
             }
         });
 
-        const dirExists: boolean = await FsUtilities.exists(path.join(mockConstants.APPS_DIR, 'api'));
+        const dirExists: boolean = await FsUtilities.exists(getPath(mockConstants.APPS_DIR, 'api'));
         expect(dirExists).toBe(true);
     }, 80000);
 });

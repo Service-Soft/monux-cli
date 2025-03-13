@@ -1,5 +1,4 @@
 import { Dirent } from 'fs';
-import path from 'path';
 
 import { Provider, EnvironmentProviders } from '@angular/core';
 import { NavbarRow, NavRoute } from 'ngx-material-navigation';
@@ -13,7 +12,7 @@ import { ANGULAR_APP_COMPONENT_FILE_NAME, ANGULAR_JSON_FILE_NAME, ANGULAR_ROUTES
 import { EnvUtilities } from '../env';
 import { DeepPartial } from '../types';
 import { AddNavElementConfig } from './add-nav-element-config.model';
-import { mergeDeep, optionsToCliString, toSnakeCase } from '../utilities';
+import { getPath, mergeDeep, optionsToCliString, toSnakeCase } from '../utilities';
 import { NavElementTypes } from './nav-element-types.enum';
 import { RobotsUtilities } from '../robots';
 import { WorkspaceUtilities } from '../workspace';
@@ -116,7 +115,7 @@ export abstract class AngularUtilities {
     static async setupLogging(root: string, name: string, apiName: string): Promise<void> {
         await NpmUtilities.install(name, [NpmPackage.NGX_PERSISTENCE_LOGGER]);
         await FsUtilities.createFile(
-            path.join(root, 'src', 'app', 'services', 'logger.service.ts'),
+            getPath(root, 'src', 'app', 'services', 'logger.service.ts'),
             [
                 'import { HttpClient } from \'@angular/common/http\';',
                 'import { Injectable } from \'@angular/core\';',
@@ -134,7 +133,7 @@ export abstract class AngularUtilities {
                 '}'
             ]
         );
-        const appComponentPath: string = path.join(root, 'src', 'app', ANGULAR_APP_COMPONENT_FILE_NAME);
+        const appComponentPath: string = getPath(root, 'src', 'app', ANGULAR_APP_COMPONENT_FILE_NAME);
         await TsUtilities.addImportStatements(
             appComponentPath,
             [{ defaultImport: false, element: 'LoggerService', path: './services/logger.service' }]
@@ -172,17 +171,17 @@ export abstract class AngularUtilities {
         const apiBaseUrlVariableName: string = `${toSnakeCase(apiName)}_base_url`;
         await EnvUtilities.addProjectVariableKey(
             name,
-            path.join(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
+            getPath(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
             apiBaseUrlVariableName,
             false
         );
         await EnvUtilities.addProjectVariableKey(
             name,
-            path.join(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
+            getPath(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
             `${toSnakeCase(apiName)}_domain`,
             false
         );
-        const authServicePath: string = path.join(root, 'src', 'app', 'services', 'auth.service.ts');
+        const authServicePath: string = getPath(root, 'src', 'app', 'services', 'auth.service.ts');
         await FsUtilities.createFile(authServicePath, authServiceContent);
         await this.addProvider(
             root,
@@ -200,7 +199,7 @@ export abstract class AngularUtilities {
                 { defaultImport: false, element: 'environment', path: '../environment/environment' }
             ]
         );
-        const appConfigPath: string = path.join(root, 'src', 'app', APP_CONFIG_FILE_NAME);
+        const appConfigPath: string = getPath(root, 'src', 'app', APP_CONFIG_FILE_NAME);
         await TsUtilities.addImportStatements(
             appConfigPath,
             [
@@ -222,7 +221,7 @@ export abstract class AngularUtilities {
         );
 
         await TsUtilities.addImportStatements(
-            path.join(root, 'src', 'app', ANGULAR_ROUTES_FILE_NAME),
+            getPath(root, 'src', 'app', ANGULAR_ROUTES_FILE_NAME),
             [
                 { defaultImport: false, element: 'JwtNotLoggedInGuard', path: NpmPackage.NGX_MATERIAL_AUTH },
                 { defaultImport: false, element: 'JwtLoggedInGuard', path: NpmPackage.NGX_MATERIAL_AUTH }
@@ -244,9 +243,9 @@ export abstract class AngularUtilities {
             },
             domain
         );
-        const pagesPath: string = path.join(root, 'src', 'app', 'pages');
-        const loginPageTs: string = path.join(pagesPath, 'login', 'login.component.ts');
-        const loginPageHtml: string = path.join(pagesPath, 'login', 'login.component.html');
+        const pagesPath: string = getPath(root, 'src', 'app', 'pages');
+        const loginPageTs: string = getPath(pagesPath, 'login', 'login.component.ts');
+        const loginPageHtml: string = getPath(pagesPath, 'login', 'login.component.html');
         await this.addComponentImports(
             loginPageTs,
             [{ defaultImport: false, element: 'NgxMatAuthLoginComponent', path: NpmPackage.NGX_MATERIAL_AUTH }]
@@ -279,9 +278,9 @@ export abstract class AngularUtilities {
             },
             domain
         );
-        const requestResetPasswordPageTs: string = path.join(pagesPath, 'request-reset-password', 'request-reset-password.component.ts');
-        // eslint-disable-next-line stylistic/max-len
-        const requestResetPasswordPageHtml: string = path.join(pagesPath, 'request-reset-password', 'request-reset-password.component.html');
+        const requestResetPasswordPageTs: string = getPath(pagesPath, 'request-reset-password', 'request-reset-password.component.ts');
+
+        const requestResetPasswordPageHtml: string = getPath(pagesPath, 'request-reset-password', 'request-reset-password.component.html');
         await this.addComponentImports(
             requestResetPasswordPageTs,
             [{ defaultImport: false, element: 'NgxMatAuthRequestResetPasswordComponent', path: NpmPackage.NGX_MATERIAL_AUTH }]
@@ -312,9 +311,9 @@ export abstract class AngularUtilities {
             },
             domain
         );
-        const confirmResetPasswordPageTs: string = path.join(pagesPath, 'confirm-reset-password', 'confirm-reset-password.component.ts');
-        // eslint-disable-next-line stylistic/max-len
-        const confirmResetPasswordPageHtml: string = path.join(pagesPath, 'confirm-reset-password', 'confirm-reset-password.component.html');
+        const confirmResetPasswordPageTs: string = getPath(pagesPath, 'confirm-reset-password', 'confirm-reset-password.component.ts');
+
+        const confirmResetPasswordPageHtml: string = getPath(pagesPath, 'confirm-reset-password', 'confirm-reset-password.component.html');
         await this.addComponentImports(
             confirmResetPasswordPageTs,
             [{ defaultImport: false, element: 'NgxMatAuthConfirmResetPasswordComponent', path: NpmPackage.NGX_MATERIAL_AUTH }]
@@ -353,8 +352,8 @@ export abstract class AngularUtilities {
             },
             domain
         );
-        const adminsPageTs: string = path.join(pagesPath, 'admins', 'admins.component.ts');
-        const adminsPageHtml: string = path.join(pagesPath, 'admins', 'admins.component.html');
+        const adminsPageTs: string = getPath(pagesPath, 'admins', 'admins.component.ts');
+        const adminsPageHtml: string = getPath(pagesPath, 'admins', 'admins.component.html');
         await FsUtilities.updateFile(
             adminsPageTs,
             adminsPageTsContent,
@@ -369,7 +368,7 @@ export abstract class AngularUtilities {
             ],
             'replace'
         );
-        const routesTs: string = path.join(root, 'src', 'app', ANGULAR_ROUTES_FILE_NAME);
+        const routesTs: string = getPath(root, 'src', 'app', ANGULAR_ROUTES_FILE_NAME);
         await TsUtilities.addImportStatements(
             routesTs,
             [
@@ -397,7 +396,7 @@ export abstract class AngularUtilities {
     static async setupChangeSets(root: string, name: string, apiName: string): Promise<void> {
         await NpmUtilities.install(name, [NpmPackage.NGX_MATERIAL_CHANGE_SETS]);
         await FsUtilities.createFile(
-            path.join(root, 'src', 'app', 'services', 'change-set.service.ts'),
+            getPath(root, 'src', 'app', 'services', 'change-set.service.ts'),
             changeSetServiceContent
         );
         await this.addProvider(
@@ -409,29 +408,29 @@ export abstract class AngularUtilities {
             ]
         );
         await FsUtilities.createFile(
-            path.join(root, 'src', 'app', 'services', 'entities', 'admin.service.ts'),
+            getPath(root, 'src', 'app', 'services', 'entities', 'admin.service.ts'),
             getAdminServiceContent(apiName)
         );
         await FsUtilities.createFile(
-            path.join(root, 'src', 'app', 'models', 'admin.model.ts'),
+            getPath(root, 'src', 'app', 'models', 'admin.model.ts'),
             getAdminModelContent(apiName)
         );
         await FsUtilities.createFile(
-            path.join(root, 'src', 'app', 'models', 'base-entity.model.ts'),
+            getPath(root, 'src', 'app', 'models', 'base-entity.model.ts'),
             baseEntityModelContent
         );
         await FsUtilities.createFile(
-            path.join(root, 'src', 'app', 'components', 'change-sets-input', 'change-sets-input.component.ts'),
+            getPath(root, 'src', 'app', 'components', 'change-sets-input', 'change-sets-input.component.ts'),
             changeSetsComponentTsContent
         );
         await FsUtilities.createFile(
-            path.join(root, 'src', 'app', 'components', 'change-sets-input', 'change-sets-input.component.html'),
+            getPath(root, 'src', 'app', 'components', 'change-sets-input', 'change-sets-input.component.html'),
             changeSetsComponentHtmlContent
         );
         await NpmUtilities.install(name, [NpmPackage.LODASH]);
         await NpmUtilities.install(name, [NpmPackage.LODASH_TYPES], true);
         await FsUtilities.createFile(
-            path.join(root, 'src', 'app', 'utilities', 'lodash.utilities.ts'),
+            getPath(root, 'src', 'app', 'utilities', 'lodash.utilities.ts'),
             lodashUtilitiesContent
         );
     }
@@ -447,7 +446,7 @@ export abstract class AngularUtilities {
                 'provideAnimations()',
                 [{ defaultImport: false, element: 'provideAnimations', path: '@angular/platform-browser/animations' }]
             ),
-            FsUtilities.updateFile(path.join(root, 'src', 'styles.css'), [
+            FsUtilities.updateFile(getPath(root, 'src', 'styles.css'), [
                 '@import "@angular/material/prebuilt-themes/indigo-pink.css";',
                 '',
                 'html,',
@@ -475,7 +474,7 @@ export abstract class AngularUtilities {
         provider: Provider | EnvironmentProviders | CustomTsValues,
         imports: TsImportDefinition[]
     ): Promise<void> {
-        const appConfigPath: string = path.join(root, 'src', 'app', APP_CONFIG_FILE_NAME);
+        const appConfigPath: string = getPath(root, 'src', 'app', APP_CONFIG_FILE_NAME);
 
         const { result, contentString } = await TsUtilities.getArrayStartingWith(appConfigPath, 'providers: [');
 
@@ -523,7 +522,7 @@ export abstract class AngularUtilities {
             await this.addNavElement(root, navElement);
         }
 
-        const sitemapPath: string = path.join(root, 'src', SITEMAP_FILE_NAME);
+        const sitemapPath: string = getPath(root, 'src', SITEMAP_FILE_NAME);
         const route: string | undefined = this.resolveInternalRoute(navElement);
         if (
             domain
@@ -560,7 +559,7 @@ export abstract class AngularUtilities {
     }
 
     private static async addNavElement(projectPath: string, element: AddNavElementConfig): Promise<void> {
-        const routesPath: string = path.join(projectPath, 'src', 'app', ANGULAR_ROUTES_FILE_NAME);
+        const routesPath: string = getPath(projectPath, 'src', 'app', ANGULAR_ROUTES_FILE_NAME);
 
         const startIdentifier: ArrayStartIdentifier = this.getStartIdentifierForAddingNavElement(element);
         const { result, contentString } = await TsUtilities.getArrayStartingWith<typeof element.element>(routesPath, startIdentifier);
@@ -617,13 +616,13 @@ export abstract class AngularUtilities {
     static async addSitemapAndRobots(root: string, projectName: string, domain: string): Promise<void> {
         const app: Dirent = await WorkspaceUtilities.findProjectOrFail(projectName);
         await RobotsUtilities.createRobotsTxtForApp(app, domain, true);
-        await FsUtilities.createFile(path.join(root, 'src', SITEMAP_FILE_NAME), [
+        await FsUtilities.createFile(getPath(root, 'src', SITEMAP_FILE_NAME), [
             '<?xml version="1.0" encoding="UTF-8"?>',
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">',
             '</urlset>'
         ]);
 
-        const angularJsonPath: string = path.join(root, ANGULAR_JSON_FILE_NAME);
+        const angularJsonPath: string = getPath(root, ANGULAR_JSON_FILE_NAME);
         const currentAngularJson: AngularJson = await FsUtilities.parseFileAs(angularJsonPath);
         // eslint-disable-next-line stylistic/max-len
         const currentAssets: AngularJsonAssetPattern[] = currentAngularJson?.projects[projectName]?.architect?.['build'].options?.assets ?? [];
@@ -657,7 +656,7 @@ export abstract class AngularUtilities {
 
         await NpmUtilities.install(name, [NpmPackage.NGX_MATERIAL_NAVIGATION]);
         await FsUtilities.updateFile(
-            path.join(root, 'src', 'app', 'app.component.html'),
+            getPath(root, 'src', 'app', 'app.component.html'),
             [
                 // eslint-disable-next-line stylistic/max-len
                 '<ngx-mat-navigation-navbar [minHeight]="80" [minSidenavWidth]="\'30%\'" [minHeightOtherElements]="70" [navbarRows]="navbarRows">',
@@ -668,7 +667,7 @@ export abstract class AngularUtilities {
             ],
             'append'
         );
-        const appComponentTs: string = path.join(root, 'src', 'app', ANGULAR_APP_COMPONENT_FILE_NAME);
+        const appComponentTs: string = getPath(root, 'src', 'app', ANGULAR_APP_COMPONENT_FILE_NAME);
         await this.addComponentImports(
             appComponentTs,
             [
@@ -718,13 +717,13 @@ export abstract class AngularUtilities {
         }
         await FsUtilities.updateFile(appComponentTs, tsLines, 'replace');
 
-        const routesTs: string = path.join(root, 'src', 'app', ANGULAR_ROUTES_FILE_NAME);
+        const routesTs: string = getPath(root, 'src', 'app', ANGULAR_ROUTES_FILE_NAME);
         await FsUtilities.rename(
-            path.join(root, 'src', 'app', 'app.routes.ts'),
+            getPath(root, 'src', 'app', 'app.routes.ts'),
             routesTs
         );
         await FsUtilities.replaceAllInFile(
-            path.join(root, 'src', 'app', APP_CONFIG_FILE_NAME),
+            getPath(root, 'src', 'app', APP_CONFIG_FILE_NAME),
             'import { routes } from \'./app.routes\';',
             'import { routes } from \'./routes\';'
         );
@@ -766,7 +765,7 @@ export abstract class AngularUtilities {
             'replace'
         );
 
-        await FsUtilities.mkdir(path.join(root, 'src', 'app', 'pages'));
+        await FsUtilities.mkdir(getPath(root, 'src', 'app', 'pages'));
     }
 
     /**
@@ -780,12 +779,12 @@ export abstract class AngularUtilities {
         this.runCommand(root, `add @angular/pwa@${this.CLI_VERSION}`, { '--skip-confirmation': true });
         await NpmUtilities.install(name, [NpmPackage.NGX_PWA]);
         await FsUtilities.updateFile(
-            path.join(root, 'src', 'app', 'app.component.html'),
+            getPath(root, 'src', 'app', 'app.component.html'),
             ['<ngx-pwa-offline-status-bar></ngx-pwa-offline-status-bar>'],
             'prepend'
         );
         await this.addComponentImports(
-            path.join(root, 'src', 'app', ANGULAR_APP_COMPONENT_FILE_NAME),
+            getPath(root, 'src', 'app', ANGULAR_APP_COMPONENT_FILE_NAME),
             [
                 {
                     element: 'NgxPwaOfflineStatusBarComponent',
@@ -795,7 +794,7 @@ export abstract class AngularUtilities {
             ]
         );
         await FsUtilities.createFile(
-            path.join(root, 'src', 'app', 'services', 'offline.service.ts'),
+            getPath(root, 'src', 'app', 'services', 'offline.service.ts'),
             offlineServiceContent
         );
         await this.addProvider(

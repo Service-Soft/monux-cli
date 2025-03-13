@@ -1,8 +1,9 @@
 import { Dirent } from 'fs';
 import { access, writeFile, mkdir, readFile, readdir, rm, rename, cp } from 'fs/promises';
-import path, { dirname } from 'path';
+import { dirname } from 'path';
 
 import { JsonUtilities } from './json.utilities';
+import { getPath } from '../utilities';
 
 /**
  * Definition for a line in a file.
@@ -307,8 +308,8 @@ export abstract class FsUtilities {
     }
 
     private static async copyEntry(entry: Dirent, destination: string): Promise<void> {
-        const source: string = path.join(entry.parentPath, entry.name);
-        const dest: string = path.join(destination, entry.name);
+        const source: string = getPath(entry.parentPath, entry.name);
+        const dest: string = getPath(destination, entry.name);
         await cp(source, dest, { recursive: true, errorOnExist: true });
     }
 }

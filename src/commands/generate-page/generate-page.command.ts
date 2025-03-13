@@ -1,11 +1,10 @@
 import { Dirent } from 'fs';
-import path from 'path';
 
 import { AddNavElementConfig, AngularUtilities, NavElementTypes } from '../../angular';
 import { ANGULAR_ROUTES_FILE_NAME } from '../../constants';
 import { FsUtilities, InquirerUtilities, QuestionsFor } from '../../encapsulation';
 import { EnvUtilities } from '../../env';
-import { toKebabCase, toPascalCase, toSnakeCase } from '../../utilities';
+import { getPath, toKebabCase, toPascalCase, toSnakeCase } from '../../utilities';
 import { WorkspaceUtilities } from '../../workspace';
 
 /**
@@ -79,10 +78,10 @@ export async function runGeneratePage(): Promise<void> {
         rowIndex: 0
     };
 
-    await AngularUtilities.generatePage(path.join(projectRoot.parentPath, projectRoot.name), options.pageName, navElement, domain);
+    await AngularUtilities.generatePage(getPath(projectRoot.parentPath, projectRoot.name), options.pageName, navElement, domain);
     const pageName: string = toKebabCase(options.pageName);
     await FsUtilities.replaceInFile(
-        path.join(projectRoot.parentPath, projectRoot.name, 'src', 'app', ANGULAR_ROUTES_FILE_NAME),
+        getPath(projectRoot.parentPath, projectRoot.name, 'src', 'app', ANGULAR_ROUTES_FILE_NAME),
         `\'${LOAD_COMPONENT_PLACEHOLDER}\'`,
         `() => import(\'./pages/${pageName}/${pageName}.component\').then(m => m.${toPascalCase(options.pageName)}Component)`
     );

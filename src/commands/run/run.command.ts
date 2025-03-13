@@ -1,8 +1,8 @@
 import { Dirent } from 'fs';
-import path from 'path';
 
 import { CPUtilities } from '../../encapsulation';
 import { NativeNpmCommands, NpmUtilities } from '../../npm';
+import { getPath } from '../../utilities';
 import { WorkspaceUtilities } from '../../workspace';
 
 /**
@@ -19,6 +19,6 @@ export async function runRun(...args: string[]): Promise<void> {
     }
 
     const project: Dirent = await WorkspaceUtilities.findProjectOrFail(projectName);
-    const projectPath: string = path.join(project.parentPath, project.name);
+    const projectPath: string = getPath(project.parentPath, project.name);
     CPUtilities.execSync(`cd ${projectPath} && npm ${args.slice(1).join(' ')}`);
 }

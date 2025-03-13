@@ -1,4 +1,3 @@
-import path from 'path';
 
 import { beforeEach, describe, expect, test } from '@jest/globals';
 
@@ -6,6 +5,7 @@ import { FileMockUtilities, getMockConstants, MockConstants } from '../__testing
 import { TailwindUtilities } from './tailwind.utilities';
 import { TAILWIND_CONFIG_FILE_NAME } from '../constants';
 import { FsUtilities } from '../encapsulation';
+import { getPath } from '../utilities';
 
 const mockConstants: MockConstants = getMockConstants('tailwind-utilities');
 
@@ -16,7 +16,7 @@ describe('TailwindUtilities', () => {
 
     test('setupProjectTailwind', async () => {
         await TailwindUtilities.setupProjectTailwind(mockConstants.TS_LIBRARY_DIR);
-        const lines: string[] = await FsUtilities.readFileLines(path.join(mockConstants.TS_LIBRARY_DIR, TAILWIND_CONFIG_FILE_NAME));
+        const lines: string[] = await FsUtilities.readFileLines(getPath(mockConstants.TS_LIBRARY_DIR, TAILWIND_CONFIG_FILE_NAME));
         expect(lines).toEqual([
             'baseConfig = require(\'../../tailwind.config\');',
             '',

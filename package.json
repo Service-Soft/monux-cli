@@ -1,6 +1,6 @@
 {
-    "name": "mrcli",
-    "version": "1.0.0",
+    "name": "monux-cli",
+    "version": "1.0.1",
     "license": "ISC",
     "main": "index.js",
     "engines": {

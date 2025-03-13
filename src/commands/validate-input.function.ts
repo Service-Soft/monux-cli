@@ -1,5 +1,4 @@
 import { Dirent } from 'fs';
-import path from 'path';
 
 import { FsUtilities } from '../encapsulation';
 import { WorkspaceConfig, WorkspaceUtilities } from '../workspace';
@@ -7,6 +6,7 @@ import { Command } from './command.enum';
 import { exitWithError } from './exit-with-error.function';
 import { PACKAGE_JSON_FILE_NAME } from '../constants';
 import { NativeNpmCommands, PackageJson } from '../npm';
+import { getPath } from '../utilities';
 
 const allKnownCommands: Command[] = Object.values(Command);
 
@@ -58,7 +58,7 @@ async function validateRunInput(...args: string[]): Promise<void> {
     await validateInsideWorkspace();
     const foundProject: Dirent = await WorkspaceUtilities.findProjectOrFail(project);
 
-    const foundProjectPath: string = path.join(foundProject.parentPath, foundProject.name);
+    const foundProjectPath: string = getPath(foundProject.parentPath, foundProject.name);
     const packageJson: Dirent | undefined = (await FsUtilities.readdir(foundProjectPath)).find(f => f.name === PACKAGE_JSON_FILE_NAME);
     if (!packageJson) {
         exitWithError(`The provided project "${project}" does not contain a ${PACKAGE_JSON_FILE_NAME} file`);
@@ -73,7 +73,7 @@ async function validateRunInput(...args: string[]): Promise<void> {
         exitWithError('Error parsing the command: Too many arguments.');
     }
     const npmScript: string = args[1];
-    const file: PackageJson = await FsUtilities.parseFileAs<PackageJson>(path.join(packageJson.parentPath, packageJson.name));
+    const file: PackageJson = await FsUtilities.parseFileAs<PackageJson>(getPath(packageJson.parentPath, packageJson.name));
 
     if (!Object.keys(file.scripts).includes(npmScript)) {
         exitWithError(`The project "${project}" does not contain the provided script "${npmScript}"`);

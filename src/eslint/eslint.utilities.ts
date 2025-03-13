@@ -1,8 +1,8 @@
-import path from 'path';
 
 import { ESLINT_CONFIG_FILE_NAME, PACKAGE_JSON_FILE_NAME } from '../constants';
 import { FsUtilities } from '../encapsulation';
 import { NpmUtilities } from '../npm';
+import { getPath } from '../utilities';
 
 /**
  * Utilities for eslint.
@@ -24,7 +24,7 @@ export abstract class EslintUtilities {
         baseEslintConfigPath: string = '../../eslint.config'
     ): Promise<void> {
         await NpmUtilities.updatePackageJsonFile(
-            path.join(root, PACKAGE_JSON_FILE_NAME),
+            getPath(root, PACKAGE_JSON_FILE_NAME),
             {
                 scripts: {
                     lint: 'eslint . --max-warnings 0',
@@ -33,7 +33,7 @@ export abstract class EslintUtilities {
             }
         );
         await FsUtilities.createFile(
-            path.join(root, ESLINT_CONFIG_FILE_NAME),
+            getPath(root, ESLINT_CONFIG_FILE_NAME),
             [
                 useModuleJs ? 'import baseConfig from \'../../eslint.config.js\';' : `baseConfig = require('${baseEslintConfigPath}');`,
                 '',

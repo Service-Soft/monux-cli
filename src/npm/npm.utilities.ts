@@ -1,12 +1,11 @@
 import { Dirent } from 'fs';
-import path from 'path';
 
 import { CPUtilities, FsUtilities, JsonUtilities } from '../encapsulation';
 import { WorkspaceUtilities } from '../workspace';
 import { PackageJson } from './package-json.model';
 import { PACKAGE_JSON_FILE_NAME } from '../constants';
 import { NpmPackage } from './npm-package.enum';
-import { mergeDeep } from '../utilities';
+import { getPath, mergeDeep } from '../utilities';
 
 /**
  * Options for running the npm init command.
@@ -54,7 +53,7 @@ export abstract class NpmUtilities {
             `npm init -y --scope=${config.scope} -w ${config.path}`,
             output
         );
-        const packageJsonPath: string = path.join(config.path, PACKAGE_JSON_FILE_NAME);
+        const packageJsonPath: string = getPath(config.path, PACKAGE_JSON_FILE_NAME);
         const oldPackageJson: PackageJson = await FsUtilities.parseFileAs(packageJsonPath);
         await FsUtilities.updateFile(packageJsonPath, JsonUtilities.stringify(oldPackageJson), 'replace', false);
     }
@@ -66,7 +65,7 @@ export abstract class NpmUtilities {
      */
     static async run(projectName: string, npmScript: NpmScript): Promise<void> {
         const project: Dirent = await WorkspaceUtilities.findProjectOrFail(projectName);
-        const projectPath: string = path.join(project.parentPath, project.name);
+        const projectPath: string = getPath(project.parentPath, project.name);
         CPUtilities.execSync(`cd ${projectPath} && npm run ${npmScript}`);
     }
 
@@ -78,7 +77,7 @@ export abstract class NpmUtilities {
      */
     static async install(projectName: string, npmPackages: NpmPackage[], development: boolean = false): Promise<void> {
         const project: Dirent = await WorkspaceUtilities.findProjectOrFail(projectName);
-        const projectPath: string = path.join(project.parentPath, project.name);
+        const projectPath: string = getPath(project.parentPath, project.name);
 
         const installCommand: string = development ? 'npm i -D' : 'npm i';
         CPUtilities.execSync(`cd ${projectPath} && ${installCommand} ${npmPackages.join(' ')}`);
@@ -101,7 +100,7 @@ export abstract class NpmUtilities {
      */
     static async updatePackageJson(projectName: string, data: Partial<PackageJson>): Promise<void> {
         const project: Dirent = await WorkspaceUtilities.findProjectOrFail(projectName);
-        const packageJsonPath: string = path.join(project.parentPath, project.name, PACKAGE_JSON_FILE_NAME);
+        const packageJsonPath: string = getPath(project.parentPath, project.name, PACKAGE_JSON_FILE_NAME);
         await this.updatePackageJsonFile(packageJsonPath, data);
     }
 

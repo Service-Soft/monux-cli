@@ -1,10 +1,9 @@
 import { Dirent } from 'fs';
-import path from 'path';
 
 import { ENV_FILE_NAME, IS_PUBLIC_ENVIRONMENT_VARIABLE, ROBOTS_FILE_NAME, SITEMAP_FILE_NAME } from '../constants';
 import { FsUtilities } from '../encapsulation';
 import { EnvUtilities } from '../env';
-import { filterAsync, toSnakeCase } from '../utilities';
+import { filterAsync, getPath, toSnakeCase } from '../utilities';
 import { WorkspaceUtilities } from '../workspace';
 
 /**
@@ -17,14 +16,14 @@ export abstract class RobotsUtilities {
      * @param rootPath - The root of the monorepo.
      */
     static async createRobotsTxtFiles(rootPath: string = ''): Promise<void> {
-        const environmentFilePath: string = path.join(rootPath, ENV_FILE_NAME);
+        const environmentFilePath: string = getPath(rootPath, ENV_FILE_NAME);
         if (!(await FsUtilities.readFile(environmentFilePath)).includes(`${IS_PUBLIC_ENVIRONMENT_VARIABLE}=`)) {
             return;
         }
 
         // Only projects that have a sitemap file get a robots.txt file.
         const apps: Dirent[] = await filterAsync(await WorkspaceUtilities.getProjects('apps'), async a => {
-            const sitemapPath: string = path.join(a.parentPath, a.name, 'src', SITEMAP_FILE_NAME);
+            const sitemapPath: string = getPath(a.parentPath, a.name, 'src', SITEMAP_FILE_NAME);
             return await FsUtilities.exists(sitemapPath);
         });
         await Promise.all(apps.map(async a => {
@@ -46,7 +45,7 @@ export abstract class RobotsUtilities {
         shouldCreateEnvVariable: boolean,
         rootPath: string = ''
     ): Promise<void> {
-        const robotsTxtPath: string = path.join(app.parentPath, app.name, 'src', ROBOTS_FILE_NAME);
+        const robotsTxtPath: string = getPath(app.parentPath, app.name, 'src', ROBOTS_FILE_NAME);
         await FsUtilities.rm(robotsTxtPath);
 
         if (shouldCreateEnvVariable) {
@@ -69,7 +68,7 @@ export abstract class RobotsUtilities {
     }
 
     private static async createIsPublicEnvVariableIfNotExists(rootPath: string = ''): Promise<void> {
-        const environmentFilePath: string = path.join(rootPath, ENV_FILE_NAME);
+        const environmentFilePath: string = getPath(rootPath, ENV_FILE_NAME);
         if ((await FsUtilities.readFile(environmentFilePath)).includes(`${IS_PUBLIC_ENVIRONMENT_VARIABLE}=`)) {
             return;
         }

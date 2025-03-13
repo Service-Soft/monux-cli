@@ -1,9 +1,9 @@
-import path from 'path';
 
 import yaml from 'js-yaml';
 
 import { FsUtilities } from '../encapsulation';
 import { GithubWorkflow } from './github-workflow.model';
+import { getPath } from '../utilities';
 
 /**
  * Utilities for github.
@@ -14,7 +14,7 @@ export abstract class GithubUtilities {
      * @param data - The data of the workflow to create.
      */
     static async createWorkflow(data: GithubWorkflow): Promise<void> {
-        const workflowFilePath: string = path.join('.github', 'workflows', `${data.name}.yml`);
+        const workflowFilePath: string = getPath('.github', 'workflows', `${data.name}.yml`);
         await this.createWorkflowFile(workflowFilePath, data);
     }
 

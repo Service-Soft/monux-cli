@@ -1,6 +1,5 @@
 /* eslint-disable no-console */
 import { Dirent } from 'fs';
-import path from 'path';
 
 import { AngularUtilities, NavElementTypes } from '../../../angular';
 import { ANGULAR_JSON_FILE_NAME, APP_CONFIG_FILE_NAME, APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, GIT_IGNORE_FILE_NAME } from '../../../constants';
@@ -12,7 +11,7 @@ import { NpmPackage, NpmUtilities } from '../../../npm';
 import { TailwindUtilities } from '../../../tailwind';
 import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
-import { toPascalCase, toSnakeCase } from '../../../utilities';
+import { getPath, toPascalCase, toSnakeCase } from '../../../utilities';
 import { WorkspaceUtilities } from '../../../workspace';
 import { AddCommand } from '../models/add-command.class';
 import { AddConfiguration } from '../models/add-configuration.model';
@@ -105,7 +104,7 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
                 config.baseUrl
             ),
             AngularUtilities.updateAngularJson(
-                path.join(root, ANGULAR_JSON_FILE_NAME),
+                getPath(root, ANGULAR_JSON_FILE_NAME),
                 { $schema: '../../node_modules/@angular/cli/lib/config/schema.json' }
             ),
             AngularUtilities.setupMaterial(root)
@@ -117,7 +116,7 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
         await AngularUtilities.setupChangeSets(root, config.name, config.apiName);
         await AngularUtilities.setupPwa(root, config.name);
         await FsUtilities.replaceInFile(
-            path.join(root, 'src', 'app', APP_CONFIG_FILE_NAME),
+            getPath(root, 'src', 'app', APP_CONFIG_FILE_NAME),
             '\'ALLOWED_DOMAINS_PLACEHOLDER\'',
             `environment.${toSnakeCase(config.apiName)}_domain`
         );
@@ -133,7 +132,7 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
 
     private async setupTailwind(root: string): Promise<void> {
         await TailwindUtilities.setupProjectTailwind(root);
-        await FsUtilities.updateFile(path.join(root, 'src', 'styles.css'), [
+        await FsUtilities.updateFile(getPath(root, 'src', 'styles.css'), [
             '@tailwind base;',
             '@tailwind components;',
             '@tailwind utilities;'
@@ -171,7 +170,7 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
 
     private async createDockerfile(root: string, config: AddAngularConfiguration): Promise<void> {
         await FsUtilities.createFile(
-            path.join(root, DOCKER_FILE_NAME),
+            getPath(root, DOCKER_FILE_NAME),
             [
                 'FROM node:20 AS build',
                 '# Set to a non-root built-in user `node`',
@@ -198,8 +197,8 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
             { '--skip-git': true, '--style': 'css', '--inline-style': true, '--ssr': true }
         );
         const newProject: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
-        const root: string = path.join(newProject.parentPath, newProject.name);
-        await FsUtilities.updateFile(path.join(root, 'src', 'app', 'app.component.html'), '', 'replace');
+        const root: string = getPath(newProject.parentPath, newProject.name);
+        await FsUtilities.updateFile(getPath(root, 'src', 'app', 'app.component.html'), '', 'replace');
         await AngularUtilities.addProvider(root, 'provideHttpClient(withInterceptorsFromDi(), withFetch())', [
             { defaultImport: false, element: 'provideHttpClient', path: '@angular/common/http' },
             { defaultImport: false, element: 'withInterceptorsFromDi', path: '@angular/common/http' }
@@ -209,10 +208,10 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
 
     private async cleanUp(root: string): Promise<void> {
         console.log('cleans up');
-        await FsUtilities.rm(path.join(root, '.vscode'));
-        await FsUtilities.rm(path.join(root, '.editorconfig'));
-        await FsUtilities.rm(path.join(root, GIT_IGNORE_FILE_NAME));
-        await FsUtilities.rm(path.join(root, 'src', 'app', 'app.component.spec.ts'));
+        await FsUtilities.rm(getPath(root, '.vscode'));
+        await FsUtilities.rm(getPath(root, '.editorconfig'));
+        await FsUtilities.rm(getPath(root, GIT_IGNORE_FILE_NAME));
+        await FsUtilities.rm(getPath(root, 'src', 'app', 'app.component.spec.ts'));
     }
 
     private async setupTsConfig(root: string, projectName: string): Promise<void> {
@@ -235,6 +234,6 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
                 'src/**/*.d.ts'
             ]
         };
-        await FsUtilities.createFile(path.join(root, 'tsconfig.eslint.json'), JsonUtilities.stringify(eslintTsconfig));
+        await FsUtilities.createFile(getPath(root, 'tsconfig.eslint.json'), JsonUtilities.stringify(eslintTsconfig));
     }
 }

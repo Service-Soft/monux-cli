@@ -1,5 +1,3 @@
-import path from 'path';
-
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
 import { AngularUtilities } from './angular.utilities';
@@ -8,6 +6,7 @@ import { CPUtilities, FsUtilities } from '../encapsulation';
 import { NpmUtilities } from '../npm';
 import { TsImportDefinition } from '../ts';
 import { AddNavElementConfig } from './add-nav-element-config.model';
+import { getPath } from '../utilities';
 
 const mockConstants: MockConstants = getMockConstants('angular-utilities');
 
@@ -138,8 +137,8 @@ describe('AngularUtilities', () => {
         );
 
         const exists: boolean[] = await Promise.all([
-            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.ts')),
-            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.html'))
+            FsUtilities.exists(getPath(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.ts')),
+            FsUtilities.exists(getPath(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.html'))
         ]);
 
         expect(exists.some(e => !e)).toBe(false);
@@ -196,8 +195,8 @@ describe('AngularUtilities', () => {
             undefined
         );
         const exists2: boolean[] = await Promise.all([
-            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test-test', 'test-test.component.ts')),
-            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test-test', 'test-test.component.html'))
+            FsUtilities.exists(getPath(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test-test', 'test-test.component.ts')),
+            FsUtilities.exists(getPath(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test-test', 'test-test.component.html'))
         ]);
         expect(exists2.some(e => !e)).toBe(false);
 
@@ -271,8 +270,8 @@ describe('AngularUtilities', () => {
         );
 
         const exists: boolean[] = await Promise.all([
-            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.ts')),
-            FsUtilities.exists(path.join(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.html'))
+            FsUtilities.exists(getPath(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.ts')),
+            FsUtilities.exists(getPath(mockConstants.ANGULAR_APP_DIR, 'src', 'app', 'pages', 'test', 'test.component.html'))
         ]);
         expect(exists.some(e => !e)).toBe(false);
 

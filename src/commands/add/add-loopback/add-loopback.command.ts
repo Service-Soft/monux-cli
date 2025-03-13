@@ -1,5 +1,4 @@
 import { Dirent } from 'fs';
-import path from 'path';
 
 import { APPS_DIRECTORY_NAME, DOCKER_COMPOSE_FILE_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, GIT_IGNORE_FILE_NAME, TS_CONFIG_FILE_NAME } from '../../../constants';
 import { DbUtilities } from '../../../db';
@@ -12,7 +11,7 @@ import { NpmPackage, NpmUtilities } from '../../../npm';
 import { TsUtilities } from '../../../ts';
 import { TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
-import { toKebabCase, toPascalCase, toSnakeCase } from '../../../utilities';
+import { getPath, toKebabCase, toPascalCase, toSnakeCase } from '../../../utilities';
 import { WorkspaceUtilities } from '../../../workspace';
 import { AddCommand } from '../models';
 import { AddConfiguration } from '../models/add-configuration.model';
@@ -134,7 +133,7 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
     }
 
     private async updateIndexTs(root: string, port: number): Promise<void> {
-        const indexPath: string = path.join(root, 'src', 'index.ts');
+        const indexPath: string = getPath(root, 'src', 'index.ts');
         await FsUtilities.replaceInFile(indexPath, '  console.log(`Try ${url}/ping`);\n', '');
         await FsUtilities.replaceInFile(
             indexPath,
@@ -147,14 +146,14 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
     }
 
     private async updateOpenApiSpec(root: string, port: number): Promise<void> {
-        const openApiPath: string = path.join(root, 'src', 'openapi-spec.ts');
+        const openApiPath: string = getPath(root, 'src', 'openapi-spec.ts');
         await FsUtilities.replaceInFile(openApiPath, 'env.PORT', 'env[\'PORT\']');
         await FsUtilities.replaceInFile(openApiPath, 'env.HOST', 'env[\'HOST\']');
         await FsUtilities.replaceInFile(openApiPath, '?? 3000', `?? ${port}`);
     }
 
     private async updateApplicationTs(root: string): Promise<void> {
-        const applicationPath: string = path.join(root, 'src', 'application.ts');
+        const applicationPath: string = getPath(root, 'src', 'application.ts');
         await FsUtilities.replaceInFile(
             applicationPath,
             'BootMixin(RestApplication)',
@@ -181,7 +180,7 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
         const USER_ENV_VARIABLE: string = `${toSnakeCase(name)}_db_user`;
         const DATABASE_ENV_VARIABLE: string = `${toSnakeCase(name)}_database`;
         const HOST_ENV_VARIABLE: string = `${toSnakeCase(dbName)}_host`;
-        const dataSourcePath: string = path.join(root, 'src', 'datasources', `${toKebabCase(dbName)}.datasource.ts`);
+        const dataSourcePath: string = getPath(root, 'src', 'datasources', `${toKebabCase(dbName)}.datasource.ts`);
         await TsUtilities.addImportStatements(
             dataSourcePath,
             [{ defaultImport: false, element: 'environment', path: '../environment/environment' }]
@@ -217,7 +216,7 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
             `  constructor(\n    @inject('datasources.config.${dbName}', {optional: true})\n    dsConfig: object = config,\n  ) {\n    super(dsConfig);\n  }`,
             '    constructor() {\n        super(config);\n    }'
         );
-        const environmentModel: string = path.join(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
+        const environmentModel: string = getPath(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
 
         await EnvUtilities.addProjectVariableKey(name, environmentModel, PASSWORD_ENV_VARIABLE, true);
         await EnvUtilities.addProjectVariableKey(name, environmentModel, USER_ENV_VARIABLE, true);
@@ -238,15 +237,15 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
             }
         });
         const newProject: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
-        const root: string = path.join(newProject.parentPath, newProject.name);
+        const root: string = getPath(newProject.parentPath, newProject.name);
         await Promise.all([
-            FsUtilities.rm(path.join(root, 'src', '__tests__')),
-            FsUtilities.rm(path.join(root, GIT_IGNORE_FILE_NAME)),
-            FsUtilities.rm(path.join(root, 'DEVELOPING.md')),
-            FsUtilities.rm(path.join(root, 'src', 'controllers', 'ping.controller.ts')),
-            FsUtilities.updateFile(path.join(root, 'src', 'controllers', 'index.ts'), '', 'replace')
+            FsUtilities.rm(getPath(root, 'src', '__tests__')),
+            FsUtilities.rm(getPath(root, GIT_IGNORE_FILE_NAME)),
+            FsUtilities.rm(getPath(root, 'DEVELOPING.md')),
+            FsUtilities.rm(getPath(root, 'src', 'controllers', 'ping.controller.ts')),
+            FsUtilities.updateFile(getPath(root, 'src', 'controllers', 'index.ts'), '', 'replace')
         ]);
-        const indexTs: string = path.join(root, 'src', 'index.ts');
+        const indexTs: string = getPath(root, 'src', 'index.ts');
         await FsUtilities.replaceInFile(
             indexTs,
             'async function main(options: ApplicationConfig = {})',

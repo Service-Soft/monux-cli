@@ -13,7 +13,7 @@ export abstract class FigletUtilities {
     static displayLogo(): void {
         console.log(
             ChalkUtilities.primary(
-                figlet.textSync('Monorepo', { horizontalLayout: 'full' })
+                figlet.textSync('Monux', { horizontalLayout: 'full' })
             )
         );
     }

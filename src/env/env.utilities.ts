@@ -1,9 +1,9 @@
 import { Dirent } from 'fs';
-import path from 'path';
 
 import { ENV_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME, GlobalEnvironmentVariable } from '../constants';
 import { FileLine, FsUtilities, JsonUtilities } from '../encapsulation';
 import { KeyValue, OmitStrict } from '../types';
+import { getPath } from '../utilities';
 import { WorkspaceUtilities } from '../workspace';
 
 /**
@@ -56,11 +56,12 @@ export abstract class EnvUtilities {
      * @param failOnMissingVariable - Whether or not the build should fail when a variable is missing.
      */
     static async buildEnvironmentFileForApp(app: Dirent, rootPath: string, failOnMissingVariable: boolean): Promise<void> {
-        const environmentFolder: string = path.join(app.parentPath, app.name, 'src', 'environment');
-        const variableKeys: string[] = await this.getProjectVariableKeys(path.join(environmentFolder, ENVIRONMENT_MODEL_TS_FILE_NAME));
+        const environmentFolder: string = getPath(app.parentPath, app.name, 'src', 'environment');
+        const variableKeys: string[] = await this.getProjectVariableKeys(getPath(environmentFolder, ENVIRONMENT_MODEL_TS_FILE_NAME));
 
-        await FsUtilities.rm(path.join(environmentFolder, ENVIRONMENT_TS_FILE_NAME));
-        await this.createProjectEnvironmentFile(path.join(app.parentPath, app.name), variableKeys, rootPath, failOnMissingVariable);
+        // TODO: The first time getPath fails here because
+        await FsUtilities.rm(getPath(environmentFolder, ENVIRONMENT_TS_FILE_NAME));
+        await this.createProjectEnvironmentFile(getPath(app.parentPath, app.name), variableKeys, rootPath, failOnMissingVariable);
     }
 
     /**
@@ -111,7 +112,7 @@ export abstract class EnvUtilities {
      */
     static async setupProjectEnvironment(projectPath: string, disableCommentRule: boolean, rootPath: string = ''): Promise<void> {
         await FsUtilities.createFile(
-            path.join(projectPath, 'src', 'environment', 'environment.model.ts'),
+            getPath(projectPath, 'src', 'environment', 'environment.model.ts'),
             [
                 // eslint-disable-next-line stylistic/max-len
                 (disableCommentRule ? '/* eslint-disable jsdoc/require-jsdoc */\n' : '') + 'import { GlobalEnvironment } from \'../../../../global-environment.model\';',
@@ -139,7 +140,7 @@ export abstract class EnvUtilities {
     ): Promise<void> {
         const variables: EnvVariable[] = await this.getEnvVariables(variableKeys, rootPath, failOnMissingVariable);
         await FsUtilities.createFile(
-            path.join(projectPath, 'src', 'environment', ENVIRONMENT_TS_FILE_NAME),
+            getPath(projectPath, 'src', 'environment', ENVIRONMENT_TS_FILE_NAME),
             [
                 'import { Environment } from \'./environment.model\';',
                 '',
@@ -159,9 +160,9 @@ export abstract class EnvUtilities {
         rootPath: string,
         failOnMissingVariable: boolean
     ): Promise<EnvVariable[]> {
-        const lines: string[] = await FsUtilities.readFileLines(path.join(rootPath, ENV_FILE_NAME));
+        const lines: string[] = await FsUtilities.readFileLines(getPath(rootPath, ENV_FILE_NAME));
         const variableDefinitions: OmitStrict<EnvVariable, 'value'>[] = await this.getVariableDefinitions(
-            path.join(rootPath, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME)
+            getPath(rootPath, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME)
         );
         const res: EnvVariable[] = [];
         for (const line of lines.filter(l => l.includes('='))) {
@@ -219,11 +220,11 @@ export abstract class EnvUtilities {
     }
 
     private static async createGlobalEnvironmentModel(rootPath: string): Promise<void> {
-        await FsUtilities.createFile(path.join(rootPath, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME), 'export type GlobalEnvironment = {}');
+        await FsUtilities.createFile(getPath(rootPath, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME), 'export type GlobalEnvironment = {}');
     }
 
     private static async createEnvFile(rootPath: string): Promise<void> {
-        await FsUtilities.createFile(path.join(rootPath, ENV_FILE_NAME), '');
+        await FsUtilities.createFile(getPath(rootPath, ENV_FILE_NAME), '');
     }
 
     /**
@@ -232,7 +233,7 @@ export abstract class EnvUtilities {
      * @returns An array of error messages mapped to the keys that caused them.
      */
     static async validate(rootPath: string = ''): Promise<KeyValue<EnvValidationErrorMessage>[]> {
-        if (!await FsUtilities.exists(path.join(rootPath, ENV_FILE_NAME))) {
+        if (!await FsUtilities.exists(getPath(rootPath, ENV_FILE_NAME))) {
             return [
                 {
                     key: ENV_FILE_NAME,
@@ -244,7 +245,7 @@ export abstract class EnvUtilities {
         const envValues: EnvVariable[] = await this.getEnvVariables(undefined, rootPath, true);
 
         const variableDefinitions: OmitStrict<EnvVariable, 'value'>[] = await this.getVariableDefinitions(
-            path.join(rootPath, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME)
+            getPath(rootPath, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME)
         );
 
         const res: KeyValue<EnvValidationErrorMessage>[] = [];
@@ -302,13 +303,13 @@ export abstract class EnvUtilities {
      * @param rootPath - The path to the root of the monorepo.
      */
     static async addVariable(variable: EnvVariable, rootPath: string = ''): Promise<void> {
-        const environmentFilePath: string = path.join(rootPath, ENV_FILE_NAME);
+        const environmentFilePath: string = getPath(rootPath, ENV_FILE_NAME);
         if ((await FsUtilities.readFile(environmentFilePath)).includes(`${variable.key}=`)) {
             throw new Error(`The variable ${variable.key} has already been set.`);
         }
         await FsUtilities.updateFile(environmentFilePath, `${variable.key}=${variable.value ?? ''}`, 'append');
 
-        const environmentModelFilePath: string = path.join(rootPath, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
+        const environmentModelFilePath: string = getPath(rootPath, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
 
         const lines: string[] = await FsUtilities.readFileLines(environmentModelFilePath);
         const firstLine: FileLine = await FsUtilities.findLineWithContent(lines, 'GlobalEnvironment = {');
@@ -357,9 +358,9 @@ export abstract class EnvUtilities {
     //  */
     // static async updateVariable(variable: EnvVariable, basePath: string = ''): Promise<void> {
     //     await this.createEnvFile(basePath);
-    //     const lines: string[] = await FsUtilities.readFileLines(path.join(basePath, ENV_FILE_NAME));
+    //     const lines: string[] = await FsUtilities.readFileLines(getPath(basePath, ENV_FILE_NAME));
     //     const foundLine: FileLine = FsUtilities.findLineWithContent(lines, `${variable.key}=`);
     //     lines[foundLine.index] = `${variable.key}=${variable.value}`;
-    //     await FsUtilities.updateFile(path.join(basePath, ENV_FILE_NAME), lines, 'replace');
+    //     await FsUtilities.updateFile(getPath(basePath, ENV_FILE_NAME), lines, 'replace');
     // }
 }

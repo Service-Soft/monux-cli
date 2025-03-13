@@ -1,10 +1,10 @@
-import path from 'path';
 
 import { beforeEach, describe, expect, test } from '@jest/globals';
 
 import { FileMockUtilities, getMockConstants, MockConstants } from '../__testing__';
 import { FsUtilities } from '../encapsulation';
 import { GithubUtilities } from './github.utilities';
+import { getPath } from '../utilities';
 
 const mockConstants: MockConstants = getMockConstants('github-utilities');
 
@@ -15,7 +15,7 @@ describe('GithubUtilities', () => {
     });
 
     test('createWorkflow', async () => {
-        const WORKFLOW_FILE: string = path.join(mockConstants.GITHUB_WORKFLOW_DIR, 'main.yml');
+        const WORKFLOW_FILE: string = getPath(mockConstants.GITHUB_WORKFLOW_DIR, 'main.yml');
         await GithubUtilities['createWorkflowFile'](WORKFLOW_FILE, {
             name: 'main',
             on: 'push',

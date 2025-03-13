@@ -1,11 +1,10 @@
-import path from 'path';
 
 import { AddLoopbackConfiguration } from '../commands/add/add-loopback';
 import { ENVIRONMENT_MODEL_TS_FILE_NAME, TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE } from '../constants';
 import { CPUtilities, FsUtilities } from '../encapsulation';
 import { EnvUtilities } from '../env';
 import { TsUtilities } from '../ts';
-import { generatePlaceholderPassword, optionsToCliString, toKebabCase, toPascalCase, toSnakeCase } from '../utilities';
+import { generatePlaceholderPassword, getPath, optionsToCliString, toKebabCase, toPascalCase, toSnakeCase } from '../utilities';
 import { LbDatabaseConfig } from './lb-database-config.model';
 import { NpmPackage, NpmUtilities } from '../npm';
 import { adminControllerContent } from './admin-controller.content';
@@ -174,7 +173,7 @@ export abstract class LoopbackUtilities {
         }
         CPUtilities.execSync(`cd ${directory} && npx @loopback/cli@${this.CLI_VERSION} ${command} ${optionsToCliString(options, ' ')}`);
         if (command.startsWith('service')) {
-            const servicePath: string = path.join(directory, 'src', 'services', `${toKebabCase(command.split(' ')[1])}.service.ts`);
+            const servicePath: string = getPath(directory, 'src', 'services', `${toKebabCase(command.split(' ')[1])}.service.ts`);
             await FsUtilities.replaceInFile(servicePath, '/* inject, */', '');
             await FsUtilities.replaceInFile(servicePath, '/* Add @inject to inject parameters */', '');
             await FsUtilities.replaceInFile(servicePath, '\n  /*\n   * Add service methods here\n   */', '');
@@ -209,7 +208,7 @@ export abstract class LoopbackUtilities {
 
     private static async createBiometricCredentialsService(root: string, config: AddLoopbackConfiguration): Promise<void> {
         await this.runCommand(root, 'service BiometricCredentials', { '--skip-install': true, '--type': 'class', '--yes': true });
-        const servicePath: string = path.join(root, 'src', 'services', 'biometric-credentials.service.ts');
+        const servicePath: string = getPath(root, 'src', 'services', 'biometric-credentials.service.ts');
         await TsUtilities.addImportStatements(
             servicePath,
             [
@@ -231,7 +230,7 @@ export abstract class LoopbackUtilities {
 
     private static async createAdminFiles(root: string, dbName: string): Promise<void> {
         await this.runCommand(root, 'model Admin', { '--skip-install': true, '--yes': true });
-        const adminModelTs: string = path.join(root, 'src', 'models', 'admin.model.ts');
+        const adminModelTs: string = getPath(root, 'src', 'models', 'admin.model.ts');
         await FsUtilities.replaceInFile(adminModelTs, 'extends Entity', 'extends ChangeSetEntity');
         await FsUtilities.replaceInFile(adminModelTs, 'Entity, ', '');
         await TsUtilities.addToStartOfClass(adminModelTs, [
@@ -257,7 +256,7 @@ export abstract class LoopbackUtilities {
             'repository Admin',
             { '--skip-install': true, '--yes': true, '--datasource': dbName, '--model': 'Admin' }
         );
-        const adminRepositoryTs: string = path.join(root, 'src', 'repositories', 'admin.repository.ts');
+        const adminRepositoryTs: string = getPath(root, 'src', 'repositories', 'admin.repository.ts');
         await TsUtilities.addImportStatements(adminRepositoryTs, [
             { defaultImport: false, element: 'Getter', path: '@loopback/core' },
             { defaultImport: false, element: 'BelongsToAccessor', path: '@loopback/repository' },
@@ -309,17 +308,17 @@ export abstract class LoopbackUtilities {
             'this.registerInclusionResolver(\'baseUser\', this.baseUser.inclusionResolver);'
         ].join('\n'));
 
-        const controllerPath: string = path.join(root, 'src', 'controllers');
-        await FsUtilities.createFile(path.join(controllerPath, 'admin', 'admin.controller.ts'), adminControllerContent);
-        await FsUtilities.updateFile(path.join(controllerPath, 'index.ts'), 'export * from \'./admin/admin.controller\';', 'append');
+        const controllerPath: string = getPath(root, 'src', 'controllers');
+        await FsUtilities.createFile(getPath(controllerPath, 'admin', 'admin.controller.ts'), adminControllerContent);
+        await FsUtilities.updateFile(getPath(controllerPath, 'index.ts'), 'export * from \'./admin/admin.controller\';', 'append');
 
-        await FsUtilities.createFile(path.join(controllerPath, 'admin', 'new-admin.model.ts'), newAdminModelContent);
-        await FsUtilities.createFile(path.join(controllerPath, 'admin', 'full-admin.model.ts'), fullAdminModelContent);
+        await FsUtilities.createFile(getPath(controllerPath, 'admin', 'new-admin.model.ts'), newAdminModelContent);
+        await FsUtilities.createFile(getPath(controllerPath, 'admin', 'full-admin.model.ts'), fullAdminModelContent);
     }
 
     private static async createMailService(root: string, config: AddLoopbackConfiguration): Promise<void> {
         await this.runCommand(root, 'service mail', { '--skip-install': true, '--type': 'class', '--yes': true });
-        const servicePath: string = path.join(root, 'src', 'services', 'mail.service.ts');
+        const servicePath: string = getPath(root, 'src', 'services', 'mail.service.ts');
         await TsUtilities.addImportStatements(
             servicePath,
             [
@@ -382,7 +381,7 @@ export abstract class LoopbackUtilities {
             { key: 'webserver_mail_port', required: true, type: 'number', value: undefined }
         );
 
-        const environmentModel: string = path.join(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
+        const environmentModel: string = getPath(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
         await EnvUtilities.addProjectVariableKey(config.name, environmentModel, emailEnvKey, true);
         await EnvUtilities.addProjectVariableKey(config.name, environmentModel, passwordEnvKey, true);
         await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'access_token_secret', true);
@@ -403,7 +402,7 @@ export abstract class LoopbackUtilities {
         emailEnvKey: string,
         passwordEnvKey: string
     ): Promise<void> {
-        const indexTs: string = path.join(root, 'src', 'index.ts');
+        const indexTs: string = getPath(root, 'src', 'index.ts');
         await TsUtilities.addImportStatements(
             indexTs,
             [
@@ -435,7 +434,7 @@ export abstract class LoopbackUtilities {
 
     private static async applyAuthToApplicationTs(root: string): Promise<void> {
         // eslint-disable-next-line sonar/no-duplicate-string
-        const applicationTs: string = path.join(root, 'src', 'application.ts');
+        const applicationTs: string = getPath(root, 'src', 'application.ts');
         await TsUtilities.addImportStatements(
             applicationTs,
             [
@@ -501,7 +500,7 @@ export abstract class LoopbackUtilities {
     static async setupLogging(root: string, name: string): Promise<void> {
         await NpmUtilities.install(name, [NpmPackage.LBX_PERSISTENCE_LOGGER, NpmPackage.LOOPBACK_CRON]);
 
-        const applicationTs: string = path.join(root, 'src', 'application.ts');
+        const applicationTs: string = getPath(root, 'src', 'application.ts');
         await TsUtilities.addImportStatements(
             applicationTs,
             [
@@ -527,7 +526,7 @@ export abstract class LoopbackUtilities {
             '    }'
         ]);
         await TsUtilities.addToConstructorBody(applicationTs, 'this.setupLogging();');
-        const indexTs: string = path.join(root, 'src', 'index.ts');
+        const indexTs: string = getPath(root, 'src', 'index.ts');
         await TsUtilities.addImportStatements(
             indexTs,
             [
@@ -546,7 +545,7 @@ export abstract class LoopbackUtilities {
         );
         await FsUtilities.replaceInFile(indexTs, 'console.log(`Server', 'await logger.info(`Server');
 
-        const mailServiceTs: string = path.join(root, 'src', 'services', 'mail.service.ts');
+        const mailServiceTs: string = getPath(root, 'src', 'services', 'mail.service.ts');
         await TsUtilities.addImportStatements(
             mailServiceTs,
             [{ defaultImport: false, element: 'Log, LoggerNotificationService', path: NpmPackage.LBX_PERSISTENCE_LOGGER }]
@@ -570,7 +569,7 @@ export abstract class LoopbackUtilities {
      */
     static async setupChangeSets(root: string, name: string): Promise<void> {
         await NpmUtilities.install(name, [NpmPackage.LBX_CHANGE_SETS]);
-        const applicationTs: string = path.join(root, 'src', 'application.ts');
+        const applicationTs: string = getPath(root, 'src', 'application.ts');
         await TsUtilities.addImportStatements(
             applicationTs,
             [

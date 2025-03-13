@@ -1,11 +1,10 @@
 import { Dirent } from 'fs';
-import path from 'path';
 
 import { DATABASES_DIRECTORY_NAME, DEV_DOCKER_COMPOSE_FILE_NAME } from '../constants';
 import { ComposeService, DockerUtilities } from '../docker';
 import { FsUtilities, InquirerUtilities, JsonUtilities, QuestionsFor } from '../encapsulation';
 import { EnvUtilities } from '../env';
-import { generatePlaceholderPassword, toKebabCase, toSnakeCase } from '../utilities';
+import { generatePlaceholderPassword, getPath, toKebabCase, toSnakeCase } from '../utilities';
 import { DbType } from './db-type.enum';
 import { dbTypeQuestion } from './db-type.question';
 import { MariaDbConfig, mariaDbConfigQuestions } from './maria-db.questions';
@@ -61,8 +60,8 @@ export abstract class DbUtilities {
         for (const db of dbs) {
             const configs: DbInitConfig[] = await this.getInitConfigsForDb(db.name, rootPath);
             for (let i: number = 0; i < configs.length; i++) {
-                const initFileSh: string = path.join(rootPath, DATABASES_DIRECTORY_NAME, toKebabCase(db.name), 'init', `${i}.sh`);
-                const initFileSql: string = path.join(rootPath, DATABASES_DIRECTORY_NAME, toKebabCase(db.name), 'init', `${i}.sql`);
+                const initFileSh: string = getPath(rootPath, DATABASES_DIRECTORY_NAME, toKebabCase(db.name), 'init', `${i}.sh`);
+                const initFileSql: string = getPath(rootPath, DATABASES_DIRECTORY_NAME, toKebabCase(db.name), 'init', `${i}.sql`);
                 await FsUtilities.rm(initFileSh);
                 await FsUtilities.rm(initFileSql);
                 await this.createInitFile(configs[i], initFileSh, initFileSql, rootPath);
@@ -108,8 +107,8 @@ export abstract class DbUtilities {
     }
 
     private static async getInitConfigsForDb(db: string, rootPath: string): Promise<DbInitConfig[]> {
-        const dbFolder: Dirent[] = await FsUtilities.readdir(path.join(rootPath, DATABASES_DIRECTORY_NAME, toKebabCase(db)));
-        const configFilePaths: string[] = dbFolder.filter(e => e.name.endsWith('.json')).map(e => path.join(e.parentPath, e.name));
+        const dbFolder: Dirent[] = await FsUtilities.readdir(getPath(rootPath, DATABASES_DIRECTORY_NAME, toKebabCase(db)));
+        const configFilePaths: string[] = dbFolder.filter(e => e.name.endsWith('.json')).map(e => getPath(e.parentPath, e.name));
         return await Promise.all(configFilePaths.map(async p => await FsUtilities.parseFileAs(p)));
     }
 
@@ -192,13 +191,13 @@ export abstract class DbUtilities {
     }
 
     private static async addDbInitConfig(dbComposeServiceName: string, data: DbInitConfig, rootPath: string): Promise<void> {
-        const dbFolder: string = path.join(rootPath, DATABASES_DIRECTORY_NAME, toKebabCase(dbComposeServiceName));
-        await FsUtilities.mkdir(path.join(dbFolder, 'init'));
+        const dbFolder: string = getPath(rootPath, DATABASES_DIRECTORY_NAME, toKebabCase(dbComposeServiceName));
+        await FsUtilities.mkdir(getPath(dbFolder, 'init'));
 
         let created: boolean = false;
         let i: number = 0;
         while (!created) {
-            const configFile: string = path.join(dbFolder, `${i}.json`);
+            const configFile: string = getPath(dbFolder, `${i}.json`);
             if (await FsUtilities.exists(configFile)) {
                 i++;
                 continue;

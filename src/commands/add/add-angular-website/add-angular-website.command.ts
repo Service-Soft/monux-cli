@@ -1,5 +1,4 @@
 import { Dirent } from 'fs';
-import path from 'path';
 
 import { AngularUtilities, NavElementTypes } from '../../../angular';
 import { ANGULAR_JSON_FILE_NAME, APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, GIT_IGNORE_FILE_NAME } from '../../../constants';
@@ -11,7 +10,7 @@ import { NpmUtilities } from '../../../npm';
 import { TailwindUtilities } from '../../../tailwind';
 import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
-import { toPascalCase } from '../../../utilities';
+import { getPath, toPascalCase } from '../../../utilities';
 import { WorkspaceUtilities } from '../../../workspace';
 import { AddCommand } from '../models';
 import { AddConfiguration } from '../models/add-configuration.model';
@@ -108,7 +107,7 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
                 config.baseUrl
             ),
             AngularUtilities.updateAngularJson(
-                path.join(root, ANGULAR_JSON_FILE_NAME),
+                getPath(root, ANGULAR_JSON_FILE_NAME),
                 { $schema: '../../node_modules/@angular/cli/lib/config/schema.json' }
             ),
             AngularUtilities.setupMaterial(root),
@@ -175,7 +174,7 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
 
     private async setupTailwind(root: string): Promise<void> {
         await TailwindUtilities.setupProjectTailwind(root);
-        await FsUtilities.updateFile(path.join(root, 'src', 'styles.css'), [
+        await FsUtilities.updateFile(getPath(root, 'src', 'styles.css'), [
             '@tailwind base;',
             '@tailwind components;',
             '@tailwind utilities;'
@@ -184,7 +183,7 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
 
     private async createDockerfile(root: string, config: AddAngularWebsiteConfiguration): Promise<void> {
         await FsUtilities.createFile(
-            path.join(root, DOCKER_FILE_NAME),
+            getPath(root, DOCKER_FILE_NAME),
             [
                 'FROM node:20 AS build',
                 '# Set to a non-root built-in user `node`',
@@ -224,16 +223,16 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
                 'src/**/*.d.ts'
             ]
         };
-        await FsUtilities.createFile(path.join(root, 'tsconfig.eslint.json'), JsonUtilities.stringify(eslintTsconfig));
+        await FsUtilities.createFile(getPath(root, 'tsconfig.eslint.json'), JsonUtilities.stringify(eslintTsconfig));
     }
 
     private async cleanUp(root: string): Promise<void> {
         // eslint-disable-next-line no-console
         console.log('cleans up');
-        await FsUtilities.rm(path.join(root, '.vscode'));
-        await FsUtilities.rm(path.join(root, '.editorconfig'));
-        await FsUtilities.rm(path.join(root, GIT_IGNORE_FILE_NAME));
-        await FsUtilities.rm(path.join(root, 'src', 'app', 'app.component.spec.ts'));
+        await FsUtilities.rm(getPath(root, '.vscode'));
+        await FsUtilities.rm(getPath(root, '.editorconfig'));
+        await FsUtilities.rm(getPath(root, GIT_IGNORE_FILE_NAME));
+        await FsUtilities.rm(getPath(root, 'src', 'app', 'app.component.spec.ts'));
     }
 
     private async createProject(config: AddAngularWebsiteConfiguration): Promise<string> {
@@ -245,8 +244,8 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
             { '--skip-git': true, '--style': 'css', '--inline-style': true, '--ssr': true }
         );
         const newProject: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
-        const root: string = path.join(newProject.parentPath, newProject.name);
-        await FsUtilities.updateFile(path.join(root, 'src', 'app', 'app.component.html'), '', 'replace');
+        const root: string = getPath(newProject.parentPath, newProject.name);
+        await FsUtilities.updateFile(getPath(root, 'src', 'app', 'app.component.html'), '', 'replace');
         await AngularUtilities.addProvider(root, 'provideHttpClient(withInterceptorsFromDi(), withFetch())', [
             // eslint-disable-next-line sonar/no-duplicate-string
             { defaultImport: false, element: 'provideHttpClient', path: '@angular/common/http' },

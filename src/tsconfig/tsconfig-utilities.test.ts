@@ -1,4 +1,3 @@
-import path from 'path';
 
 import { beforeEach, describe, expect, test } from '@jest/globals';
 
@@ -7,6 +6,7 @@ import { TsConfigUtilities } from './tsconfig.utilities';
 import { TS_CONFIG_FILE_NAME } from '../constants';
 import { FsUtilities } from '../encapsulation';
 import { TsConfig } from './tsconfig.model';
+import { getPath } from '../utilities';
 
 const mockConstants: MockConstants = getMockConstants('tsconfig-utilities');
 
@@ -17,7 +17,7 @@ describe('TsConfigUtilities', () => {
 
     test('init', async () => {
         TsConfigUtilities.init(mockConstants.TS_LIBRARY_DIR);
-        const content: TsConfig = await FsUtilities.parseFileAs(path.join(mockConstants.TS_LIBRARY_DIR, TS_CONFIG_FILE_NAME));
+        const content: TsConfig = await FsUtilities.parseFileAs(getPath(mockConstants.TS_LIBRARY_DIR, TS_CONFIG_FILE_NAME));
         expect(content).toEqual({
             compilerOptions: {
                 target: 'es2016',
@@ -32,7 +32,7 @@ describe('TsConfigUtilities', () => {
 
     test('update', async () => {
         TsConfigUtilities.init(mockConstants.TS_LIBRARY_DIR);
-        const tsconfigPath: string = path.join(mockConstants.TS_LIBRARY_DIR, TS_CONFIG_FILE_NAME);
+        const tsconfigPath: string = getPath(mockConstants.TS_LIBRARY_DIR, TS_CONFIG_FILE_NAME);
         await TsConfigUtilities['update'](tsconfigPath, {
             extends: '../../tsconfig.base.json',
             compilerOptions: {

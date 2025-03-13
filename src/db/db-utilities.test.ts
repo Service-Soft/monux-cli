@@ -1,4 +1,3 @@
-import path from 'path';
 
 import { beforeEach, describe, expect, test } from '@jest/globals';
 
@@ -8,7 +7,7 @@ import { DbUtilities } from './db.utilities';
 import { DATABASES_DIRECTORY_NAME } from '../constants';
 import { FsUtilities } from '../encapsulation';
 import { EnvUtilities } from '../env';
-import { toSnakeCase } from '../utilities';
+import { getPath, toSnakeCase } from '../utilities';
 
 const mockConstants: MockConstants = getMockConstants('db-utilities');
 
@@ -34,7 +33,7 @@ describe('DbUtilities', () => {
         );
         const dockerComposeContent: string[] = await FsUtilities.readFileLines(mockConstants.DOCKER_COMPOSE_YAML);
         const devDockerComposeContent: string[] = await FsUtilities.readFileLines(mockConstants.DEV_DOCKER_COMPOSE_YAML);
-        const initConfig: string[] = await FsUtilities.readFileLines(path.join(mockConstants.PROJECT_DIR, DATABASES_DIRECTORY_NAME, 'postgres-db', '0.json'));
+        const initConfig: string[] = await FsUtilities.readFileLines(getPath(mockConstants.PROJECT_DIR, DATABASES_DIRECTORY_NAME, 'postgres-db', '0.json'));
 
         expect(dockerComposeContent).toEqual([
             'services:',
@@ -93,7 +92,7 @@ describe('DbUtilities', () => {
 
         const dockerComposeContent: string[] = await FsUtilities.readFileLines(mockConstants.DOCKER_COMPOSE_YAML);
         const devDockerComposeContent: string[] = await FsUtilities.readFileLines(mockConstants.DEV_DOCKER_COMPOSE_YAML);
-        const initConfig: string[] = await FsUtilities.readFileLines(path.join(mockConstants.PROJECT_DIR, DATABASES_DIRECTORY_NAME, 'maria-db', '0.json'));
+        const initConfig: string[] = await FsUtilities.readFileLines(getPath(mockConstants.PROJECT_DIR, DATABASES_DIRECTORY_NAME, 'maria-db', '0.json'));
 
         expect(dockerComposeContent).toEqual([
             'services:',
@@ -163,9 +162,9 @@ describe('DbUtilities', () => {
 
         await DbUtilities.createInitFiles(mockConstants.PROJECT_DIR);
 
-        const initShContent: string[] = await FsUtilities.readFileLines(path.join(mockConstants.PROJECT_DIR, DATABASES_DIRECTORY_NAME, 'postgres-db', 'init', '0.sh'));
+        const initShContent: string[] = await FsUtilities.readFileLines(getPath(mockConstants.PROJECT_DIR, DATABASES_DIRECTORY_NAME, 'postgres-db', 'init', '0.sh'));
         const postgresPassword: string = await EnvUtilities.getEnvVariable(`${toSnakeCase('test2')}_db_password`, mockConstants.PROJECT_DIR);
-        const initSqlContent: string[] = await FsUtilities.readFileLines(path.join(mockConstants.PROJECT_DIR, DATABASES_DIRECTORY_NAME, 'maria-db', 'init', '0.sql'));
+        const initSqlContent: string[] = await FsUtilities.readFileLines(getPath(mockConstants.PROJECT_DIR, DATABASES_DIRECTORY_NAME, 'maria-db', 'init', '0.sql'));
         const mariadbPassword: string = await EnvUtilities.getEnvVariable(`${toSnakeCase('test')}_db_password`, mockConstants.PROJECT_DIR);
 
         expect(initShContent).toEqual([

@@ -1,5 +1,4 @@
 import { Dirent } from 'fs';
-import path from 'path';
 
 import { AngularUtilities } from '../../../angular';
 import { ANGULAR_JSON_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, PACKAGE_JSON_FILE_NAME } from '../../../constants';
@@ -10,7 +9,7 @@ import { StorybookUtilities } from '../../../storybook';
 import { TailwindUtilities } from '../../../tailwind';
 import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
-import { mergeDeep } from '../../../utilities';
+import { getPath, mergeDeep } from '../../../utilities';
 import { WorkspaceConfig, WorkspaceUtilities } from '../../../workspace';
 import { AddCommand } from '../models';
 import { AddConfiguration } from '../models/add-configuration.model';
@@ -55,10 +54,10 @@ export class AddAngularLibraryCommand extends AddCommand<AddAngularLibraryConfig
         const result: CreateResult = await this.createProject(config);
 
         await Promise.all([
-            FsUtilities.rm(path.join(result.root, '.vscode')),
-            FsUtilities.rm(path.join(result.root, '.editorconfig')),
-            FsUtilities.rm(path.join(result.root, GIT_IGNORE_FILE_NAME)),
-            FsUtilities.rm(path.join(result.root, 'src', 'lib')),
+            FsUtilities.rm(getPath(result.root, '.vscode')),
+            FsUtilities.rm(getPath(result.root, '.editorconfig')),
+            FsUtilities.rm(getPath(result.root, GIT_IGNORE_FILE_NAME)),
+            FsUtilities.rm(getPath(result.root, 'src', 'lib')),
             this.updatePublicApi(result.root),
             this.updateNgPackageJson(result.root),
             this.updateAngularJson(result.root, config.name),
@@ -67,16 +66,16 @@ export class AddAngularLibraryCommand extends AddCommand<AddAngularLibraryConfig
             this.setupTailwind(result.root),
             EslintUtilities.setupProjectEslint(result.root, false)
         ]);
-        await FsUtilities.rm(path.join(result.root, 'projects'));
+        await FsUtilities.rm(getPath(result.root, 'projects'));
     }
 
     private async updatePublicApi(root: string): Promise<void> {
-        await FsUtilities.updateFile(path.join(root, 'src', 'public-api.ts'), '', 'replace');
+        await FsUtilities.updateFile(getPath(root, 'src', 'public-api.ts'), '', 'replace');
     }
 
     private async setupTailwind(root: string): Promise<void> {
         await TailwindUtilities.setupProjectTailwind(root);
-        await FsUtilities.createFile(path.join(root, 'src', 'styles.css'), [
+        await FsUtilities.createFile(getPath(root, 'src', 'styles.css'), [
             '@tailwind base;',
             '@tailwind components;',
             '@tailwind utilities;'
@@ -102,27 +101,27 @@ export class AddAngularLibraryCommand extends AddCommand<AddAngularLibraryConfig
         // eslint-disable-next-line no-console
         console.log('Creates the base library');
         AngularUtilities.runCommand(
-            path.join(LIBS_DIRECTORY_NAME, config.name),
+            getPath(LIBS_DIRECTORY_NAME, config.name),
             `generate library ${config.name}`,
             {}
         );
 
         // eslint-disable-next-line no-console
         console.log('Sets up the storybook');
-        StorybookUtilities.setup(path.join(LIBS_DIRECTORY_NAME, config.name));
+        StorybookUtilities.setup(getPath(LIBS_DIRECTORY_NAME, config.name));
 
         const oldPackageJson: PackageJson = await FsUtilities.parseFileAs(
-            path.join(LIBS_DIRECTORY_NAME, config.name, 'projects', config.name, PACKAGE_JSON_FILE_NAME)
+            getPath(LIBS_DIRECTORY_NAME, config.name, 'projects', config.name, PACKAGE_JSON_FILE_NAME)
         );
 
         await FsUtilities.moveDirectoryContent(
-            path.join(LIBS_DIRECTORY_NAME, config.name, 'projects', config.name),
-            path.join(LIBS_DIRECTORY_NAME, config.name),
+            getPath(LIBS_DIRECTORY_NAME, config.name, 'projects', config.name),
+            getPath(LIBS_DIRECTORY_NAME, config.name),
             [PACKAGE_JSON_FILE_NAME]
         );
 
         const newProject: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
-        const root: string = path.join(newProject.parentPath, newProject.name);
+        const root: string = getPath(newProject.parentPath, newProject.name);
         return { root, oldPackageJson };
     }
 
@@ -139,7 +138,7 @@ export class AddAngularLibraryCommand extends AddCommand<AddAngularLibraryConfig
     }
 
     private async updateTsConfigLib(root: string): Promise<void> {
-        const tsconfigPath: string = path.join(root, 'tsconfig.lib.json');
+        const tsconfigPath: string = getPath(root, 'tsconfig.lib.json');
         const oldConfig: TsConfig = await FsUtilities.parseFileAs(tsconfigPath);
         const config: TsConfig = mergeDeep(oldConfig, {
             extends: './tsconfig.json',
@@ -151,7 +150,7 @@ export class AddAngularLibraryCommand extends AddCommand<AddAngularLibraryConfig
     }
 
     private async updateTsConfigSpec(root: string): Promise<void> {
-        const tsconfigPath: string = path.join(root, 'tsconfig.spec.json');
+        const tsconfigPath: string = getPath(root, 'tsconfig.spec.json');
         const oldConfig: TsConfig = await FsUtilities.parseFileAs(tsconfigPath);
         const config: TsConfig = mergeDeep(oldConfig, {
             extends: 'tsconfig.json',
@@ -175,11 +174,11 @@ export class AddAngularLibraryCommand extends AddCommand<AddAngularLibraryConfig
                 'src/**/*.d.ts'
             ]
         };
-        await FsUtilities.createFile(path.join(root, 'tsconfig.eslint.json'), JsonUtilities.stringify(eslintTsconfig));
+        await FsUtilities.createFile(getPath(root, 'tsconfig.eslint.json'), JsonUtilities.stringify(eslintTsconfig));
     }
 
     private async updateNgPackageJson(root: string): Promise<void> {
-        await AngularUtilities.updateNgPackageJson(path.join(root, 'ng-package.json'), {
+        await AngularUtilities.updateNgPackageJson(getPath(root, 'ng-package.json'), {
             $schema: './node_modules/ng-packagr/ng-package.schema.json',
             dest: './dist/ui',
             lib: {
@@ -189,7 +188,7 @@ export class AddAngularLibraryCommand extends AddCommand<AddAngularLibraryConfig
     }
 
     private async updateAngularJson(root: string, projectName: string): Promise<void> {
-        await AngularUtilities.updateAngularJson(path.join(root, ANGULAR_JSON_FILE_NAME), {
+        await AngularUtilities.updateAngularJson(getPath(root, ANGULAR_JSON_FILE_NAME), {
             $schema: '../../node_modules/@angular/cli/lib/config/schema.json',
             newProjectRoot: './',
             projects: {

@@ -1,5 +1,3 @@
-import path from 'path';
-
 import yaml from 'js-yaml';
 
 import { DEV_DOCKER_COMPOSE_FILE_NAME, DOCKER_COMPOSE_FILE_NAME, TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE, TRAEFIK_WEB_SECURE_ENVIRONMENT_VARIABLE } from '../constants';
@@ -7,7 +5,7 @@ import { FsUtilities } from '../encapsulation';
 import { ComposeBuild, ComposeDefinition, ComposePort, ComposeService, ComposeServiceEnvironment, ComposeServiceVolume } from './compose-file.model';
 import { EnvUtilities } from '../env';
 import { OmitStrict } from '../types';
-import { toSnakeCase } from '../utilities';
+import { getPath, toSnakeCase } from '../utilities';
 
 // eslint-disable-next-line jsdoc/require-jsdoc
 type ParsedDockerComposeEnvironment = { [key: string]: string } | string[];
@@ -90,7 +88,7 @@ export abstract class DockerUtilities {
             networks: []
         };
         const yaml: string[] = this.composeDefinitionToYaml(compose);
-        await FsUtilities.createFile(path.join(rootPath, DEV_DOCKER_COMPOSE_FILE_NAME), yaml);
+        await FsUtilities.createFile(getPath(rootPath, DEV_DOCKER_COMPOSE_FILE_NAME), yaml);
     }
 
     /**
@@ -156,7 +154,7 @@ export abstract class DockerUtilities {
             networks: []
         };
         const yaml: string[] = this.composeDefinitionToYaml(compose);
-        await FsUtilities.createFile(path.join(rootPath, DOCKER_COMPOSE_FILE_NAME), yaml);
+        await FsUtilities.createFile(getPath(rootPath, DOCKER_COMPOSE_FILE_NAME), yaml);
     }
 
     /**
@@ -176,7 +174,7 @@ export abstract class DockerUtilities {
         rootPath: string = '',
         composeFileName: string = DOCKER_COMPOSE_FILE_NAME
     ): Promise<void> {
-        const composePath: string = path.join(rootPath, composeFileName);
+        const composePath: string = getPath(rootPath, composeFileName);
         const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
         definition.services.push(service);
         await FsUtilities.updateFile(composePath, this.composeDefinitionToYaml(definition), 'replace');
@@ -198,7 +196,7 @@ export abstract class DockerUtilities {
      * @returns The parsed services.
      */
     static async getComposeServices(rootPath: string = ''): Promise<ComposeService[]> {
-        const composePath: string = path.join(rootPath, DOCKER_COMPOSE_FILE_NAME);
+        const composePath: string = getPath(rootPath, DOCKER_COMPOSE_FILE_NAME);
         const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
         return definition.services;
     }
@@ -214,7 +212,7 @@ export abstract class DockerUtilities {
         rootPath: string = '',
         composeFileName: string = DOCKER_COMPOSE_FILE_NAME
     ): Promise<void> {
-        const composePath: string = path.join(rootPath, composeFileName);
+        const composePath: string = getPath(rootPath, composeFileName);
         const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
         definition.volumes.push(volume);
         await FsUtilities.updateFile(composePath, this.composeDefinitionToYaml(definition), 'replace');

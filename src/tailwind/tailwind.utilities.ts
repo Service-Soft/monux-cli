@@ -1,7 +1,7 @@
-import path from 'path';
 
 import { TAILWIND_CONFIG_FILE_NAME } from '../constants';
 import { FsUtilities } from '../encapsulation';
+import { getPath } from '../utilities';
 
 /**
  * Utilities for Tailwind.
@@ -13,7 +13,7 @@ export abstract class TailwindUtilities {
      */
     static async setupProjectTailwind(root: string): Promise<void> {
         await FsUtilities.createFile(
-            path.join(root, TAILWIND_CONFIG_FILE_NAME),
+            getPath(root, TAILWIND_CONFIG_FILE_NAME),
             [
                 'baseConfig = require(\'../../tailwind.config\');',
                 '',

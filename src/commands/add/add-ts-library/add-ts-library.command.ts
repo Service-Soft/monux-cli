@@ -1,5 +1,4 @@
 import { Dirent } from 'fs';
-import path from 'path';
 
 import { GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, TS_CONFIG_FILE_NAME } from '../../../constants';
 import { CPUtilities, FsUtilities, QuestionsFor } from '../../../encapsulation';
@@ -7,6 +6,7 @@ import { EslintUtilities } from '../../../eslint';
 import { NpmPackage, NpmUtilities } from '../../../npm';
 import { TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
+import { getPath } from '../../../utilities';
 import { WorkspaceConfig, WorkspaceUtilities } from '../../../workspace';
 import { AddCommand } from '../models/add-command.class';
 import { AddConfiguration } from '../models/add-configuration.model';
@@ -44,16 +44,16 @@ export class AddTsLibraryCommand extends AddCommand<TsLibraryConfiguration> {
         await Promise.all([
             EslintUtilities.setupProjectEslint(root, false, true, TS_CONFIG_FILE_NAME),
             this.updateBaseTsConfig(config, root),
-            FsUtilities.rm(path.join(root, GIT_IGNORE_FILE_NAME)),
-            FsUtilities.rm(path.join(root, 'index.html')),
-            FsUtilities.rm(path.join(root, 'public')),
-            FsUtilities.rm(path.join(root, 'src', 'counter.ts')),
-            FsUtilities.rm(path.join(root, 'src', 'style.css')),
-            FsUtilities.rm(path.join(root, 'src', 'typescript.svg')),
-            FsUtilities.rm(path.join(root, 'src', 'main.ts'))
+            FsUtilities.rm(getPath(root, GIT_IGNORE_FILE_NAME)),
+            FsUtilities.rm(getPath(root, 'index.html')),
+            FsUtilities.rm(getPath(root, 'public')),
+            FsUtilities.rm(getPath(root, 'src', 'counter.ts')),
+            FsUtilities.rm(getPath(root, 'src', 'style.css')),
+            FsUtilities.rm(getPath(root, 'src', 'typescript.svg')),
+            FsUtilities.rm(getPath(root, 'src', 'main.ts'))
         ]);
 
-        await FsUtilities.createFile(path.join(root, 'src', 'index.ts'), '');
+        await FsUtilities.createFile(getPath(root, 'src', 'index.ts'), '');
         await NpmUtilities.install(config.name, [NpmPackage.VITE_PLUGIN_DTS], true);
         await NpmUtilities.run(config.name, 'build');
         await this.installInProjects(config);
@@ -79,8 +79,8 @@ export class AddTsLibraryCommand extends AddCommand<TsLibraryConfiguration> {
         // eslint-disable-next-line no-console
         console.log('Creates the library');
         CPUtilities.execSync(`cd ${LIBS_DIRECTORY_NAME} && npm create vite@latest ${config.name} -- --template vanilla-ts`);
-        const libraryPath: string = path.join(LIBS_DIRECTORY_NAME, config.name);
-        await FsUtilities.createFile(path.join(libraryPath, 'vite.config.ts'), [
+        const libraryPath: string = getPath(LIBS_DIRECTORY_NAME, config.name);
+        await FsUtilities.createFile(getPath(libraryPath, 'vite.config.ts'), [
             'import { defineConfig, PluginOption } from \'vite\';',
             'import path from \'path\';',
             `import dts from '${NpmPackage.VITE_PLUGIN_DTS}';`,
@@ -100,7 +100,7 @@ export class AddTsLibraryCommand extends AddCommand<TsLibraryConfiguration> {
             '\t}',
             '});'
         ]);
-        // const originalPackageJson: PackageJson = await FsUtilities.parseFileAs(path.join(libraryPath, PACKAGE_JSON_FILE_NAME));
+        // const originalPackageJson: PackageJson = await FsUtilities.parseFileAs(getPath(libraryPath, PACKAGE_JSON_FILE_NAME));
         await NpmUtilities.updatePackageJson(
             config.name,
             {

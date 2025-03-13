@@ -1,5 +1,4 @@
 import { Dirent } from 'fs';
-import path from 'path';
 
 import { ModuleKind, ModuleResolutionKind, ScriptTarget } from 'typescript';
 
@@ -7,7 +6,7 @@ import { CPUtilities, FsUtilities, JsonUtilities } from '../encapsulation';
 import { WorkspaceUtilities } from '../workspace';
 import { TsConfig } from './tsconfig.model';
 import { TS_CONFIG_FILE_NAME } from '../constants';
-import { mergeDeep } from '../utilities';
+import { getPath, mergeDeep } from '../utilities';
 
 /**
  * Utilities for tsconfig.
@@ -63,7 +62,7 @@ export abstract class TsConfigUtilities {
      */
     static async updateTsConfig(projectName: string, data: Partial<TsConfig>): Promise<void> {
         const project: Dirent = await WorkspaceUtilities.findProjectOrFail(projectName);
-        const tsConfigPath: string = path.join(project.parentPath, project.name, TS_CONFIG_FILE_NAME);
+        const tsConfigPath: string = getPath(project.parentPath, project.name, TS_CONFIG_FILE_NAME);
         await this.update(tsConfigPath, data);
     }
 
