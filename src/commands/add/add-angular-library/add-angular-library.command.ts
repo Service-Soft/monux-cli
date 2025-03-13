@@ -6,11 +6,12 @@ import { ANGULAR_JSON_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, PACK
 import { FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
 import { EslintUtilities } from '../../../eslint';
 import { NpmUtilities, PackageJson } from '../../../npm';
+import { StorybookUtilities } from '../../../storybook';
 import { TailwindUtilities } from '../../../tailwind';
 import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
 import { mergeDeep } from '../../../utilities';
-import { WorkspaceUtilities } from '../../../workspace';
+import { WorkspaceConfig, WorkspaceUtilities } from '../../../workspace';
 import { AddCommand } from '../models';
 import { AddConfiguration } from '../models/add-configuration.model';
 
@@ -18,7 +19,10 @@ import { AddConfiguration } from '../models/add-configuration.model';
  * Configuration for adding a new angular library.
  */
 type AddAngularLibraryConfiguration = AddConfiguration & {
-
+    /**
+     * The scope of the library, eg. '@project'.
+     */
+    scope: string
 };
 
 // eslint-disable-next-line jsdoc/require-jsdoc
@@ -35,7 +39,15 @@ type CreateResult = {
 export class AddAngularLibraryCommand extends AddCommand<AddAngularLibraryConfiguration> {
 
     protected override configQuestions: QuestionsFor<OmitStrict<AddAngularLibraryConfiguration, keyof AddConfiguration>> = {
-
+        scope: {
+            type: 'input',
+            required: true,
+            message: 'scope',
+            default: async () => {
+                const workspaceConfig: WorkspaceConfig = await WorkspaceUtilities.getConfigOrFail();
+                return `@${workspaceConfig.name}`;
+            }
+        }
     };
 
     override async run(): Promise<void> {
@@ -46,7 +58,8 @@ export class AddAngularLibraryCommand extends AddCommand<AddAngularLibraryConfig
             FsUtilities.rm(path.join(result.root, '.vscode')),
             FsUtilities.rm(path.join(result.root, '.editorconfig')),
             FsUtilities.rm(path.join(result.root, GIT_IGNORE_FILE_NAME)),
-            FsUtilities.rm(path.join(result.root, LIBS_DIRECTORY_NAME)),
+            FsUtilities.rm(path.join(result.root, 'src', 'lib')),
+            this.updatePublicApi(result.root),
             this.updateNgPackageJson(result.root),
             this.updateAngularJson(result.root, config.name),
             this.setupTsConfig(result.root, config.name),
@@ -57,13 +70,17 @@ export class AddAngularLibraryCommand extends AddCommand<AddAngularLibraryConfig
         await FsUtilities.rm(path.join(result.root, 'projects'));
     }
 
+    private async updatePublicApi(root: string): Promise<void> {
+        await FsUtilities.updateFile(path.join(root, 'src', 'public-api.ts'), '', 'replace');
+    }
+
     private async setupTailwind(root: string): Promise<void> {
         await TailwindUtilities.setupProjectTailwind(root);
-        await FsUtilities.updateFile(path.join(root, 'src', 'styles.css'), [
+        await FsUtilities.createFile(path.join(root, 'src', 'styles.css'), [
             '@tailwind base;',
             '@tailwind components;',
             '@tailwind utilities;'
-        ], 'append');
+        ]);
     }
 
     private async updatePackageJson(result: CreateResult, name: string): Promise<void> {
@@ -76,12 +93,23 @@ export class AddAngularLibraryCommand extends AddCommand<AddAngularLibraryConfig
 
     private async createProject(config: AddAngularLibraryConfiguration): Promise<CreateResult> {
         // eslint-disable-next-line no-console
+        console.log('Creates a temporary angular workspace');
+        AngularUtilities.runCommand(
+            LIBS_DIRECTORY_NAME,
+            `new ${config.name}`,
+            { '--no-create-application': true }
+        );
+        // eslint-disable-next-line no-console
         console.log('Creates the base library');
         AngularUtilities.runCommand(
             path.join(LIBS_DIRECTORY_NAME, config.name),
             `generate library ${config.name}`,
-            { '--inline-style': true }
+            {}
         );
+
+        // eslint-disable-next-line no-console
+        console.log('Sets up the storybook');
+        StorybookUtilities.setup(path.join(LIBS_DIRECTORY_NAME, config.name));
 
         const oldPackageJson: PackageJson = await FsUtilities.parseFileAs(
             path.join(LIBS_DIRECTORY_NAME, config.name, 'projects', config.name, PACKAGE_JSON_FILE_NAME)
@@ -152,6 +180,7 @@ export class AddAngularLibraryCommand extends AddCommand<AddAngularLibraryConfig
 
     private async updateNgPackageJson(root: string): Promise<void> {
         await AngularUtilities.updateNgPackageJson(path.join(root, 'ng-package.json'), {
+            $schema: './node_modules/ng-packagr/ng-package.schema.json',
             dest: './dist/ui',
             lib: {
                 entryFile: 'src/public-api.ts'
@@ -165,6 +194,7 @@ export class AddAngularLibraryCommand extends AddCommand<AddAngularLibraryConfig
             newProjectRoot: './',
             projects: {
                 [projectName]: {
+                    prefix: projectName,
                     root: './',
                     sourceRoot: 'src',
                     architect: {

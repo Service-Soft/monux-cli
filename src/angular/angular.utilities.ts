@@ -52,7 +52,7 @@ type NewOptions = {
     /**
      * Whether or not creating a application should be skipped.
      */
-    '--create-application'?: boolean,
+    '--no-create-application'?: boolean,
     /**
      * Which stylesheets to use.
      */
