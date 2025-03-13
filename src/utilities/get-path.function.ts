@@ -1,3 +1,4 @@
+import path from 'path';
 
 /**
  * Gets a os agnostic path by joining the given parts.
@@ -7,7 +8,7 @@
  */
 export function getPath(...paths: string[]): string {
     try {
-        return getPath(...paths);
+        return path.join(...paths);
     }
     catch (error) {
         throw new Error(`Error trying to get the path ${paths.join()}`, { cause: error });
