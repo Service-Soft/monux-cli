@@ -17,6 +17,7 @@ const allKnownCommands: Command[] = Object.values(Command);
 export async function validateInput(args: string[]): Promise<void> {
     if (args.length < 1) {
         exitWithError('Error: You need to specify a command.');
+        return;
     }
 
     const command: Command = args[0] as Command;
@@ -27,10 +28,12 @@ export async function validateInput(args: string[]): Promise<void> {
 
     if (!allKnownCommands.includes(command)) {
         exitWithError(`Error: Unknown command ${command}.`);
+        return;
     }
 
     if (args.length > 1 && !args[1].startsWith('-')) {
         exitWithError('Error parsing the command: Too many arguments.');
+        return;
     }
 
     if ([
@@ -71,12 +74,14 @@ async function validateRunInput(...args: string[]): Promise<void> {
 
     if (args.length > 2) {
         exitWithError('Error parsing the command: Too many arguments.');
+        return;
     }
     const npmScript: string = args[1];
     const file: PackageJson = await FsUtilities.parseFileAs<PackageJson>(getPath(packageJson.parentPath, packageJson.name));
 
     if (!Object.keys(file.scripts).includes(npmScript)) {
         exitWithError(`The project "${project}" does not contain the provided script "${npmScript}"`);
+        return;
     }
 }
 
@@ -86,5 +91,6 @@ async function validateInsideWorkspace(): Promise<void> {
     // eslint-disable-next-line typescript/strict-boolean-expressions
     if (!config?.isWorkspace) {
         exitWithError('This command can only be run inside a workspace');
+        return;
     }
 }

@@ -114,7 +114,8 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
                 },
                 config.domain,
                 config.baseUrl
-            )
+            ),
+            this.updateDockerFile(root)
         ]);
 
         await NpmUtilities.updatePackageJson(config.name, {
@@ -130,6 +131,18 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
 
         const app: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
         await EnvUtilities.buildEnvironmentFileForApp(app, '', false);
+    }
+
+    private async updateDockerFile(root: string): Promise<void> {
+        // TODO: Update loopback 4 Dockerfile
+        // await FsUtilities.updateFile(
+        //     getPath(root, DOCKER_FILE_NAME),
+        //     [
+        //         '',
+        //         ''
+        //     ],
+        //     'replace'
+        // );
     }
 
     private async updateIndexTs(root: string, port: number): Promise<void> {

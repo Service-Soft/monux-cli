@@ -7,7 +7,7 @@ export type WorkspaceConfig = {
      */
     name: string,
     /**
-     * Flag to determine that the file was generated with the mr-cli.
+     * Flag to determine that the file was generated with the monux-cli.
      */
     isWorkspace: boolean
 };

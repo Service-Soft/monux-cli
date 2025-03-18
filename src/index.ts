@@ -23,7 +23,7 @@ async function main(): Promise<void> {
         }
         case Command.VERSION:
         case Command.V: {
-            runVersion();
+            await runVersion();
             return;
         }
         case Command.INIT:

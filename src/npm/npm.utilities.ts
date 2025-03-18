@@ -70,6 +70,14 @@ export abstract class NpmUtilities {
     }
 
     /**
+     * Runs the given script inside all projects that have it.
+     * @param npmScript - The npm script to run.
+     */
+    static runAll(npmScript: NpmScript): void {
+        CPUtilities.execSync(`npm run ${npmScript} --workspaces --if-present`);
+    }
+
+    /**
      * Installs the provided packages inside the project with the given name.
      * @param projectName - The name of the project to install the package in.
      * @param npmPackages - The packages to install.

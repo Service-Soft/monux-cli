@@ -21,5 +21,7 @@ export enum Command {
     DOWN_DEV = 'down-dev',
     DD = 'dd',
     GENERATE_PAGE = 'generatePage',
-    GP = 'gp'
+    GP = 'gp',
+    RUN_ALL = 'run-all',
+    RA = 'ra'
 }

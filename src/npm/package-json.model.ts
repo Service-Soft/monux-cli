@@ -26,6 +26,10 @@ export type PackageJson = {
      */
     name: string,
     /**
+     * The version of the npm package.
+     */
+    version?: string,
+    /**
      * Files that should be included in the package.
      */
     files?: string[],

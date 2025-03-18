@@ -119,7 +119,10 @@ export abstract class DockerUtilities {
                         '--providers.docker=true',
                         '--providers.docker.exposedbydefault=false',
                         '--entryPoints.web.address=:80',
+                        '--entrypoints.web.http.redirections.entrypoint.to=websecure', // TODO: only in secure environment
+                        '--entryPoints.web.http.redirections.entrypoint.scheme=https', // TODO: only in prod
                         '--entryPoints.websecure.address=:443',
+                        '--entrypoints.websecure.asDefault=true', // TODO: only in prod
                         `--certificatesresolvers.\${${TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE}:-placeholderresolver}.acme.httpchallenge=true`,
                         // eslint-disable-next-line stylistic/max-len
                         `--certificatesresolvers.\${${TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE}:-placeholderresolver}.acme.httpchallenge.entrypoint=web`,
@@ -176,6 +179,15 @@ export abstract class DockerUtilities {
     ): Promise<void> {
         const composePath: string = getPath(rootPath, composeFileName);
         const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
+
+        if (domain && (domain.startsWith('www.') || [...domain].filter(c => c === '.').length === 1)) {
+            service.labels?.push(
+                '- traefik.http.middlewares.mywwwredirect.redirectregex.regex=^https://www\.(.*)',
+                '- traefik.http.middlewares.mywwwredirect.redirectregex.replacement=https://$${1}',
+                `- traefik.http.routers.${toSnakeCase(service.name)}.middlewares=mywwwredirect`
+            );
+        }
+
         definition.services.push(service);
         await FsUtilities.updateFile(composePath, this.composeDefinitionToYaml(definition), 'replace');
         if (domain) {

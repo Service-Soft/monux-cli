@@ -4,12 +4,12 @@ import { ChalkUtilities } from './encapsulation';
 /**
  * The base command of the cli.
  */
-export const CLI_BASE_COMMAND: string = 'mr';
+export const CLI_BASE_COMMAND: string = 'mx';
 
 /**
  * The name of the workspace file.
  */
-export const WORKSPACE_FILE_NAME: string = 'mr.workspace.json';
+export const WORKSPACE_FILE_NAME: string = `${CLI_BASE_COMMAND}.workspace.json`;
 
 /**
  * The name of the package json file.

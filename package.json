@@ -1,16 +1,33 @@
 {
     "name": "monux-cli",
-    "version": "1.0.4",
-    "license": "ISC",
+    "version": "1.0.5",
+    "license": "MIT",
     "main": "index.js",
     "engines": {
         "node": ">=20"
     },
-    "keywords": [],
+    "keywords": [
+        "monux",
+        "mx",
+        "monorepo",
+        "fullstack",
+        "full-stack",
+        "cli",
+        "docker",
+        "typescript",
+        "deployment",
+        "docker compose",
+        "environment",
+        "automatic",
+        "code generation",
+        "angular",
+        "loopback 4",
+        "vite"
+    ],
     "author": "Tim Fabian",
     "description": "",
     "bin": {
-        "mr": "dist/index.js"
+        "mx": "dist/index.js"
     },
     "scripts": {
         "start": "npm run build && cd sandbox && node ../dist/index.js",
@@ -19,7 +36,7 @@
         "test": "jest",
         "lint": "eslint . --max-warnings=0",
         "lint:fix": "eslint . --max-warnings=0 --fix",
-        "prepublishOnly": "npm run build"
+        "prepublishOnly": "npm i && npm run lint && npm run build"
     },
     "dependencies": {
         "chalk": "^4.1.2",

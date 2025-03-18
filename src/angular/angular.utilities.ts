@@ -604,7 +604,7 @@ export abstract class AngularUtilities {
         // eslint-disable-next-line no-console
         console.log('Adds tracking');
         await NpmUtilities.install(projectName, [NpmPackage.NGX_MATERIAL_TRACKING]);
-        // TODO
+        // TODO: Angular Tracking
     }
 
     /**
@@ -805,7 +805,7 @@ export abstract class AngularUtilities {
                 { defaultImport: false, element: 'OfflineService', path: './services/offline.service' }
             ]
         );
-        // TODO: enable
+        // TODO: enable OfflineRequestInterceptor
         // await this.addProvider(
         //     root,
         //     { provide: 'HTTP_INTERCEPTORS', useClass: 'OfflineRequestInterceptor' as any, multi: true },

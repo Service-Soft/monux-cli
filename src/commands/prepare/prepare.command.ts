@@ -25,6 +25,7 @@ async function buildEnv(): Promise<void> {
             'Error when validating the .env file:\n'
             + validationErrors.map(e => `\t${e.key}: ${e.value}`).join('\n')
         );
+        return;
     }
     await EnvUtilities.buildEnvironmentFiles();
 }

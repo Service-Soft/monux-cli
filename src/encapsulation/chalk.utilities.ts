@@ -43,4 +43,13 @@ export abstract class ChalkUtilities {
     static boldUnderline(...value: string[]): string {
         return chalk.underline.bold(value);
     }
+
+    /**
+     * Defines how an example usage of the cli should be formatted.
+     * @param value - The value to log.
+     * @returns The value in italic with primary color.
+     */
+    static exampleUsage(...value: string[]): string {
+        return chalk.italic.hex(COLOR_PRIMARY)(value);
+    }
 }

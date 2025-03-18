@@ -21,3 +21,6 @@ datname
 psql
 packagr
 Monux
+redirections
+redirectregex
+mywwwredirect
