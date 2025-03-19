@@ -50,6 +50,7 @@ The projects that can be added to a Monux monorepo also provide a lot of functio
       - [Automatically create the projects environment.ts files](#automatically-create-the-projects-environmentts-files)
   - [Handling initial database content](#handling-initial-database-content)
     - [How do they work?](#how-do-they-work)
+  - [Starting prod locally](#starting-prod-locally)
   - [Starting in production](#starting-in-production)
 - [Supported project types](#supported-project-types)
   - [Angular app](#angular-app)
@@ -218,6 +219,13 @@ When running the `mx prepare` command, these configuration files are used to gen
 What's nice about this is that these configuration files actually only reference the environment variable names instead of real values, so things like db credentials are only ever need to be provided in the .env file, which is excluded from the git repository by default.
 
 Monux handles everything regarding mapping these variable names back to values automatically, so you don't have to worry about it at all.
+
+## Starting prod locally
+Experimental, WIP
+
+Often times you want to test your project under production like constraints (eg. when developing a website to check its SEO performance).
+
+For that Monux provides the command `mx up-local`.
 
 ## Starting in production
 You can start the whole monorepo with the single command `mx up`.
