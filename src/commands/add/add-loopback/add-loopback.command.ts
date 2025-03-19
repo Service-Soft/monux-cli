@@ -1,6 +1,6 @@
 import { Dirent } from 'fs';
 
-import { APPS_DIRECTORY_NAME, DOCKER_COMPOSE_FILE_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, GIT_IGNORE_FILE_NAME, TS_CONFIG_FILE_NAME } from '../../../constants';
+import { APPS_DIRECTORY_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, GIT_IGNORE_FILE_NAME, TS_CONFIG_FILE_NAME } from '../../../constants';
 import { DbUtilities } from '../../../db';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, QuestionsFor } from '../../../encapsulation';
@@ -20,14 +20,6 @@ import { AddConfiguration } from '../models/add-configuration.model';
  * Configuration for adding a new loopback api.
  */
 export type AddLoopbackConfiguration = AddConfiguration & {
-    /**
-     * The domain that the api should be reached under.
-     */
-    domain: string,
-    /**
-     * The base url that the api should be reached under.
-     */
-    baseUrl: string,
     /**
      * The name of the frontend where the reset password functionality is implemented.
      */
@@ -58,23 +50,11 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
             required: true,
             default: 3000
         },
-        domain: {
-            type: 'input',
-            message: 'domain',
-            default: 'localhost:3000',
-            required: true
-        },
-        baseUrl: {
-            type: 'input',
-            message: 'base url',
-            default: 'http://localhost:3000',
-            required: true
-        },
         defaultUserEmail: {
             type: 'input',
             message: 'Email of the default user',
             required: true,
-            default: async () => (await FsUtilities.readFile(DOCKER_COMPOSE_FILE_NAME)).split('.acme.email=')[1].split('\n')[0]
+            default: async () => (await FsUtilities.readFile(PROD_DOCKER_COMPOSE_FILE_NAME)).split('.acme.email=')[1].split('\n')[0]
         },
         defaultUserPassword: {
             type: 'input',
@@ -95,6 +75,8 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
         const root: string = await this.createProject(config);
         await EnvUtilities.setupProjectEnvironment(root, false);
         await this.createLoopbackDatasource(dbName, root, config.name);
+        const domain: string = `localhost:${config.port}`;
+        const baseUrl: string = `http://${domain}`;
 
         await Promise.all([
             this.setupTsConfig(config.name),
@@ -110,10 +92,10 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
                         context: '.'
                     },
                     volumes: [{ path: `/${config.name}` }],
-                    labels: DockerUtilities.getTraefikLabels(config.name, 3000)
+                    labels: DockerUtilities.getTraefikLabels(config.name, 3000, domain)
                 },
-                config.domain,
-                config.baseUrl
+                domain,
+                baseUrl
             ),
             this.updateDockerFile(root)
         ]);

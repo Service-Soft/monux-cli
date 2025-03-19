@@ -15,7 +15,7 @@ describe('DockerUtilities', () => {
 
         const fakeEmail: string = faker.internet.email();
         await EnvUtilities.init(mockConstants.PROJECT_DIR);
-        await DockerUtilities.createDockerCompose(fakeEmail, mockConstants.PROJECT_DIR);
+        await DockerUtilities.createComposeFiles(fakeEmail, mockConstants.PROJECT_DIR);
 
         const initialDockerComposeContent: string[] = await FsUtilities.readFileLines(mockConstants.DOCKER_COMPOSE_YAML);
         expect(initialDockerComposeContent).toEqual([
@@ -28,11 +28,14 @@ describe('DockerUtilities', () => {
             '            - --providers.docker=true',
             '            - --providers.docker.exposedbydefault=false',
             '            - --entryPoints.web.address=:80',
+            '            - --entrypoints.web.http.redirections.entrypoint.to=websecure',
+            '            - --entryPoints.web.http.redirections.entrypoint.scheme=https',
             '            - --entryPoints.websecure.address=:443',
-            '            - --certificatesresolvers.${ssl_resolver:-placeholderresolver}.acme.httpchallenge=true',
-            '            - --certificatesresolvers.${ssl_resolver:-placeholderresolver}.acme.httpchallenge.entrypoint=web',
-            `            - --certificatesresolvers.\${ssl_resolver:-placeholderresolver}.acme.email=${fakeEmail}`,
-            '            - --certificatesresolvers.${ssl_resolver:-placeholderresolver}.acme.storage=/letsencrypt/acme.json',
+            '            - --entrypoints.websecure.asDefault=true',
+            '            - --certificatesresolvers.sslresolver.acme.httpchallenge=true',
+            '            - --certificatesresolvers.sslresolver.acme.httpchallenge.entrypoint=web',
+            `            - --certificatesresolvers.sslresolver.acme.email=${fakeEmail}`,
+            '            - --certificatesresolvers.sslresolver.acme.storage=/letsencrypt/acme.json',
             '        ports:',
             '            - 80:80',
             '            - 443:443',
@@ -46,7 +49,7 @@ describe('DockerUtilities', () => {
         const def: ComposeService = fakeComposeService();
         await DockerUtilities.addServiceToCompose(def, 'test.de', 'https://www.test.de', mockConstants.PROJECT_DIR);
         const fileContent: ComposeDefinition = await DockerUtilities['yamlToComposeDefinition'](mockConstants.DOCKER_COMPOSE_YAML);
-
+        def.labels = def.labels?.map(l => l.replace('http:', 'https:'));
         const service: ComposeService = fileContent.services[1];
         expect(def).toEqual(service);
     });

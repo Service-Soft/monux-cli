@@ -67,7 +67,7 @@ export abstract class RobotsUtilities {
         await FsUtilities.createFile(robotsTxtPath, content);
     }
 
-    private static async createIsPublicEnvVariableIfNotExists(rootPath: string = ''): Promise<void> {
+    private static async createIsPublicEnvVariableIfNotExists(rootPath: string): Promise<void> {
         const environmentFilePath: string = getPath(rootPath, ENV_FILE_NAME);
         if ((await FsUtilities.readFile(environmentFilePath)).includes(`${IS_PUBLIC_ENVIRONMENT_VARIABLE}=`)) {
             return;

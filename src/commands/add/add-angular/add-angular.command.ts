@@ -21,14 +21,6 @@ import { AddConfiguration } from '../models/add-configuration.model';
  */
 type AddAngularConfiguration = AddConfiguration & {
     /**
-     * The domain that the app should be reached under.
-     */
-    domain: string,
-    /**
-     * The base url that the app should be reached under.
-     */
-    baseUrl: string,
-    /**
      * Name of the api used by this app.
      */
     apiName: string,
@@ -54,18 +46,6 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
             required: true,
             default: 4200
         },
-        domain: {
-            type: 'input',
-            message: 'domain (eg. "localhost:4200" or "admin.test.com")',
-            required: true,
-            default: 'localhost:4200'
-        },
-        baseUrl: {
-            type: 'input',
-            message: 'base url',
-            default: 'http://localhost:4200',
-            required: true
-        },
         titleSuffix: {
             type: 'input',
             message: 'title suffix (eg. "| My Company")',
@@ -83,6 +63,8 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
     override async run(): Promise<void> {
         const config: AddAngularConfiguration = await this.getConfig();
         const root: string = await this.createProject(config);
+        const domain: string = `localhost:${config.port}`;
+        const baseUrl: string = `http://${domain}`;
         await Promise.all([
             this.cleanUp(root),
             this.setupTsConfig(root, config.name),
@@ -98,10 +80,10 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
                         context: '.'
                     },
                     volumes: [{ path: `/${config.name}` }],
-                    labels: DockerUtilities.getTraefikLabels(config.name, 4000)
+                    labels: DockerUtilities.getTraefikLabels(config.name, 4000, domain)
                 },
-                config.domain,
-                config.baseUrl
+                domain,
+                baseUrl
             ),
             AngularUtilities.updateAngularJson(
                 getPath(root, ANGULAR_JSON_FILE_NAME),
@@ -112,7 +94,7 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
 
         await AngularUtilities.setupNavigation(root, config.name);
         await AngularUtilities.setupLogging(root, config.name, config.apiName);
-        await AngularUtilities.setupAuth(root, config.name, config.apiName, config.domain, config.titleSuffix);
+        await AngularUtilities.setupAuth(root, config.name, config.apiName, domain, config.titleSuffix);
         await AngularUtilities.setupChangeSets(root, config.name, config.apiName);
         await AngularUtilities.setupPwa(root, config.name);
         await FsUtilities.replaceInFile(

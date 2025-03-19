@@ -12,3 +12,4 @@ export * from './generate-page';
 export * from './up-dev';
 export * from './down-dev';
 export * from './run-all';
+export * from './up-local';

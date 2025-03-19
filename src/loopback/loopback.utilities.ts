@@ -1,6 +1,6 @@
 
 import { AddLoopbackConfiguration } from '../commands/add/add-loopback';
-import { ENVIRONMENT_MODEL_TS_FILE_NAME, TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE } from '../constants';
+import { ENVIRONMENT_MODEL_TS_FILE_NAME, IS_PUBLIC_ENVIRONMENT_VARIABLE } from '../constants';
 import { CPUtilities, FsUtilities } from '../encapsulation';
 import { EnvUtilities } from '../env';
 import { TsUtilities } from '../ts';
@@ -343,7 +343,7 @@ export abstract class LoopbackUtilities {
             '            pass: environment.webserver_mail_password',
             '        }',
             '    });',
-            `    protected override readonly PRODUCTION: boolean = !!environment.${TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE};`,
+            `    protected override readonly PRODUCTION: boolean = !!environment.${IS_PUBLIC_ENVIRONMENT_VARIABLE};`,
             '    protected override readonly SAVED_EMAILS_PATH: string = path.join(__dirname, \'../../../test-emails\');',
             // eslint-disable-next-line stylistic/max-len
             `    protected override readonly LOGO_HEADER_URL: string = \`\${environment.${toSnakeCase(config.name)}_base_url}/assets/email/logo-header.png\`;`,
@@ -392,7 +392,7 @@ export abstract class LoopbackUtilities {
         await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'webserver_mail_port', true);
         await EnvUtilities.addProjectVariableKey(config.name, environmentModel, `${toSnakeCase(config.frontendName)}_base_url`, false);
         await EnvUtilities.addProjectVariableKey(config.name, environmentModel, `${toSnakeCase(config.name)}_base_url`, false);
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE, false);
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, IS_PUBLIC_ENVIRONMENT_VARIABLE, false);
         await EnvUtilities.addProjectVariableKey(config.name, environmentModel, `${toSnakeCase(config.frontendName)}_domain`, false);
     }
 

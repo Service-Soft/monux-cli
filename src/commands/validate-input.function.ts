@@ -49,7 +49,9 @@ export async function validateInput(args: string[]): Promise<void> {
         Command.UP,
         Command.UD,
         Command.UP_DEV,
-        Command.GENERATE_PAGE
+        Command.GENERATE_PAGE,
+        Command.UP_LOCAL,
+        Command.UL
     ].includes(command)) {
         await validateInsideWorkspace();
     }
@@ -81,7 +83,6 @@ async function validateRunInput(...args: string[]): Promise<void> {
 
     if (!Object.keys(file.scripts).includes(npmScript)) {
         exitWithError(`The project "${project}" does not contain the provided script "${npmScript}"`);
-        return;
     }
 }
 
@@ -91,6 +92,5 @@ async function validateInsideWorkspace(): Promise<void> {
     // eslint-disable-next-line typescript/strict-boolean-expressions
     if (!config?.isWorkspace) {
         exitWithError('This command can only be run inside a workspace');
-        return;
     }
 }

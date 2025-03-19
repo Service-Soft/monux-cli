@@ -32,14 +32,19 @@ export const LIBS_DIRECTORY_NAME: string = 'libs';
 export const DATABASES_DIRECTORY_NAME: string = 'databases';
 
 /**
- * The name of the docker compose file.
+ * The name of the production docker compose file.
  */
-export const DOCKER_COMPOSE_FILE_NAME: string = 'docker-compose.yaml';
+export const PROD_DOCKER_COMPOSE_FILE_NAME: string = 'docker-compose.yaml';
 
 /**
  * The name of the dev docker compose file.
  */
 export const DEV_DOCKER_COMPOSE_FILE_NAME: string = 'dev.docker-compose.yaml';
+
+/**
+ * The name of the local docker compose file.
+ */
+export const LOCAL_DOCKER_COMPOSE_FILE_NAME: string = 'local.docker-compose.yaml';
 
 /**
  * The name of the docker compose file.
@@ -102,22 +107,16 @@ export const ANGULAR_APP_COMPONENT_FILE_NAME: string = 'app.component.ts';
 export const GIT_IGNORE_FILE_NAME: string = '.gitignore';
 
 /**
- * The environment variable for configuring if traefik should run as web or as websecure.
- */
-// eslint-disable-next-line typescript/typedef
-export const TRAEFIK_WEB_SECURE_ENVIRONMENT_VARIABLE = 'web_secure';
-
-/**
- * The environment variable for the ssl resolver. If this is unset, the docker compose can run without ssl on localhost.
- */
-// eslint-disable-next-line typescript/typedef
-export const TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE = 'ssl_resolver';
-
-/**
  * Whether or not the project is currently public.
  */
 // eslint-disable-next-line typescript/typedef
 export const IS_PUBLIC_ENVIRONMENT_VARIABLE = 'is_public';
+
+// /**
+//  *
+//  */
+// // eslint-disable-next-line typescript/typedef
+// export const ROOT_DOMAIN_ENVIRONMENT_VARIABLE = 'root_domain';
 
 /**
  * The name of the robots txt file.
@@ -149,6 +148,4 @@ export const MORE_INFORMATION_MESSAGE: string = `run ${ChalkUtilities.secondary(
 /**
  * Default global environment variables.
  */
-export type GlobalEnvironmentVariable = typeof TRAEFIK_WEB_SECURE_ENVIRONMENT_VARIABLE
-    | typeof TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE
-    | typeof IS_PUBLIC_ENVIRONMENT_VARIABLE;
+export type GlobalEnvironmentVariable = typeof IS_PUBLIC_ENVIRONMENT_VARIABLE;

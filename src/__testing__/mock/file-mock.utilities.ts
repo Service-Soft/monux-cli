@@ -11,6 +11,7 @@ export abstract class FileMockUtilities {
     > = {
             DOCKER_COMPOSE_YAML: this.createEmptyFile,
             DEV_DOCKER_COMPOSE_YAML: this.createEmptyFile,
+            LOCAL_DOCKER_COMPOSE_YAML: this.createEmptyFile,
             ANGULAR_ESLINT_CONFIG_JS: this.createEmptyFile,
             ANGULAR_PACKAGE_JSON: this.createAngularPackageJson,
             ANGULAR_APP_COMPONENT_TS: this.createAppComponentTsFile,

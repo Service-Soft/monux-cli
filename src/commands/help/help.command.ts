@@ -23,6 +23,10 @@ export function runHelp(): void {
         getCommandLabel(Command.UP, Command.U),
         `deploys the monorepo. This includes the ${ChalkUtilities.secondary(Command.PREPARE)} command.`
     );
+    console.log(
+        getCommandLabel(Command.UP_LOCAL, Command.UL),
+        `deploys the monorepo on localhost. This includes the ${ChalkUtilities.secondary(Command.PREPARE)} command.`
+    );
     console.log(getCommandLabel(Command.DOWN, Command.D), 'stops the currently deployed monorepo');
     console.log(getCommandLabel(Command.GENERATE_PAGE, Command.GP), 'generates a new page for an angular project');
     console.log();

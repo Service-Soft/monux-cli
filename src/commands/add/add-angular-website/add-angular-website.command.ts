@@ -25,14 +25,6 @@ type AddAngularWebsiteConfiguration = AddConfiguration & {
      */
     port: number,
     /**
-     * The domain that the website should be reached under.
-     */
-    domain: string,
-    /**
-     * The base url that the website should be reached under.
-     */
-    baseUrl: string,
-    /**
      * Suffix for the html title (eg. "| My Company").
      */
     titleSuffix: string,
@@ -54,18 +46,6 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
             required: true,
             default: 4200
         },
-        domain: {
-            type: 'input',
-            message: 'domain (eg. "localhost:4200" or "test.com")',
-            required: true,
-            default: 'localhost:4200'
-        },
-        baseUrl: {
-            type: 'input',
-            message: 'base url',
-            default: 'http://localhost:4200',
-            required: true
-        },
         titleSuffix: {
             type: 'input',
             message: 'title suffix (eg. "| My Company")',
@@ -83,8 +63,10 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
     override async run(): Promise<void> {
         const config: AddAngularWebsiteConfiguration = await this.getConfig();
         const root: string = await this.createProject(config);
+        const domain: string = `localhost:${config.port}`;
+        const baseUrl: string = `http://${domain}`;
 
-        await AngularUtilities.addSitemapAndRobots(root, config.name, config.domain);
+        await AngularUtilities.addSitemapAndRobots(root, config.name, domain);
 
         await Promise.all([
             this.cleanUp(root),
@@ -101,10 +83,10 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
                         context: '.'
                     },
                     volumes: [{ path: `/${config.name}` }],
-                    labels: DockerUtilities.getTraefikLabels(config.name, 4000)
+                    labels: DockerUtilities.getTraefikLabels(config.name, 4000, domain)
                 },
-                config.domain,
-                config.baseUrl
+                domain,
+                baseUrl
             ),
             AngularUtilities.updateAngularJson(
                 getPath(root, ANGULAR_JSON_FILE_NAME),
@@ -113,7 +95,7 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
             AngularUtilities.setupMaterial(root),
             EnvUtilities.setupProjectEnvironment(root, false)
         ]);
-        await this.createDefaultPages(root, config);
+        await this.createDefaultPages(root, config.titleSuffix, domain);
         if (config.addTracking) {
             await AngularUtilities.setupTracking(config.name);
         }
@@ -122,7 +104,7 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
         await EnvUtilities.buildEnvironmentFileForApp(app, '', true);
     }
 
-    private async createDefaultPages(root: string, config: AddAngularWebsiteConfiguration): Promise<void> {
+    private async createDefaultPages(root: string, titleSuffix: string, domain: string): Promise<void> {
         await AngularUtilities.generatePage(root, 'Home', {
             addTo: 'navbar',
             rowIndex: 0,
@@ -132,14 +114,14 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
                 link: {
                     route: {
                         path: '',
-                        title: `Home ${config.titleSuffix}`,
+                        title: `Home ${titleSuffix}`,
                         // @ts-ignore
                         // eslint-disable-next-line typescript/no-unsafe-return, typescript/no-unsafe-member-access
                         loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent)
                     }
                 }
             }
-        }, config.domain);
+        }, domain);
         await AngularUtilities.generatePage(root, 'Imprint', {
             addTo: 'footer',
             rowIndex: 0,
@@ -148,13 +130,13 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
                 name: 'Imprint',
                 route: {
                     path: 'imprint',
-                    title: `Imprint ${config.titleSuffix}`,
+                    title: `Imprint ${titleSuffix}`,
                     // @ts-ignore
                     // eslint-disable-next-line typescript/no-unsafe-return, typescript/no-unsafe-member-access
                     loadComponent: () => import('./pages/imprint/imprint.component').then(m => m.ImprintComponent)
                 }
             }
-        }, config.domain);
+        }, domain);
         await AngularUtilities.generatePage(root, 'Privacy', {
             addTo: 'footer',
             rowIndex: 0,
@@ -163,13 +145,13 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
                 name: 'Privacy',
                 route: {
                     path: 'privacy',
-                    title: `Privacy ${config.titleSuffix}`,
+                    title: `Privacy ${titleSuffix}`,
                     // @ts-ignore
                     // eslint-disable-next-line typescript/no-unsafe-return, typescript/no-unsafe-member-access
                     loadComponent: () => import('./pages/privacy/privacy.component').then(m => m.PrivacyComponent)
                 }
             }
-        }, config.domain);
+        }, domain);
     }
 
     private async setupTailwind(root: string): Promise<void> {

@@ -23,4 +23,5 @@ packagr
 Monux
 redirections
 redirectregex
-mywwwredirect
+wwwredirect
+sslresolver

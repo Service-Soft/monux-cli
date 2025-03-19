@@ -1,4 +1,3 @@
-
 import { beforeEach, describe, expect, test } from '@jest/globals';
 
 import { FileMockUtilities, getMockConstants, MockConstants } from '../__testing__';
@@ -15,7 +14,7 @@ describe('DbUtilities', () => {
     beforeEach(async () => {
         await FileMockUtilities.setup(
             mockConstants,
-            ['DOCKER_COMPOSE_YAML', 'DEV_DOCKER_COMPOSE_YAML', 'ENV', 'GLOBAL_ENV_MODEL']
+            ['DOCKER_COMPOSE_YAML', 'DEV_DOCKER_COMPOSE_YAML', 'LOCAL_DOCKER_COMPOSE_YAML', 'ENV', 'GLOBAL_ENV_MODEL']
         );
     });
 

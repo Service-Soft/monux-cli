@@ -16,6 +16,8 @@ export enum Command {
     U = 'u',
     UP_DEV = 'up-dev',
     UD = 'ud',
+    UP_LOCAL = 'up-local',
+    UL = 'ul',
     DOWN = 'down',
     D = 'd',
     DOWN_DEV = 'down-dev',

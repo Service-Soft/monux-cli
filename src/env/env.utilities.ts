@@ -1,6 +1,6 @@
 import { Dirent } from 'fs';
 
-import { ENV_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME, GlobalEnvironmentVariable } from '../constants';
+import { ENV_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME, GlobalEnvironmentVariable, IS_PUBLIC_ENVIRONMENT_VARIABLE } from '../constants';
 import { FileLine, FsUtilities, JsonUtilities } from '../encapsulation';
 import { KeyValue, OmitStrict } from '../types';
 import { getPath } from '../utilities';
@@ -220,11 +220,18 @@ export abstract class EnvUtilities {
     }
 
     private static async createGlobalEnvironmentModel(rootPath: string): Promise<void> {
-        await FsUtilities.createFile(getPath(rootPath, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME), 'export type GlobalEnvironment = {}');
+        await FsUtilities.createFile(
+            getPath(rootPath, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
+            [
+                'export type GlobalEnvironment = {',
+                `\t${IS_PUBLIC_ENVIRONMENT_VARIABLE}: boolean`,
+                '}'
+            ]
+        );
     }
 
     private static async createEnvFile(rootPath: string): Promise<void> {
-        await FsUtilities.createFile(getPath(rootPath, ENV_FILE_NAME), '');
+        await FsUtilities.createFile(getPath(rootPath, ENV_FILE_NAME), [`${IS_PUBLIC_ENVIRONMENT_VARIABLE}=false`]);
     }
 
     /**

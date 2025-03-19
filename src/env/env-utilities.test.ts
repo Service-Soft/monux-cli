@@ -19,18 +19,18 @@ describe('EnvUtilities', () => {
         await EnvUtilities.addVariable(variable, mockConstants.PROJECT_DIR);
 
         const lines: string[] = await FsUtilities.readFileLines(mockConstants.ENV);
-        expect(lines[0]).toEqual(`${variable.key}=${variable.value}`);
+        expect(lines[1]).toEqual(`${variable.key}=${variable.value}`);
 
         const variable2: EnvVariable = fakeEnvVariable();
         await EnvUtilities.addVariable(variable2, mockConstants.PROJECT_DIR);
 
         const lines2: string[] = await FsUtilities.readFileLines(mockConstants.ENV);
-        expect(lines2[1]).toEqual(`${variable2.key}=${variable2.value}`);
+        expect(lines2[2]).toEqual(`${variable2.key}=${variable2.value}`);
 
         const globalEnvLines: string[] = await FsUtilities.readFileLines(mockConstants.GLOBAL_ENV_MODEL);
 
-        expect(globalEnvLines[1]).toEqual(`    ${variable.key}${variable.required ? '' : '?'}: ${variable.type},`);
-        expect(globalEnvLines[2]).toEqual(`    ${variable2.key}${variable2.required ? '' : '?'}: ${variable2.type}`);
+        expect(globalEnvLines[2]).toEqual(`    ${variable.key}${variable.required ? '' : '?'}: ${variable.type},`);
+        expect(globalEnvLines[3]).toEqual(`    ${variable2.key}${variable2.required ? '' : '?'}: ${variable2.type}`);
     });
 
     test('validate', async () => {
@@ -46,7 +46,7 @@ describe('EnvUtilities', () => {
 
         await FsUtilities.updateFile(mockConstants.ENV, '', 'replace');
         const errorMessages3: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(mockConstants.PROJECT_DIR);
-        expect(errorMessages3.length).toEqual(1);
+        expect(errorMessages3.length).toEqual(2);
         expect(errorMessages3[0].value).toEqual(EnvValidationErrorMessage.REQUIRED);
 
         await FsUtilities.rm(mockConstants.ENV);

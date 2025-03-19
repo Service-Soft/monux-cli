@@ -60,7 +60,7 @@ export class AddWordpressCommand extends AddCommand<AddWordpressConfiguration> {
         };
         await DockerUtilities.addServiceToCompose({
             ...serviceDefinition,
-            labels: DockerUtilities.getTraefikLabels(config.name, 80)
+            labels: DockerUtilities.getTraefikLabels(config.name, 80, 'localhost')
         });
         await DockerUtilities.addVolumeToCompose(`${toKebabCase(config.name)}-data`);
         await DockerUtilities.addServiceToCompose(

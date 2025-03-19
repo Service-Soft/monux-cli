@@ -1,6 +1,6 @@
 import yaml from 'js-yaml';
 
-import { DEV_DOCKER_COMPOSE_FILE_NAME, DOCKER_COMPOSE_FILE_NAME, TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE, TRAEFIK_WEB_SECURE_ENVIRONMENT_VARIABLE } from '../constants';
+import { DEV_DOCKER_COMPOSE_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, LOCAL_DOCKER_COMPOSE_FILE_NAME } from '../constants';
 import { FsUtilities } from '../encapsulation';
 import { ComposeBuild, ComposeDefinition, ComposePort, ComposeService, ComposeServiceEnvironment, ComposeServiceVolume } from './compose-file.model';
 import { EnvUtilities } from '../env';
@@ -52,25 +52,39 @@ export abstract class DockerUtilities {
      * Gets the docker compose labels for usage with the traefik reverse proxy.
      * @param projectName - The name of the project to get the labels for.
      * @param port - The internal port of the service (eg. 4000 for angular ssr, 3000 for loopback api, etc.).
+     * @param domain - The domain of the project.
      * @returns The docker compose traefik labels as an string array.
      */
-    static getTraefikLabels(projectName: string, port: number): string[] {
+    static getTraefikLabels(projectName: string, port: number, domain: string): string[] {
         const DOMAIN_ENVIRONMENT_VARIABLE: string = `${toSnakeCase(projectName)}_domain`;
+        let host: string = `Host(\`\${${DOMAIN_ENVIRONMENT_VARIABLE}}\`)`;
+        if ([...domain].filter(c => c === '.').length === 1) {
+            host = `Host(\`\${${DOMAIN_ENVIRONMENT_VARIABLE}}\`) || Host(\`www.\${${DOMAIN_ENVIRONMENT_VARIABLE}}\`))`;
+        }
         return [
             'traefik.enable=true',
-            `traefik.http.routers.${projectName}.rule=Host(\`\${${DOMAIN_ENVIRONMENT_VARIABLE}}\`)`,
-            `traefik.http.routers.${projectName}.entrypoints=\${${TRAEFIK_WEB_SECURE_ENVIRONMENT_VARIABLE}}`,
-            // eslint-disable-next-line stylistic/max-len
-            `\${${TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE}:+traefik.http.routers.${projectName}.tls.certresolver=\${${TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE}}}`,
+            `traefik.http.routers.${projectName}.rule=${host}`,
+            `traefik.http.routers.${projectName}.entrypoints=web_secure`,
+            `traefik.http.routers.${projectName}.tls.certresolver=ssl_resolver`,
             `traefik.http.services.${projectName}.loadbalancer.server.port=${port}`
         ];
     }
 
     /**
-     * Creates the dev docker compose file.
-     * @param rootPath - The root path where the dev compose file resides.
+     * Creates the initial docker compose files at the given path.
+     * @param email - The email that should be used for the letsencrypt certificate.
+     * @param rootPath - The path of the root where to create the files.
+     * Defaults to "" (which creates the file in the current directory).
      */
-    static async createDevDockerCompose(rootPath: string = ''): Promise<void> {
+    static async createComposeFiles(email: string, rootPath: string = ''): Promise<void> {
+        await Promise.all([
+            this.createProdDockerCompose(email, rootPath),
+            this.createDevDockerCompose(rootPath),
+            this.createLocalDockerCompose(rootPath)
+        ]);
+    }
+
+    private static async createDevDockerCompose(rootPath: string): Promise<void> {
         const compose: ComposeDefinition = {
             services: [
                 {
@@ -91,25 +105,7 @@ export abstract class DockerUtilities {
         await FsUtilities.createFile(getPath(rootPath, DEV_DOCKER_COMPOSE_FILE_NAME), yaml);
     }
 
-    /**
-     * Creates an empty docker compose file at the given path.
-     * @param email - The email that should be used for the letsencrypt certificate.
-     * @param rootPath - The path of the root where to create the file.
-     * Defaults to "" (which creates the file in the current directory).
-     */
-    static async createDockerCompose(email: string, rootPath: string = ''): Promise<void> {
-        await EnvUtilities.addVariable({
-            key: TRAEFIK_WEB_SECURE_ENVIRONMENT_VARIABLE,
-            required: true,
-            type: 'string',
-            value: 'web'
-        }, rootPath);
-        await EnvUtilities.addVariable({
-            key: TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE,
-            required: false,
-            type: 'string',
-            value: ''
-        }, rootPath);
+    private static async createLocalDockerCompose(rootPath: string): Promise<void> {
         const compose: ComposeDefinition = {
             services: [
                 {
@@ -119,16 +115,52 @@ export abstract class DockerUtilities {
                         '--providers.docker=true',
                         '--providers.docker.exposedbydefault=false',
                         '--entryPoints.web.address=:80',
-                        '--entrypoints.web.http.redirections.entrypoint.to=websecure', // TODO: only in secure environment
-                        '--entryPoints.web.http.redirections.entrypoint.scheme=https', // TODO: only in prod
+                        '--entryPoints.websecure.address=:443'
+                    ],
+                    ports: [
+                        {
+                            internal: 80,
+                            external: 80
+                        },
+                        {
+                            internal: 443,
+                            external: 443
+                        }
+                    ],
+                    volumes: [
+                        {
+                            path: '/var/run/docker.sock',
+                            mount: '/var/run/docker.sock:ro'
+                        }
+                    ],
+                    labels: []
+                }
+            ],
+            volumes: [],
+            networks: []
+        };
+        const yaml: string[] = this.composeDefinitionToYaml(compose);
+        await FsUtilities.createFile(getPath(rootPath, LOCAL_DOCKER_COMPOSE_FILE_NAME), yaml);
+    }
+
+    private static async createProdDockerCompose(email: string, rootPath: string): Promise<void> {
+        const compose: ComposeDefinition = {
+            services: [
+                {
+                    image: 'traefik:v3.2',
+                    name: 'traefik',
+                    command: [
+                        '--providers.docker=true',
+                        '--providers.docker.exposedbydefault=false',
+                        '--entryPoints.web.address=:80',
+                        '--entrypoints.web.http.redirections.entrypoint.to=websecure',
+                        '--entryPoints.web.http.redirections.entrypoint.scheme=https',
                         '--entryPoints.websecure.address=:443',
-                        '--entrypoints.websecure.asDefault=true', // TODO: only in prod
-                        `--certificatesresolvers.\${${TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE}:-placeholderresolver}.acme.httpchallenge=true`,
-                        // eslint-disable-next-line stylistic/max-len
-                        `--certificatesresolvers.\${${TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE}:-placeholderresolver}.acme.httpchallenge.entrypoint=web`,
-                        `--certificatesresolvers.\${${TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE}:-placeholderresolver}.acme.email=${email}`,
-                        // eslint-disable-next-line stylistic/max-len
-                        `--certificatesresolvers.\${${TRAEFIK_RESOLVER_ENVIRONMENT_VARIABLE}:-placeholderresolver}.acme.storage=/letsencrypt/acme.json`
+                        '--entrypoints.websecure.asDefault=true',
+                        '--certificatesresolvers.sslresolver.acme.httpchallenge=true',
+                        '--certificatesresolvers.sslresolver.acme.httpchallenge.entrypoint=web',
+                        `--certificatesresolvers.sslresolver.acme.email=${email}`,
+                        '--certificatesresolvers.sslresolver.acme.storage=/letsencrypt/acme.json'
                     ],
                     ports: [
                         {
@@ -157,7 +189,7 @@ export abstract class DockerUtilities {
             networks: []
         };
         const yaml: string[] = this.composeDefinitionToYaml(compose);
-        await FsUtilities.createFile(getPath(rootPath, DOCKER_COMPOSE_FILE_NAME), yaml);
+        await FsUtilities.createFile(getPath(rootPath, PROD_DOCKER_COMPOSE_FILE_NAME), yaml);
     }
 
     /**
@@ -175,21 +207,26 @@ export abstract class DockerUtilities {
         domain?: string,
         baseUrl?: string,
         rootPath: string = '',
-        composeFileName: string = DOCKER_COMPOSE_FILE_NAME
+        composeFileName: string = PROD_DOCKER_COMPOSE_FILE_NAME
     ): Promise<void> {
         const composePath: string = getPath(rootPath, composeFileName);
         const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
-
-        if (domain && (domain.startsWith('www.') || [...domain].filter(c => c === '.').length === 1)) {
-            service.labels?.push(
-                '- traefik.http.middlewares.mywwwredirect.redirectregex.regex=^https://www\.(.*)',
-                '- traefik.http.middlewares.mywwwredirect.redirectregex.replacement=https://$${1}',
-                `- traefik.http.routers.${toSnakeCase(service.name)}.middlewares=mywwwredirect`
+        if ([...domain ?? ''].filter(c => c === '.').length === 1) {
+            service.labels ??= [];
+            service.labels.push(
+                'traefik.http.middlewares.wwwredirect.redirectregex.regex=^https://www\.(.*)',
+                'traefik.http.middlewares.wwwredirect.redirectregex.replacement=https://$${1}',
+                `traefik.http.routers.${toSnakeCase(service.name)}.middlewares=wwwredirect`
             );
         }
 
         definition.services.push(service);
         await FsUtilities.updateFile(composePath, this.composeDefinitionToYaml(definition), 'replace');
+
+        if (composeFileName === PROD_DOCKER_COMPOSE_FILE_NAME) {
+            await this.addServiceToLocalCompose(service, domain, rootPath);
+        }
+
         if (domain) {
             await EnvUtilities.addVariable(
                 { key: `${toSnakeCase(service.name)}_domain`, value: domain, required: true, type: 'string' },
@@ -202,13 +239,37 @@ export abstract class DockerUtilities {
         }
     }
 
+    private static async addServiceToLocalCompose(
+        service: ComposeService,
+        domain?: string,
+        rootPath: string = ''
+    ): Promise<void> {
+        const composePath: string = getPath(rootPath, LOCAL_DOCKER_COMPOSE_FILE_NAME);
+        const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
+        if ([...domain ?? ''].filter(c => c === '.').length === 1) {
+            // This is only called from within the addService method
+            // => the www redirect labels are already set
+            // => we only have to update these labels to use http instead of https
+            const regexLabel: string | undefined = service.labels?.find(l => l === 'traefik.http.middlewares.wwwredirect.redirectregex.regex=^https://www\.(.*)');
+            const replacementLabel: string | undefined = service.labels?.find(l => l === 'traefik.http.middlewares.wwwredirect.redirectregex.replacement=https://$${1}');
+            if (!service.labels?.length || !regexLabel || !replacementLabel) {
+                throw new Error('No www redirect label found...');
+            }
+            service.labels[service.labels.indexOf(regexLabel)] = 'traefik.http.middlewares.wwwredirect.redirectregex.regex=^http://www\.(.*)';
+            service.labels[service.labels.indexOf(replacementLabel)] = 'traefik.http.middlewares.wwwredirect.redirectregex.replacement=http://$${1}';
+        }
+
+        definition.services.push(service);
+        await FsUtilities.updateFile(composePath, this.composeDefinitionToYaml(definition), 'replace');
+    }
+
     /**
      * Gets all services from the docker compose file.
      * @param rootPath - The root path of the monorepo.
      * @returns The parsed services.
      */
     static async getComposeServices(rootPath: string = ''): Promise<ComposeService[]> {
-        const composePath: string = getPath(rootPath, DOCKER_COMPOSE_FILE_NAME);
+        const composePath: string = getPath(rootPath, PROD_DOCKER_COMPOSE_FILE_NAME);
         const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
         return definition.services;
     }
@@ -222,7 +283,7 @@ export abstract class DockerUtilities {
     static async addVolumeToCompose(
         volume: string,
         rootPath: string = '',
-        composeFileName: string = DOCKER_COMPOSE_FILE_NAME
+        composeFileName: string = PROD_DOCKER_COMPOSE_FILE_NAME
     ): Promise<void> {
         const composePath: string = getPath(rootPath, composeFileName);
         const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
