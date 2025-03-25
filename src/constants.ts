@@ -34,17 +34,17 @@ export const DATABASES_DIRECTORY_NAME: string = 'databases';
 /**
  * The name of the production docker compose file.
  */
-export const PROD_DOCKER_COMPOSE_FILE_NAME: string = 'docker-compose.yaml';
+export const PROD_DOCKER_COMPOSE_FILE_NAME: 'docker-compose.yaml' = 'docker-compose.yaml';
 
 /**
  * The name of the dev docker compose file.
  */
-export const DEV_DOCKER_COMPOSE_FILE_NAME: string = 'dev.docker-compose.yaml';
+export const DEV_DOCKER_COMPOSE_FILE_NAME: 'dev.docker-compose.yaml' = 'dev.docker-compose.yaml';
 
 /**
  * The name of the local docker compose file.
  */
-export const LOCAL_DOCKER_COMPOSE_FILE_NAME: string = 'local.docker-compose.yaml';
+export const LOCAL_DOCKER_COMPOSE_FILE_NAME: 'local.docker-compose.yaml' = 'local.docker-compose.yaml';
 
 /**
  * The name of the docker compose file.
@@ -107,18 +107,6 @@ export const ANGULAR_APP_COMPONENT_FILE_NAME: string = 'app.component.ts';
 export const GIT_IGNORE_FILE_NAME: string = '.gitignore';
 
 /**
- * Whether or not the project is currently public.
- */
-// eslint-disable-next-line typescript/typedef
-export const IS_PUBLIC_ENVIRONMENT_VARIABLE = 'is_public';
-
-// /**
-//  *
-//  */
-// // eslint-disable-next-line typescript/typedef
-// export const ROOT_DOMAIN_ENVIRONMENT_VARIABLE = 'root_domain';
-
-/**
  * The name of the robots txt file.
  */
 export const ROBOTS_FILE_NAME: string = 'robots.txt';
@@ -146,6 +134,7 @@ export const MORE_INFORMATION_MESSAGE: string = `run ${ChalkUtilities.secondary(
 )} for more information.`;
 
 /**
- * Default global environment variables.
+ * The possible file names of the different docker-compose files Monux provides.
  */
-export type GlobalEnvironmentVariable = typeof IS_PUBLIC_ENVIRONMENT_VARIABLE;
+// eslint-disable-next-line stylistic/max-len
+export type DockerComposeFileName = typeof PROD_DOCKER_COMPOSE_FILE_NAME | typeof DEV_DOCKER_COMPOSE_FILE_NAME | typeof LOCAL_DOCKER_COMPOSE_FILE_NAME;

@@ -7,6 +7,11 @@ import { TsImportDefinition } from './ts-import-definition.model';
 export type ArrayStartIdentifier = `${string}: [` | `${string} = [` | `${string}, [`;
 
 /**
+ * The possible identifier strings for the start of an object.
+ */
+export type ObjectStartIdentifier = `${string}: {` | `${string} = {` | `${string}, {`;
+
+/**
  * The result of the getArrayStartingWith method.
  * Consists of the parsed array, as well as the old content string to use for replacement.
  */
@@ -15,6 +20,21 @@ type ParseArrayResult<T> = {
      * The parsed array.
      */
     result: T[],
+    /**
+     * The old content string.
+     */
+    contentString: string
+};
+
+/**
+ * The result of the getObjectStartingWith method.
+ * Consists of the parsed object, as well as the old content string to use for replacement.
+ */
+export type ParseObjectResult<T> = {
+    /**
+     * The parsed object.
+     */
+    result: T,
     /**
      * The old content string.
      */
@@ -186,6 +206,48 @@ export abstract class TsUtilities {
         return {
             result: await JsonUtilities.parseAsTs(`[${content}]`),
             contentString: ` [\n${content}\n${lines[lastLineIndex]}`
+        };
+    }
+
+    /**
+     * Reads an object from a file at the given path that starts with the provided startIdentifier.
+     * @param filePath - The path of the file to read the array from.
+     * @param startIdentifier - The identifier for the start of the object.
+     * @returns The parsed object as well as the string in the file.
+     */
+    static async getObjectStartingWith<T>(filePath: string, startIdentifier: ObjectStartIdentifier): Promise<ParseObjectResult<T>> {
+        const lines: string[] = await FsUtilities.readFileLines(filePath);
+        const firstLine: FileLine = await FsUtilities.findLineWithContent(lines, startIdentifier);
+
+        let openBraces: number = 0;
+        let lastLineIndex: number = firstLine.index;
+
+        for (let i: number = firstLine.index; i < lines.length; i++) {
+            const line: string = lines[i];
+
+            openBraces += (line.match(/{/g) ?? []).length;
+            openBraces -= (line.match(/}/g) ?? []).length;
+
+            if (openBraces === 0) {
+                lastLineIndex = i;
+                break;
+            }
+        }
+
+        if (firstLine.index === lastLineIndex) {
+            const content: string = firstLine.content.split(startIdentifier)[1].split('}')[0];
+            return {
+                result: await JsonUtilities.parseAsTs(`{${content}}`),
+                contentString: ` {${content}${firstLine.content.trim().endsWith('};') ? '};' : '}'}`
+            };
+        }
+
+        const contentLines: FileLine[] = FsUtilities.getFileLines(lines, firstLine.index + 1, lastLineIndex - 1);
+        const content: string = contentLines.map(l => l.content).join('\n');
+
+        return {
+            result: await JsonUtilities.parseAsTs(`{${content}}`),
+            contentString: ` {\n${content}\n${lines[lastLineIndex]}`
         };
     }
 

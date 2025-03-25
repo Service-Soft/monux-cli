@@ -9,10 +9,10 @@ import { ArrayStartIdentifier, TsImportDefinition, TsUtilities } from '../ts';
 import { AngularJson, AngularJsonAssetPattern } from './angular-json.model';
 import { NgPackageJson } from './ng-package-json.model';
 import { ANGULAR_APP_COMPONENT_FILE_NAME, ANGULAR_JSON_FILE_NAME, ANGULAR_ROUTES_FILE_NAME, APP_CONFIG_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ROBOTS_FILE_NAME, SITEMAP_FILE_NAME } from '../constants';
-import { EnvUtilities } from '../env';
+import { DefaultEnvKeys, EnvUtilities } from '../env';
 import { DeepPartial } from '../types';
 import { AddNavElementConfig } from './add-nav-element-config.model';
-import { getPath, mergeDeep, optionsToCliString, toSnakeCase } from '../utilities';
+import { getPath, mergeDeep, optionsToCliString } from '../utilities';
 import { NavElementTypes } from './nav-element-types.enum';
 import { RobotsUtilities } from '../robots';
 import { WorkspaceUtilities } from '../workspace';
@@ -124,7 +124,7 @@ export abstract class AngularUtilities {
                 '',
                 '@Injectable({ providedIn: \'root\' })',
                 'export class LoggerService extends BaseLoggerService {',
-                `\tprotected override readonly LOG_URL: string = \`\${environment.${toSnakeCase(apiName)}_base_url}/logs\`;`,
+                `\tprotected override readonly LOG_URL: string = \`\${environment.${DefaultEnvKeys.baseUrl(apiName)}}/logs\`;`,
                 `\tprotected override readonly APPLICATION_NAME: string = '${name}';`,
                 '',
                 '\tconstructor(http: HttpClient) {',
@@ -160,31 +160,37 @@ export abstract class AngularUtilities {
 
     /**
      * Sets up auth.
-     * @param root - The root of the project.
+     * @param projectRoot - The root of the project.
      * @param name - Name of the project.
      * @param apiName - The name of the api that the angular project should use.
-     * @param domain - The domain of the project.
+     * @param domain - The production domain of the project.
      * @param titleSuffix - The suffix after the title.
      */
-    static async setupAuth(root: string, name: string, apiName: string, domain: string, titleSuffix: string): Promise<void> {
+    static async setupAuth(
+        projectRoot: string,
+        name: string,
+        apiName: string,
+        domain: string,
+        titleSuffix: string
+    ): Promise<void> {
         await NpmUtilities.install(name, [NpmPackage.NGX_MATERIAL_AUTH]);
-        const apiBaseUrlVariableName: string = `${toSnakeCase(apiName)}_base_url`;
+        const apiBaseUrlVariableName: string = DefaultEnvKeys.baseUrl(apiName);
         await EnvUtilities.addProjectVariableKey(
             name,
-            getPath(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
+            getPath(projectRoot, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
             apiBaseUrlVariableName,
             false
         );
         await EnvUtilities.addProjectVariableKey(
             name,
-            getPath(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
-            `${toSnakeCase(apiName)}_domain`,
+            getPath(projectRoot, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
+            DefaultEnvKeys.domain(apiName),
             false
         );
-        const authServicePath: string = getPath(root, 'src', 'app', 'services', 'auth.service.ts');
+        const authServicePath: string = getPath(projectRoot, 'src', 'app', 'services', 'auth.service.ts');
         await FsUtilities.createFile(authServicePath, authServiceContent);
         await this.addProvider(
-            root,
+            projectRoot,
             { provide: 'NGX_AUTH_SERVICE', useExisting: 'AuthService' },
             [
                 { defaultImport: false, element: 'NGX_AUTH_SERVICE', path: NpmPackage.NGX_MATERIAL_AUTH },
@@ -192,14 +198,14 @@ export abstract class AngularUtilities {
             ]
         );
         await this.addProvider(
-            root,
+            projectRoot,
             { provide: 'NGX_JWT_INTERCEPTOR_ALLOWED_DOMAINS', useValue: ['ALLOWED_DOMAINS_PLACEHOLDER'] },
             [
                 { defaultImport: false, element: 'NGX_JWT_INTERCEPTOR_ALLOWED_DOMAINS', path: NpmPackage.NGX_MATERIAL_AUTH },
                 { defaultImport: false, element: 'environment', path: '../environment/environment' }
             ]
         );
-        const appConfigPath: string = getPath(root, 'src', 'app', APP_CONFIG_FILE_NAME);
+        const appConfigPath: string = getPath(projectRoot, 'src', 'app', APP_CONFIG_FILE_NAME);
         await TsUtilities.addImportStatements(
             appConfigPath,
             [
@@ -208,27 +214,27 @@ export abstract class AngularUtilities {
             ]
         );
         await this.addProvider(
-            root,
+            projectRoot,
             // eslint-disable-next-line typescript/no-unsafe-assignment, typescript/no-explicit-any
             { provide: 'HTTP_INTERCEPTORS', useClass: 'JwtInterceptor' as any, multi: true },
             [{ defaultImport: false, element: 'JwtInterceptor', path: NpmPackage.NGX_MATERIAL_AUTH }]
         );
         await this.addProvider(
-            root,
+            projectRoot,
             // eslint-disable-next-line typescript/no-unsafe-assignment, typescript/no-explicit-any
             { provide: 'HTTP_INTERCEPTORS', useClass: 'HttpErrorInterceptor' as any, multi: true },
             [{ defaultImport: false, element: 'HttpErrorInterceptor', path: NpmPackage.NGX_MATERIAL_AUTH }]
         );
 
         await TsUtilities.addImportStatements(
-            getPath(root, 'src', 'app', ANGULAR_ROUTES_FILE_NAME),
+            getPath(projectRoot, 'src', 'app', ANGULAR_ROUTES_FILE_NAME),
             [
                 { defaultImport: false, element: 'JwtNotLoggedInGuard', path: NpmPackage.NGX_MATERIAL_AUTH },
                 { defaultImport: false, element: 'JwtLoggedInGuard', path: NpmPackage.NGX_MATERIAL_AUTH }
             ]
         );
         await this.generatePage(
-            root,
+            projectRoot,
             'Login',
             {
                 addTo: 'array',
@@ -243,7 +249,7 @@ export abstract class AngularUtilities {
             },
             domain
         );
-        const pagesPath: string = getPath(root, 'src', 'app', 'pages');
+        const pagesPath: string = getPath(projectRoot, 'src', 'app', 'pages');
         const loginPageTs: string = getPath(pagesPath, 'login', 'login.component.ts');
         const loginPageHtml: string = getPath(pagesPath, 'login', 'login.component.html');
         await this.addComponentImports(
@@ -262,7 +268,7 @@ export abstract class AngularUtilities {
         );
 
         await this.generatePage(
-            root,
+            projectRoot,
             'RequestResetPassword',
             {
                 addTo: 'array',
@@ -296,7 +302,7 @@ export abstract class AngularUtilities {
         );
 
         await this.generatePage(
-            root,
+            projectRoot,
             'ConfirmResetPassword',
             {
                 addTo: 'array',
@@ -329,7 +335,7 @@ export abstract class AngularUtilities {
         );
 
         await this.generatePage(
-            root,
+            projectRoot,
             'Admins',
             {
                 addTo: 'navbar',
@@ -368,7 +374,7 @@ export abstract class AngularUtilities {
             ],
             'replace'
         );
-        const routesTs: string = getPath(root, 'src', 'app', ANGULAR_ROUTES_FILE_NAME);
+        const routesTs: string = getPath(projectRoot, 'src', 'app', ANGULAR_ROUTES_FILE_NAME);
         await TsUtilities.addImportStatements(
             routesTs,
             [
@@ -611,11 +617,10 @@ export abstract class AngularUtilities {
      * Adds a sitemap.xml and a robots.txt to a project at the given path.
      * @param root - The root of the angular project to add the files to.
      * @param projectName - The name of the project.
-     * @param domain - The domain of the project.
      */
-    static async addSitemapAndRobots(root: string, projectName: string, domain: string): Promise<void> {
+    static async addSitemapAndRobots(root: string, projectName: string): Promise<void> {
         const app: Dirent = await WorkspaceUtilities.findProjectOrFail(projectName);
-        await RobotsUtilities.createRobotsTxtForApp(app, domain, true);
+        await RobotsUtilities.createRobotsTxtForApp(app, 'dev.docker-compose.yaml');
         await FsUtilities.createFile(getPath(root, 'src', SITEMAP_FILE_NAME), [
             '<?xml version="1.0" encoding="UTF-8"?>',
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">',

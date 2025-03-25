@@ -1,4 +1,4 @@
-import { toSnakeCase } from '../../utilities';
+import { DefaultEnvKeys } from '../../env';
 
 // eslint-disable-next-line jsdoc/require-jsdoc
 export function getAdminModelContent(apiName: string): string {
@@ -57,7 +57,7 @@ export class Admin extends BaseEntity {
         displayName: 'Change Sets',
         component: ChangeSetsInputComponent,
         customMetadata: {
-            changeSetsApiBaseUrl: \`\${environment.${toSnakeCase(apiName)}_base_url}/admins/change-sets\`
+            changeSetsApiBaseUrl: \`\${environment.${DefaultEnvKeys.baseUrl(apiName)}}/admins/change-sets\`
         },
         omitForCreate: true,
         // omitForUpdate: true,

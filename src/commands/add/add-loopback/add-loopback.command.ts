@@ -30,6 +30,12 @@ export type AddLoopbackConfiguration = AddConfiguration & {
      */
     port: number,
     /**
+     * The sub domain that this service should be reached under.
+     * If nothing is provided, Monux assumes that the service should be reached under the root domain
+     * and under the www sub domain.
+     */
+    subDomain?: string,
+    /**
      * The email for the default root user.
      */
     defaultUserEmail: string,
@@ -49,6 +55,11 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
             message: 'port',
             required: true,
             default: 3000
+        },
+        subDomain: {
+            type: 'input',
+            message: 'sub domain',
+            required: false
         },
         defaultUserEmail: {
             type: 'input',
@@ -75,8 +86,6 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
         const root: string = await this.createProject(config);
         await EnvUtilities.setupProjectEnvironment(root, false);
         await this.createLoopbackDatasource(dbName, root, config.name);
-        const domain: string = `localhost:${config.port}`;
-        const baseUrl: string = `http://${domain}`;
 
         await Promise.all([
             this.setupTsConfig(config.name),
@@ -91,11 +100,11 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
                         dockerfile: `./${root}/${DOCKER_FILE_NAME}`,
                         context: '.'
                     },
-                    volumes: [{ path: `/${config.name}` }],
-                    labels: DockerUtilities.getTraefikLabels(config.name, 3000, domain)
+                    volumes: [{ path: `/${config.name}` }]
                 },
-                domain,
-                baseUrl
+                config.port,
+                true,
+                config.subDomain
             ),
             this.updateDockerFile(root)
         ]);
@@ -112,7 +121,7 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
         await LoopbackUtilities.setupChangeSets(root, config.name);
 
         const app: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
-        await EnvUtilities.buildEnvironmentFileForApp(app, '', false);
+        await EnvUtilities.buildEnvironmentFileForApp(app, '', false, 'dev.docker-compose.yaml');
     }
 
     private async updateDockerFile(root: string): Promise<void> {

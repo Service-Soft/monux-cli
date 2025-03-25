@@ -1,9 +1,9 @@
 import yaml from 'js-yaml';
 
-import { DEV_DOCKER_COMPOSE_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, LOCAL_DOCKER_COMPOSE_FILE_NAME } from '../constants';
+import { DEV_DOCKER_COMPOSE_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, LOCAL_DOCKER_COMPOSE_FILE_NAME, DockerComposeFileName, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME } from '../constants';
 import { FsUtilities } from '../encapsulation';
 import { ComposeBuild, ComposeDefinition, ComposePort, ComposeService, ComposeServiceEnvironment, ComposeServiceVolume } from './compose-file.model';
-import { EnvUtilities } from '../env';
+import { DefaultEnvKeys, EnvUtilities } from '../env';
 import { OmitStrict } from '../types';
 import { getPath, toSnakeCase } from '../utilities';
 
@@ -48,26 +48,71 @@ type ParsedDockerCompose = {
  */
 export abstract class DockerUtilities {
 
-    /**
-     * Gets the docker compose labels for usage with the traefik reverse proxy.
-     * @param projectName - The name of the project to get the labels for.
-     * @param port - The internal port of the service (eg. 4000 for angular ssr, 3000 for loopback api, etc.).
-     * @param domain - The domain of the project.
-     * @returns The docker compose traefik labels as an string array.
-     */
-    static getTraefikLabels(projectName: string, port: number, domain: string): string[] {
-        const DOMAIN_ENVIRONMENT_VARIABLE: string = `${toSnakeCase(projectName)}_domain`;
-        let host: string = `Host(\`\${${DOMAIN_ENVIRONMENT_VARIABLE}}\`)`;
-        if ([...domain].filter(c => c === '.').length === 1) {
-            host = `Host(\`\${${DOMAIN_ENVIRONMENT_VARIABLE}}\`) || Host(\`www.\${${DOMAIN_ENVIRONMENT_VARIABLE}}\`))`;
+    private static getTraefikLabels(
+        projectName: string,
+        port: number,
+        composeFileName: DockerComposeFileName,
+        subDomain: string | undefined
+    ): string[] {
+        if (subDomain === 'www') {
+            throw new Error('The subdomain "www" is reserved and will be set automatically.');
         }
-        return [
+
+        switch (composeFileName) {
+            // eslint-disable-next-line sonar/no-duplicate-string
+            case 'dev.docker-compose.yaml': {
+                return [];
+            }
+            // eslint-disable-next-line sonar/no-duplicate-string
+            case 'local.docker-compose.yaml': {
+                return this.getTraefikLabelsForLocal(projectName, subDomain, port);
+            }
+            // eslint-disable-next-line sonar/no-duplicate-string
+            case 'docker-compose.yaml': {
+                return this.getTraefikLabelsForProd(projectName, subDomain, port);
+            }
+        }
+    }
+
+    private static getTraefikLabelsForProd(projectName: string, subDomain: string | undefined, port: number): string[] {
+        let host: string = `Host(\`\${${DefaultEnvKeys.subDomain(projectName)}}.\${${DefaultEnvKeys.PROD_ROOT_DOMAIN}}\`)`;
+        const labels: string[] = [];
+        if (!subDomain) {
+            host = `Host(\`\${${DefaultEnvKeys.PROD_ROOT_DOMAIN}}\`) || Host(\`www.\${${DefaultEnvKeys.PROD_ROOT_DOMAIN}}\`)`;
+            labels.push(
+                'traefik.http.middlewares.wwwredirect.redirectregex.regex=^https://www\.(.*)',
+                'traefik.http.middlewares.wwwredirect.redirectregex.replacement=https://$${1}',
+                `traefik.http.routers.${toSnakeCase(projectName)}.middlewares=wwwredirect`
+            );
+        }
+        labels.push(
             'traefik.enable=true',
-            `traefik.http.routers.${projectName}.rule=${host}`,
-            `traefik.http.routers.${projectName}.entrypoints=web_secure`,
-            `traefik.http.routers.${projectName}.tls.certresolver=ssl_resolver`,
-            `traefik.http.services.${projectName}.loadbalancer.server.port=${port}`
-        ];
+            `traefik.http.routers.${toSnakeCase(projectName)}.rule=${host}`,
+            `traefik.http.routers.${toSnakeCase(projectName)}.entrypoints=web_secure`,
+            `traefik.http.routers.${toSnakeCase(projectName)}.tls.certresolver=ssl_resolver`,
+            `traefik.http.services.${toSnakeCase(projectName)}.loadbalancer.server.port=${port}`
+        );
+        return labels;
+    }
+
+    private static getTraefikLabelsForLocal(projectName: string, subDomain: string | undefined, port: number): string[] {
+        let host: string = `Host(\`\${${DefaultEnvKeys.subDomain(projectName)}}.localhost\`)`;
+        const labels: string[] = [];
+        if (!subDomain) {
+            host = 'Host(`localhost`) || Host(`www.localhost`)';
+            labels.push(
+                'traefik.http.middlewares.wwwredirect.redirectregex.regex=^http://www\.(.*)',
+                'traefik.http.middlewares.wwwredirect.redirectregex.replacement=http://$${1}',
+                `traefik.http.routers.${toSnakeCase(projectName)}.middlewares=wwwredirect`
+            );
+        }
+        labels.push(
+            'traefik.enable=true',
+            `traefik.http.routers.${toSnakeCase(projectName)}.rule=${host}`,
+            `traefik.http.routers.${toSnakeCase(projectName)}.entrypoints=web`,
+            `traefik.http.services.${toSnakeCase(projectName)}.loadbalancer.server.port=${port}`
+        );
+        return labels;
     }
 
     /**
@@ -195,72 +240,148 @@ export abstract class DockerUtilities {
     /**
      * Adds the given compose service to the docker-compose.yaml.
      * @param service - The definition of the service to add.
-     * @param domain - The domain of the service. Optional.
-     * @param baseUrl - The base url of the service. Optional.
-     * @param rootPath - The path of the project root.
+     * @param port - The port used in development.
+     * @param addTraefik - Whether or not the service should be exposed via traefik.
+     * @param subDomain - The domain of the service. Optional.
+     * @param rootPath - The root path.
      * Defaults to "" (which creates the file in the current directory).
      * @param composeFileName - The name of the compose file.
      * Defaults to docker-compose.yaml.
      */
     static async addServiceToCompose(
         service: ComposeService,
-        domain?: string,
-        baseUrl?: string,
+        port: number,
+        addTraefik: boolean,
+        subDomain?: string,
         rootPath: string = '',
-        composeFileName: string = PROD_DOCKER_COMPOSE_FILE_NAME
+        composeFileName: DockerComposeFileName = PROD_DOCKER_COMPOSE_FILE_NAME
     ): Promise<void> {
         const composePath: string = getPath(rootPath, composeFileName);
         const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
-        if ([...domain ?? ''].filter(c => c === '.').length === 1) {
-            service.labels ??= [];
-            service.labels.push(
-                'traefik.http.middlewares.wwwredirect.redirectregex.regex=^https://www\.(.*)',
-                'traefik.http.middlewares.wwwredirect.redirectregex.replacement=https://$${1}',
-                `traefik.http.routers.${toSnakeCase(service.name)}.middlewares=wwwredirect`
-            );
-        }
 
-        definition.services.push(service);
+        const labels: string[] = addTraefik ? this.getTraefikLabels(service.name, port, composeFileName, subDomain) : [];
+
+        definition.services.push({ ...service, labels: [...service.labels ?? [], ...labels] });
         await FsUtilities.updateFile(composePath, this.composeDefinitionToYaml(definition), 'replace');
 
         if (composeFileName === PROD_DOCKER_COMPOSE_FILE_NAME) {
-            await this.addServiceToLocalCompose(service, domain, rootPath);
-        }
-
-        if (domain) {
-            await EnvUtilities.addVariable(
-                { key: `${toSnakeCase(service.name)}_domain`, value: domain, required: true, type: 'string' },
-                rootPath
-            );
-            await EnvUtilities.addVariable(
-                { key: `${toSnakeCase(service.name)}_base_url`, value: baseUrl, required: true, type: 'string' },
-                rootPath
-            );
-        }
-    }
-
-    private static async addServiceToLocalCompose(
-        service: ComposeService,
-        domain?: string,
-        rootPath: string = ''
-    ): Promise<void> {
-        const composePath: string = getPath(rootPath, LOCAL_DOCKER_COMPOSE_FILE_NAME);
-        const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
-        if ([...domain ?? ''].filter(c => c === '.').length === 1) {
-            // This is only called from within the addService method
-            // => the www redirect labels are already set
-            // => we only have to update these labels to use http instead of https
-            const regexLabel: string | undefined = service.labels?.find(l => l === 'traefik.http.middlewares.wwwredirect.redirectregex.regex=^https://www\.(.*)');
-            const replacementLabel: string | undefined = service.labels?.find(l => l === 'traefik.http.middlewares.wwwredirect.redirectregex.replacement=https://$${1}');
-            if (!service.labels?.length || !regexLabel || !replacementLabel) {
-                throw new Error('No www redirect label found...');
+            await this.addServiceToCompose(service, port, addTraefik, subDomain, rootPath, LOCAL_DOCKER_COMPOSE_FILE_NAME);
+            if (!addTraefik) {
+                return;
             }
-            service.labels[service.labels.indexOf(regexLabel)] = 'traefik.http.middlewares.wwwredirect.redirectregex.regex=^http://www\.(.*)';
-            service.labels[service.labels.indexOf(replacementLabel)] = 'traefik.http.middlewares.wwwredirect.redirectregex.replacement=http://$${1}';
+
+            await EnvUtilities.addStaticVariable(
+                { key: DefaultEnvKeys.port(service.name), value: port, required: true, type: 'number' },
+                rootPath
+            );
+
+            if (subDomain) {
+                await EnvUtilities.addStaticVariable(
+                    { key: DefaultEnvKeys.subDomain(service.name), value: subDomain, required: true, type: 'string' },
+                    rootPath
+                );
+                await EnvUtilities.addCalculatedVariable(
+                    {
+                        key: DefaultEnvKeys.baseUrl(service.name),
+                        value: (env, fileName) => {
+                            switch (fileName) {
+                                case 'dev.docker-compose.yaml': {
+                                    return `http://localhost:${'PORT_PLACEHOLDER'}`;
+                                }
+                                case 'local.docker-compose.yaml': {
+                                    return `http://${'SUB_DOMAIN_PLACEHOLDER'}.localhost`;
+                                }
+                                case 'docker-compose.yaml': {
+                                    return `https://${'SUB_DOMAIN_PLACEHOLDER'}.${'PROD_ROOT_DOMAIN_PLACEHOLDER'}`;
+                                }
+                            }
+                        },
+                        required: true,
+                        type: 'string'
+                    },
+                    rootPath
+                );
+                await EnvUtilities.addCalculatedVariable(
+                    {
+                        key: DefaultEnvKeys.domain(service.name),
+                        value: (env, fileName) => {
+                            switch (fileName) {
+                                case 'dev.docker-compose.yaml': {
+                                    return `localhost:${'PORT_PLACEHOLDER'}`;
+                                }
+                                case 'local.docker-compose.yaml': {
+                                    return `${'SUB_DOMAIN_PLACEHOLDER'}.localhost`;
+                                }
+                                case 'docker-compose.yaml': {
+
+                                    return `${'SUB_DOMAIN_PLACEHOLDER'}.${'PROD_ROOT_DOMAIN_PLACEHOLDER'}`;
+                                }
+                            }
+                        },
+                        required: true,
+                        type: 'string'
+                    },
+                    rootPath
+                );
+            }
+            else {
+                await EnvUtilities.addCalculatedVariable(
+                    {
+                        key: DefaultEnvKeys.baseUrl(service.name),
+                        value: (env, fileName) => {
+                            switch (fileName) {
+                                case 'dev.docker-compose.yaml': {
+                                    return `http://localhost:${'PORT_PLACEHOLDER'}`;
+                                }
+                                case 'local.docker-compose.yaml': {
+                                    return 'http://localhost';
+                                }
+                                case 'docker-compose.yaml': {
+                                    return `https://${'PROD_ROOT_DOMAIN_PLACEHOLDER'}`;
+                                }
+                            }
+                        },
+                        required: true,
+                        type: 'string'
+                    },
+                    rootPath
+                );
+                await EnvUtilities.addCalculatedVariable(
+                    {
+                        key: DefaultEnvKeys.domain(service.name),
+                        value: (env, fileName) => {
+                            switch (fileName) {
+                                case 'dev.docker-compose.yaml': {
+                                    return `localhost:${'PORT_PLACEHOLDER'}`;
+                                }
+                                case 'local.docker-compose.yaml': {
+                                    return 'localhost';
+                                }
+                                case 'docker-compose.yaml': {
+                                    return 'PROD_ROOT_DOMAIN_PLACEHOLDER';
+                                }
+                            }
+                        },
+                        required: true,
+                        type: 'string'
+                    },
+                    rootPath
+                );
+            }
         }
 
-        definition.services.push(service);
-        await FsUtilities.updateFile(composePath, this.composeDefinitionToYaml(definition), 'replace');
+        const environmentModelFilePath: string = getPath(rootPath, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
+        await FsUtilities.replaceAllInFile(environmentModelFilePath, '\'PORT_PLACEHOLDER\'', `env.${DefaultEnvKeys.port(service.name)}`);
+        await FsUtilities.replaceAllInFile(
+            environmentModelFilePath,
+            '\'SUB_DOMAIN_PLACEHOLDER\'',
+            `env.${DefaultEnvKeys.subDomain(service.name)}`
+        );
+        await FsUtilities.replaceAllInFile(
+            environmentModelFilePath,
+            '\'PROD_ROOT_DOMAIN_PLACEHOLDER\'',
+            `env.${DefaultEnvKeys.PROD_ROOT_DOMAIN}`
+        );
     }
 
     /**

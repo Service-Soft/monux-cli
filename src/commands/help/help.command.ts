@@ -19,13 +19,15 @@ export function runHelp(): void {
     console.log(getCommandLabel(Command.ADD, Command.A), 'adds a new application to the current monorepo workspace');
     console.log(getCommandLabel(Command.PREPARE, Command.P), 'Handles things like creating robots.txt and environment.ts files');
     console.log(getCommandLabel(Command.UP_DEV, Command.UD), 'deploys things like a database with connection to localhost for development');
-    console.log(
-        getCommandLabel(Command.UP, Command.U),
-        `deploys the monorepo. This includes the ${ChalkUtilities.secondary(Command.PREPARE)} command.`
-    );
+    console.log(getCommandLabel(Command.DOWN_DEV, Command.DD), 'stops the deployed development services');
     console.log(
         getCommandLabel(Command.UP_LOCAL, Command.UL),
         `deploys the monorepo on localhost. This includes the ${ChalkUtilities.secondary(Command.PREPARE)} command.`
+    );
+    console.log(getCommandLabel(Command.DOWN_LOCAL, Command.DL), 'stops the deployed monorepo on localhost.');
+    console.log(
+        getCommandLabel(Command.UP, Command.U),
+        `deploys the monorepo. This includes the ${ChalkUtilities.secondary(Command.PREPARE)} command.`
     );
     console.log(getCommandLabel(Command.DOWN, Command.D), 'stops the currently deployed monorepo');
     console.log(getCommandLabel(Command.GENERATE_PAGE, Command.GP), 'generates a new page for an angular project');

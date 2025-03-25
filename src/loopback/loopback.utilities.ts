@@ -1,8 +1,8 @@
 
 import { AddLoopbackConfiguration } from '../commands/add/add-loopback';
-import { ENVIRONMENT_MODEL_TS_FILE_NAME, IS_PUBLIC_ENVIRONMENT_VARIABLE } from '../constants';
+import { ENVIRONMENT_MODEL_TS_FILE_NAME } from '../constants';
 import { CPUtilities, FsUtilities } from '../encapsulation';
-import { EnvUtilities } from '../env';
+import { DefaultEnvKeys, EnvUtilities } from '../env';
 import { TsUtilities } from '../ts';
 import { generatePlaceholderPassword, getPath, optionsToCliString, toKebabCase, toPascalCase, toSnakeCase } from '../utilities';
 import { LbDatabaseConfig } from './lb-database-config.model';
@@ -223,7 +223,7 @@ export abstract class LoopbackUtilities {
         );
         await TsUtilities.addToStartOfClass(servicePath, [
             `    protected override readonly RP_NAME: string = '${toPascalCase(config.frontendName)}';`,
-            `    protected override readonly RP_DOMAIN: string = environment.${toSnakeCase(config.frontendName)}_domain;`
+            `    protected override readonly RP_DOMAIN: string = environment.${DefaultEnvKeys.domain(config.frontendName)};`
         ]);
         await FsUtilities.replaceInFile(servicePath, 'constructor() {}', '');
     }
@@ -333,7 +333,7 @@ export abstract class LoopbackUtilities {
             '    static readonly BINDING: string = \'services.MailService\';',
             '    protected override readonly WEBSERVER_MAIL: string = environment.webserver_mail_user;',
             // eslint-disable-next-line stylistic/max-len
-            `    protected override readonly BASE_RESET_PASSWORD_LINK: string = \`\${environment.${toSnakeCase(config.frontendName)}_base_url}/confirm-reset-password\`;`,
+            `    protected override readonly BASE_RESET_PASSWORD_LINK: string = \`\${environment.${DefaultEnvKeys.baseUrl(config.frontendName)}}/confirm-reset-password\`;`,
             '    protected override readonly webserverMailTransporter: Transporter = createTransport({',
             '        host: environment.webserver_mail_host,',
             '        port: environment.webserver_mail_port,',
@@ -343,12 +343,12 @@ export abstract class LoopbackUtilities {
             '            pass: environment.webserver_mail_password',
             '        }',
             '    });',
-            `    protected override readonly PRODUCTION: boolean = !!environment.${IS_PUBLIC_ENVIRONMENT_VARIABLE};`,
+            `    protected override readonly PRODUCTION: boolean = !!environment.${DefaultEnvKeys.IS_PUBLIC};`,
             '    protected override readonly SAVED_EMAILS_PATH: string = path.join(__dirname, \'../../../test-emails\');',
             // eslint-disable-next-line stylistic/max-len
-            `    protected override readonly LOGO_HEADER_URL: string = \`\${environment.${toSnakeCase(config.name)}_base_url}/assets/email/logo-header.png\`;`,
+            `    protected override readonly LOGO_HEADER_URL: string = \`\${environment.${DefaultEnvKeys.baseUrl(config.name)}}/assets/email/logo-header.png\`;`,
             // eslint-disable-next-line stylistic/max-len
-            `    protected override readonly LOGO_FOOTER_URL: string = \`\${environment.${toSnakeCase(config.name)}_base_url}/assets/email/logo-footer.png\`;`,
+            `    protected override readonly LOGO_FOOTER_URL: string = \`\${environment.${DefaultEnvKeys.baseUrl(config.name)}}/assets/email/logo-footer.png\`;`,
             '    protected override readonly ADDRESS_LINES: string[] = [];'
         ]);
         await FsUtilities.replaceInFile(servicePath, 'constructor() {}', '');
@@ -360,24 +360,24 @@ export abstract class LoopbackUtilities {
         emailEnvKey: string,
         passwordEnvKey: string
     ): Promise<void> {
-        await EnvUtilities.addVariable({ key: emailEnvKey, required: true, type: 'string', value: config.defaultUserEmail });
-        await EnvUtilities.addVariable({ key: passwordEnvKey, required: true, type: 'string', value: config.defaultUserPassword });
-        await EnvUtilities.addVariable(
+        await EnvUtilities.addStaticVariable({ key: emailEnvKey, required: true, type: 'string', value: config.defaultUserEmail });
+        await EnvUtilities.addStaticVariable({ key: passwordEnvKey, required: true, type: 'string', value: config.defaultUserPassword });
+        await EnvUtilities.addStaticVariable(
             { key: 'access_token_secret', required: true, type: 'string', value: generatePlaceholderPassword() }
         );
-        await EnvUtilities.addVariable(
+        await EnvUtilities.addStaticVariable(
             { key: 'refresh_token_secret', required: true, type: 'string', value: generatePlaceholderPassword() }
         );
-        await EnvUtilities.addVariable(
+        await EnvUtilities.addStaticVariable(
             { key: 'webserver_mail_user', required: true, type: 'string', value: undefined }
         );
-        await EnvUtilities.addVariable(
+        await EnvUtilities.addStaticVariable(
             { key: 'webserver_mail_password', required: true, type: 'string', value: undefined }
         );
-        await EnvUtilities.addVariable(
+        await EnvUtilities.addStaticVariable(
             { key: 'webserver_mail_host', required: true, type: 'string', value: undefined }
         );
-        await EnvUtilities.addVariable(
+        await EnvUtilities.addStaticVariable(
             { key: 'webserver_mail_port', required: true, type: 'number', value: undefined }
         );
 
@@ -390,10 +390,10 @@ export abstract class LoopbackUtilities {
         await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'webserver_mail_password', true);
         await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'webserver_mail_host', true);
         await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'webserver_mail_port', true);
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, `${toSnakeCase(config.frontendName)}_base_url`, false);
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, `${toSnakeCase(config.name)}_base_url`, false);
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, IS_PUBLIC_ENVIRONMENT_VARIABLE, false);
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, `${toSnakeCase(config.frontendName)}_domain`, false);
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.baseUrl(config.frontendName), false);
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.baseUrl(config.name), false);
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.IS_PUBLIC, false);
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.domain(config.frontendName), false);
     }
 
     private static async applyAuthToIndexTs(

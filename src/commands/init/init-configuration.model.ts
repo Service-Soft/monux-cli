@@ -3,6 +3,10 @@
  */
 export type InitConfiguration = {
     /**
+     * The root domain to use in production.
+     */
+    prodRootDomain: string,
+    /**
      * The email of the user.
      * Is needed for lets encrypt configuration.
      */

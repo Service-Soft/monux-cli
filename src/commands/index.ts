@@ -13,3 +13,4 @@ export * from './up-dev';
 export * from './down-dev';
 export * from './run-all';
 export * from './up-local';
+export * from './is-command.function';

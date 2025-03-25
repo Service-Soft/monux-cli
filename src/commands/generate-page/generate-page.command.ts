@@ -3,8 +3,8 @@ import { Dirent } from 'fs';
 import { AddNavElementConfig, AngularUtilities, NavElementTypes } from '../../angular';
 import { ANGULAR_ROUTES_FILE_NAME } from '../../constants';
 import { FsUtilities, InquirerUtilities, QuestionsFor } from '../../encapsulation';
-import { EnvUtilities } from '../../env';
-import { getPath, toKebabCase, toPascalCase, toSnakeCase } from '../../utilities';
+import { DefaultEnvKeys, EnvUtilities } from '../../env';
+import { getPath, toKebabCase, toPascalCase } from '../../utilities';
 import { WorkspaceUtilities } from '../../workspace';
 
 /**
@@ -61,7 +61,11 @@ export async function runGeneratePage(): Promise<void> {
 
     const options: GeneratePageOptions = await InquirerUtilities.prompt(questions);
     const projectRoot: Dirent = await WorkspaceUtilities.findProjectOrFail(options.projectName);
-    const domain: string = await EnvUtilities.getEnvVariable(`${toSnakeCase(options.projectName)}_domain`, '');
+    const domain: string = await EnvUtilities.getEnvVariable(
+        DefaultEnvKeys.domain(options.projectName),
+        '',
+        'dev.docker-compose.yaml'
+    );
 
     const navElement: AddNavElementConfig = {
         addTo: 'navbar',

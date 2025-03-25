@@ -5,8 +5,8 @@ import { DbType } from './db-type.enum';
 import { DbUtilities } from './db.utilities';
 import { DATABASES_DIRECTORY_NAME } from '../constants';
 import { FsUtilities } from '../encapsulation';
-import { EnvUtilities } from '../env';
-import { getPath, toSnakeCase } from '../utilities';
+import { DefaultEnvKeys, EnvUtilities } from '../env';
+import { getPath } from '../utilities';
 
 const mockConstants: MockConstants = getMockConstants('db-utilities');
 
@@ -24,9 +24,9 @@ describe('DbUtilities', () => {
             'postgresDb',
             {
                 type: DbType.POSTGRES,
-                nameEnvVariable: `${toSnakeCase('test')}_database`,
-                passwordEnvVariable: `${toSnakeCase('test')}_db_password`,
-                userEnvVariable: `${toSnakeCase('test')}_db_user`
+                nameEnvVariable: DefaultEnvKeys.dbName('test'),
+                passwordEnvVariable: DefaultEnvKeys.dbPassword('test'),
+                userEnvVariable: DefaultEnvKeys.dbUser('test')
             },
             mockConstants.PROJECT_DIR
         );
@@ -82,9 +82,9 @@ describe('DbUtilities', () => {
             'mariaDb',
             {
                 type: DbType.MARIADB,
-                nameEnvVariable: `${toSnakeCase('test')}_database`,
-                passwordEnvVariable: `${toSnakeCase('test')}_db_password`,
-                userEnvVariable: `${toSnakeCase('test')}_db_user`
+                nameEnvVariable: DefaultEnvKeys.dbName('test'),
+                passwordEnvVariable: DefaultEnvKeys.dbPassword('test'),
+                userEnvVariable: DefaultEnvKeys.dbUser('test')
             },
             mockConstants.PROJECT_DIR
         );
@@ -141,9 +141,9 @@ describe('DbUtilities', () => {
             'mariaDb',
             {
                 type: DbType.MARIADB,
-                nameEnvVariable: `${toSnakeCase('test')}_database`,
-                passwordEnvVariable: `${toSnakeCase('test')}_db_password`,
-                userEnvVariable: `${toSnakeCase('test')}_db_user`
+                nameEnvVariable: DefaultEnvKeys.dbName('test'),
+                passwordEnvVariable: DefaultEnvKeys.dbPassword('test'),
+                userEnvVariable: DefaultEnvKeys.dbUser('test')
             },
             mockConstants.PROJECT_DIR
         );
@@ -152,19 +152,19 @@ describe('DbUtilities', () => {
             'postgresDb',
             {
                 type: DbType.POSTGRES,
-                nameEnvVariable: `${toSnakeCase('test2')}_database`,
-                passwordEnvVariable: `${toSnakeCase('test2')}_db_password`,
-                userEnvVariable: `${toSnakeCase('test2')}_db_user`
+                nameEnvVariable: DefaultEnvKeys.dbName('test2'),
+                passwordEnvVariable: DefaultEnvKeys.dbPassword('test2'),
+                userEnvVariable: DefaultEnvKeys.dbUser('test2')
             },
             mockConstants.PROJECT_DIR
         );
 
-        await DbUtilities.createInitFiles(mockConstants.PROJECT_DIR);
+        await DbUtilities.createInitFiles('dev.docker-compose.yaml', mockConstants.PROJECT_DIR);
 
         const initShContent: string[] = await FsUtilities.readFileLines(getPath(mockConstants.PROJECT_DIR, DATABASES_DIRECTORY_NAME, 'postgres-db', 'init', '0.sh'));
-        const postgresPassword: string = await EnvUtilities.getEnvVariable(`${toSnakeCase('test2')}_db_password`, mockConstants.PROJECT_DIR);
+        const postgresPassword: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.dbPassword('test2'), mockConstants.PROJECT_DIR, 'dev.docker-compose.yaml');
         const initSqlContent: string[] = await FsUtilities.readFileLines(getPath(mockConstants.PROJECT_DIR, DATABASES_DIRECTORY_NAME, 'maria-db', 'init', '0.sql'));
-        const mariadbPassword: string = await EnvUtilities.getEnvVariable(`${toSnakeCase('test')}_db_password`, mockConstants.PROJECT_DIR);
+        const mariadbPassword: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.dbPassword('test'), mockConstants.PROJECT_DIR, 'dev.docker-compose.yaml');
 
         expect(initShContent).toEqual([
             '#!/bin/bash',

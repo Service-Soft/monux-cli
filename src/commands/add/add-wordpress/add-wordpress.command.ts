@@ -2,7 +2,7 @@ import { DEV_DOCKER_COMPOSE_FILE_NAME } from '../../../constants';
 import { DbType, DbUtilities } from '../../../db';
 import { ComposeService, DockerUtilities } from '../../../docker';
 import { QuestionsFor } from '../../../encapsulation';
-import { EnvUtilities } from '../../../env';
+import { DefaultEnvKeys, EnvUtilities } from '../../../env';
 import { OmitStrict } from '../../../types';
 import { toKebabCase, toSnakeCase } from '../../../utilities';
 import { AddCommand, AddConfiguration } from '../models';
@@ -10,18 +10,34 @@ import { AddCommand, AddConfiguration } from '../models';
 /**
  * Configuration for adding a wordpress service to the monorepo.
  */
-type AddWordpressConfiguration = AddConfiguration & {};
+type AddWordpressConfiguration = AddConfiguration & {
+    /**
+     * The sub domain for the service.
+     */
+    subDomain?: string
+};
 
 /**
  * The command for adding a wordpress server to the monorepo.
  */
 export class AddWordpressCommand extends AddCommand<AddWordpressConfiguration> {
-    protected override readonly configQuestions: QuestionsFor<OmitStrict<AddWordpressConfiguration, keyof AddConfiguration>> = {};
+    protected override readonly configQuestions: QuestionsFor<OmitStrict<AddWordpressConfiguration, keyof AddConfiguration>> = {
+        subDomain: {
+            type: 'input',
+            message: 'sub domain',
+            required: false
+        }
+    };
 
     override async run(): Promise<void> {
         const config: AddWordpressConfiguration = await this.getConfig();
-        await EnvUtilities.addVariable({ key: `${toSnakeCase(config.name)}_domain`, required: true, type: 'string', value: 'localhost' });
-        await EnvUtilities.addVariable({ key: `${toSnakeCase(config.name)}_base_url`, required: true, type: 'string', value: 'http://localhost' });
+        await EnvUtilities.addStaticVariable({
+            key: DefaultEnvKeys.domain(config.name),
+            required: true,
+            type: 'string',
+            value: 'localhost'
+        });
+        await EnvUtilities.addStaticVariable({ key: DefaultEnvKeys.baseUrl(config.name), required: true, type: 'string', value: 'http://localhost' });
         const dbName: string = await DbUtilities.configureDb(config.name, DbType.MARIADB);
         await this.createProject(config, dbName);
     }
@@ -58,17 +74,20 @@ export class AddWordpressCommand extends AddCommand<AddWordpressConfiguration> {
                 }
             ]
         };
-        await DockerUtilities.addServiceToCompose({
-            ...serviceDefinition,
-            labels: DockerUtilities.getTraefikLabels(config.name, 80, 'localhost')
-        });
+        await DockerUtilities.addServiceToCompose(
+            serviceDefinition,
+            80,
+            true,
+            config.subDomain
+        );
         await DockerUtilities.addVolumeToCompose(`${toKebabCase(config.name)}-data`);
         await DockerUtilities.addServiceToCompose(
             {
                 ...serviceDefinition,
                 ports: [{ external: 80, internal: 80 }]
             },
-            undefined,
+            80,
+            false,
             undefined,
             undefined,
             DEV_DOCKER_COMPOSE_FILE_NAME

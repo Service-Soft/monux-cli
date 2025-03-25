@@ -1,4 +1,4 @@
-import { toSnakeCase } from '../../utilities';
+import { DefaultEnvKeys } from '../../env';
 
 // eslint-disable-next-line jsdoc/require-jsdoc
 export function getAdminServiceContent(apiName: string): string {
@@ -14,7 +14,7 @@ import { Admin } from '../../models/admin.model';
 @Injectable({ providedIn: 'root' })
 export class AdminService extends EntityService<Admin> {
 
-    override readonly baseUrl: string = \`\${environment.${toSnakeCase(apiName)}_base_url}/admins\`;
+    override readonly baseUrl: string = \`\${environment.${DefaultEnvKeys.baseUrl(apiName)}}/admins\`;
 
     private readonly dialog: MatDialog;
 

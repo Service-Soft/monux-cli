@@ -12,7 +12,7 @@ import { WorkspaceUtilities } from '../../workspace';
 export async function runRun(...args: string[]): Promise<void> {
     const projectName: string = args[0];
     const npmScript: string = args[1];
-    const nativeCommand: boolean = Object.values(NativeNpmCommands).includes(args[1] as NativeNpmCommands);
+    const nativeCommand: boolean = Object.values(NativeNpmCommands).includes(npmScript as NativeNpmCommands);
 
     if (!nativeCommand) {
         await NpmUtilities.run(projectName, npmScript);

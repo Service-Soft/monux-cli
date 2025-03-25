@@ -4,7 +4,7 @@ import { AngularUtilities, NavElementTypes } from '../../../angular';
 import { ANGULAR_JSON_FILE_NAME, APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, GIT_IGNORE_FILE_NAME } from '../../../constants';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
-import { EnvUtilities } from '../../../env';
+import { DefaultEnvKeys, EnvUtilities } from '../../../env';
 import { EslintUtilities } from '../../../eslint';
 import { NpmUtilities } from '../../../npm';
 import { TailwindUtilities } from '../../../tailwind';
@@ -24,6 +24,12 @@ type AddAngularWebsiteConfiguration = AddConfiguration & {
      * @default 4200
      */
     port: number,
+    /**
+     * The sub domain that this service should be reached under.
+     * If nothing is provided, Monux assumes that the service should be reached under the root domain
+     * and under the www sub domain.
+     */
+    subDomain?: string,
     /**
      * Suffix for the html title (eg. "| My Company").
      */
@@ -46,6 +52,11 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
             required: true,
             default: 4200
         },
+        subDomain: {
+            type: 'input',
+            message: 'sub domain',
+            required: false
+        },
         titleSuffix: {
             type: 'input',
             message: 'title suffix (eg. "| My Company")',
@@ -63,10 +74,15 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
     override async run(): Promise<void> {
         const config: AddAngularWebsiteConfiguration = await this.getConfig();
         const root: string = await this.createProject(config);
-        const domain: string = `localhost:${config.port}`;
-        const baseUrl: string = `http://${domain}`;
 
-        await AngularUtilities.addSitemapAndRobots(root, config.name, domain);
+        const prodRootDomain: string = await EnvUtilities.getEnvVariable(
+            DefaultEnvKeys.PROD_ROOT_DOMAIN,
+            '',
+            'dev.docker-compose.yaml'
+        );
+        const domain: string = config.subDomain ? `${config.subDomain}.${prodRootDomain}` : prodRootDomain;
+
+        await AngularUtilities.addSitemapAndRobots(root, config.name);
 
         await Promise.all([
             this.cleanUp(root),
@@ -82,11 +98,11 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
                         dockerfile: `./${root}/${DOCKER_FILE_NAME}`,
                         context: '.'
                     },
-                    volumes: [{ path: `/${config.name}` }],
-                    labels: DockerUtilities.getTraefikLabels(config.name, 4000, domain)
+                    volumes: [{ path: `/${config.name}` }]
                 },
-                domain,
-                baseUrl
+                4000,
+                true,
+                config.subDomain
             ),
             AngularUtilities.updateAngularJson(
                 getPath(root, ANGULAR_JSON_FILE_NAME),
@@ -101,7 +117,7 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
         }
         await NpmUtilities.updatePackageJson(config.name, { scripts: { start: `ng serve --port ${config.port}` } });
         const app: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
-        await EnvUtilities.buildEnvironmentFileForApp(app, '', true);
+        await EnvUtilities.buildEnvironmentFileForApp(app, '', true, 'dev.docker-compose.yaml');
     }
 
     private async createDefaultPages(root: string, titleSuffix: string, domain: string): Promise<void> {

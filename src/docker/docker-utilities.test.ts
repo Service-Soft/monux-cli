@@ -14,7 +14,7 @@ describe('DockerUtilities', () => {
         await FileMockUtilities.setup(mockConstants);
 
         const fakeEmail: string = faker.internet.email();
-        await EnvUtilities.init(mockConstants.PROJECT_DIR);
+        await EnvUtilities.init('test.com', mockConstants.PROJECT_DIR);
         await DockerUtilities.createComposeFiles(fakeEmail, mockConstants.PROJECT_DIR);
 
         const initialDockerComposeContent: string[] = await FsUtilities.readFileLines(mockConstants.DOCKER_COMPOSE_YAML);
@@ -45,12 +45,38 @@ describe('DockerUtilities', () => {
         ]);
     });
 
-    test('createDockerCompose', async () => {
+    test('createDockerCompose with prod service', async () => {
         const def: ComposeService = fakeComposeService();
-        await DockerUtilities.addServiceToCompose(def, 'test.de', 'https://www.test.de', mockConstants.PROJECT_DIR);
+        await DockerUtilities.addServiceToCompose(def, 4200, true, def.name, mockConstants.PROJECT_DIR);
         const fileContent: ComposeDefinition = await DockerUtilities['yamlToComposeDefinition'](mockConstants.DOCKER_COMPOSE_YAML);
-        def.labels = def.labels?.map(l => l.replace('http:', 'https:'));
         const service: ComposeService = fileContent.services[1];
-        expect(def).toEqual(service);
+        expect({
+            ...def,
+            labels: [
+                ...def.labels ?? [],
+                'traefik.enable=true',
+                `traefik.http.routers.${def.name}.rule=Host(\`\${${def.name}_sub_domain}.\${prod_root_domain}\`)`,
+                `traefik.http.routers.${def.name}.entrypoints=web_secure`,
+                `traefik.http.routers.${def.name}.tls.certresolver=ssl_resolver`,
+                `traefik.http.services.${def.name}.loadbalancer.server.port=4200`
+            ]
+        }).toEqual(service);
+
+        const localFileContent: ComposeDefinition = await DockerUtilities['yamlToComposeDefinition'](mockConstants.LOCAL_DOCKER_COMPOSE_YAML);
+        const localService: ComposeService = localFileContent.services[1];
+        expect({
+            ...def,
+            labels: [
+                ...def.labels ?? [],
+                'traefik.enable=true',
+                `traefik.http.routers.${def.name}.rule=Host(\`\${${def.name}_sub_domain}.localhost\`)`,
+                `traefik.http.routers.${def.name}.entrypoints=web`,
+                `traefik.http.services.${def.name}.loadbalancer.server.port=4200`
+            ]
+        }).toEqual(localService);
+    });
+
+    test('createDockerCompose with dev service', async () => {
+        //TODO
     });
 });

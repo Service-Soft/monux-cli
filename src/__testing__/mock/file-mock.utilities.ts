@@ -2,6 +2,7 @@
 import { MockConstants, FileMockConstants, DirMockConstants } from './constants';
 import { AngularJson } from '../../angular';
 import { CPUtilities, FsUtilities, JsonUtilities } from '../../encapsulation';
+import { EnvUtilities } from '../../env';
 
 export abstract class FileMockUtilities {
 
@@ -170,6 +171,6 @@ export abstract class FileMockUtilities {
     }
 
     private static async createGlobalEnvModel(mockConstants: MockConstants): Promise<void> {
-        await FsUtilities.createFile(mockConstants.GLOBAL_ENV_MODEL, 'export type GlobalEnvironment = {}', true, false);
+        await EnvUtilities['createGlobalEnvironmentModel'](mockConstants.PROJECT_DIR);
     }
 }

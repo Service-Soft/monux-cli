@@ -5,13 +5,13 @@ import { AngularUtilities, NavElementTypes } from '../../../angular';
 import { ANGULAR_JSON_FILE_NAME, APP_CONFIG_FILE_NAME, APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, GIT_IGNORE_FILE_NAME } from '../../../constants';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
-import { EnvUtilities } from '../../../env';
+import { DefaultEnvKeys, EnvUtilities } from '../../../env';
 import { EslintUtilities } from '../../../eslint';
 import { NpmPackage, NpmUtilities } from '../../../npm';
 import { TailwindUtilities } from '../../../tailwind';
 import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
-import { getPath, toPascalCase, toSnakeCase } from '../../../utilities';
+import { getPath, toPascalCase } from '../../../utilities';
 import { WorkspaceUtilities } from '../../../workspace';
 import { AddCommand } from '../models/add-command.class';
 import { AddConfiguration } from '../models/add-configuration.model';
@@ -30,6 +30,12 @@ type AddAngularConfiguration = AddConfiguration & {
      */
     port: number,
     /**
+     * The sub domain that this service should be reached under.
+     * If nothing is provided, Monux assumes that the service should be reached under the root domain
+     * and under the www sub domain.
+     */
+    subDomain?: string,
+    /**
      * Suffix for the html title (eg. "| My Company").
      */
     titleSuffix: string
@@ -45,6 +51,11 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
             message: 'port',
             required: true,
             default: 4200
+        },
+        subDomain: {
+            type: 'input',
+            message: 'sub domain',
+            required: false
         },
         titleSuffix: {
             type: 'input',
@@ -63,8 +74,6 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
     override async run(): Promise<void> {
         const config: AddAngularConfiguration = await this.getConfig();
         const root: string = await this.createProject(config);
-        const domain: string = `localhost:${config.port}`;
-        const baseUrl: string = `http://${domain}`;
         await Promise.all([
             this.cleanUp(root),
             this.setupTsConfig(root, config.name),
@@ -79,11 +88,13 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
                         dockerfile: `./${root}/${DOCKER_FILE_NAME}`,
                         context: '.'
                     },
-                    volumes: [{ path: `/${config.name}` }],
-                    labels: DockerUtilities.getTraefikLabels(config.name, 4000, domain)
+                    volumes: [{ path: `/${config.name}` }]
+                    // labels: DockerUtilities.getTraefikLabels(config.name, 4000, domain)
                 },
-                domain,
-                baseUrl
+                config.port,
+                true,
+                config.subDomain,
+                root
             ),
             AngularUtilities.updateAngularJson(
                 getPath(root, ANGULAR_JSON_FILE_NAME),
@@ -92,15 +103,22 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
             AngularUtilities.setupMaterial(root)
         ]);
 
+        const prodRootDomain: string = await EnvUtilities.getEnvVariable(
+            DefaultEnvKeys.PROD_ROOT_DOMAIN,
+            '',
+            'dev.docker-compose.yaml'
+        );
+        const fullDomain: string = config.subDomain ? `${config.subDomain}.${prodRootDomain}` : prodRootDomain;
+
         await AngularUtilities.setupNavigation(root, config.name);
         await AngularUtilities.setupLogging(root, config.name, config.apiName);
-        await AngularUtilities.setupAuth(root, config.name, config.apiName, domain, config.titleSuffix);
+        await AngularUtilities.setupAuth(root, config.name, config.apiName, fullDomain, config.titleSuffix);
         await AngularUtilities.setupChangeSets(root, config.name, config.apiName);
         await AngularUtilities.setupPwa(root, config.name);
         await FsUtilities.replaceInFile(
             getPath(root, 'src', 'app', APP_CONFIG_FILE_NAME),
             '\'ALLOWED_DOMAINS_PLACEHOLDER\'',
-            `environment.${toSnakeCase(config.apiName)}_domain`
+            `environment.${DefaultEnvKeys.domain(config.apiName)}`
         );
         await NpmUtilities.install(config.name, [NpmPackage.NGX_MATERIAL_ENTITY]);
 
@@ -109,7 +127,7 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
         await NpmUtilities.updatePackageJson(config.name, { scripts: { start: `ng serve --port ${config.port}` } });
 
         const app: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
-        await EnvUtilities.buildEnvironmentFileForApp(app, '', false);
+        await EnvUtilities.buildEnvironmentFileForApp(app, '', false, 'dev.docker-compose.yaml');
     }
 
     private async setupTailwind(root: string): Promise<void> {

@@ -11,6 +11,11 @@ import { InitConfiguration } from './init-configuration.model';
 import { GithubUtilities } from '../../github';
 
 const initConfigQuestions: QuestionsFor<InitConfiguration> = {
+    prodRootDomain: {
+        type: 'input',
+        message: 'prod root domain (eg. "test.com")',
+        required: true
+    },
     email: {
         type: 'input',
         message: 'E-Mail (needed for ssl certificates)',
@@ -44,7 +49,7 @@ export async function runInit(): Promise<void> {
         NpmPackage.AUTOPREFIXER
     ], true);
 
-    await EnvUtilities.init();
+    await EnvUtilities.init(config.prodRootDomain);
 
     await Promise.all([
         WorkspaceUtilities.createConfig(),

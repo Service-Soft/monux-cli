@@ -58,6 +58,11 @@ export abstract class JsonUtilities {
             return eval(strippedValue) as T;
         }
 
+        // Handle arrow functions
+        if (/^\(?\s*\w+\s*(,\s*\w+\s*)*\)?\s*=>/.test(strippedValue)) {
+            return eval(strippedValue) as T;
+        }
+
         if (strippedValue.startsWith('[') && strippedValue.endsWith(']')) {
             return this.parseArrayAsTs(strippedValue) as T;
         }
@@ -73,6 +78,31 @@ export abstract class JsonUtilities {
         }
 
         return strippedValue as T;
+    }
+
+    private static formatFunctionBody(strippedValue: string, currentIndent: number): string {
+        const lines: string[] = strippedValue.split('\n');
+
+        let minIndent: number = Number.MAX_VALUE;
+        for (const line of lines.slice(1)) {
+            const lineIndent: number = line.match(/^\s*/)?.[0].length ?? 0;
+            if (lineIndent < minIndent) {
+                minIndent = lineIndent;
+            }
+        }
+
+        // Calculate how many spaces to remove from each line (after the first one)
+        const indentToRemove: number = minIndent - (currentIndent - 4);
+
+        // Format lines: remove the calculated indentation from each line (except the first)
+        const formattedLines: string[] = lines.map((line, index) => {
+            if (index === 0) {
+                return line;
+            }
+            return ' '.repeat(currentIndent) + line.slice(indentToRemove);
+        });
+
+        return formattedLines.join('\n');
     }
 
     /**
@@ -92,7 +122,7 @@ export abstract class JsonUtilities {
                 return this.stringToTsString(value);
             }
             case 'function': {
-                return this.functionToTsString(value);
+                return this.functionToTsString(value, currentIndent);
             }
             case 'object': {
                 if (Array.isArray(value)) {
@@ -148,6 +178,7 @@ export abstract class JsonUtilities {
         let isInsideString: boolean = false;
         let isInsideComment: boolean = false;
         let nestingLevel: number = 0; // Track object/array nesting levels
+        let parenLevel: number = 0; // Track function headers
 
         for (let i: number = 0; i < value.length; i++) {
             const char: string = value[i];
@@ -175,6 +206,17 @@ export abstract class JsonUtilities {
                 continue;
             }
 
+            if (char === '(') {
+                parenLevel++;
+                currentEntry += char;
+                continue;
+            }
+            if (char === ')') {
+                parenLevel--;
+                currentEntry += char;
+                continue;
+            }
+
             if (this.isStartOfArrayOrObject(char)) {
                 nestingLevel++;
                 currentEntry += char;
@@ -186,7 +228,7 @@ export abstract class JsonUtilities {
                 continue;
             }
 
-            if (this.isEndOfRootLevelEntry(char, nestingLevel)) {
+            if (this.isEndOfRootLevelEntry(char, nestingLevel, parenLevel)) {
                 result.push(currentEntry.trim());
                 currentEntry = '';
                 continue;
@@ -207,8 +249,8 @@ export abstract class JsonUtilities {
         return char === '[' || char === '{';
     }
 
-    private static isEndOfRootLevelEntry(char: string, nestingLevel: number): boolean {
-        return char === ',' && nestingLevel === 0;
+    private static isEndOfRootLevelEntry(char: string, nestingLevel: number, parenLevel: number): boolean {
+        return char === ',' && nestingLevel === 0 && parenLevel === 0;
     }
 
     private static isEndOfComment(char: string, nextChar: string): boolean {
@@ -247,17 +289,17 @@ export abstract class JsonUtilities {
         return `[\n${nextSpacing}${items}\n${currentSpacing}]`;
     }
 
-    private static functionToTsString(value: Function): string {
+    private static functionToTsString(value: Function, currentIndent: number): string {
         const funcString: string = value.toString();
         if (!funcString.includes('__importStar(require(')) {
-            return funcString;
+            return this.formatFunctionBody(funcString, currentIndent);
         }
 
         const modulePath: string | undefined = funcString.match(/require\(["'`](.*)["'`]\)/)?.[1];
         const component: string | undefined = funcString.match(/m => m\.(\w+)/)?.[1];
 
         if (!modulePath || !component) {
-            return funcString;
+            return this.formatFunctionBody(funcString, currentIndent);
         }
 
         return `() => import('${modulePath}').then(m => m.${component})`;

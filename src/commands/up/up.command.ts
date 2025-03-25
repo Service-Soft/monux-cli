@@ -5,6 +5,6 @@ import { runPrepare } from '../prepare';
  * Starts up the docker compose service.
  */
 export async function runUp(): Promise<void> {
-    await runPrepare();
+    await runPrepare('docker-compose.yaml');
     CPUtilities.execSync('docker compose up --build -d');
 }
