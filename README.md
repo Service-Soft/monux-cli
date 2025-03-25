@@ -1,4 +1,4 @@
-<img src="./logo-full-width.png" alt="Monux CLI" height=100>
+<img src="https://github.com/Service-Soft/monux-cli/blob/main/logo-full-width.png?raw=true" alt="Monux CLI" height=100>
 
 <br>
 

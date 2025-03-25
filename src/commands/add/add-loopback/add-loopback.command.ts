@@ -126,14 +126,7 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
 
     private async updateDockerFile(root: string): Promise<void> {
         // TODO: Update loopback 4 Dockerfile
-        // await FsUtilities.updateFile(
-        //     getPath(root, DOCKER_FILE_NAME),
-        //     [
-        //         '',
-        //         ''
-        //     ],
-        //     'replace'
-        // );
+        await FsUtilities.updateFile(getPath(root, DOCKER_FILE_NAME), '', 'append');
     }
 
     private async updateIndexTs(root: string, port: number): Promise<void> {

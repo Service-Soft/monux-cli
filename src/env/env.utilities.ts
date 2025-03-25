@@ -531,7 +531,6 @@ export abstract class EnvUtilities {
      * @param rootPath - The path to the root of the monorepo.
      */
     static async addCalculatedVariable(variable: CalculatedEnvVariable, rootPath: string): Promise<void> {
-        // TODO
         const environmentModelFilePath: string = getPath(rootPath, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
         if ((await FsUtilities.readFile(environmentModelFilePath)).includes(`${variable.key}: `)) {
             throw new Error(`The variable ${variable.key} has already been set.`);
