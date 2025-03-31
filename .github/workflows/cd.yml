@@ -3,7 +3,7 @@ name: CD
 on:
     pull_request:
         types: [closed]
-        branches: release
+        branches: [release]
 
 jobs:
     deploy:
@@ -12,7 +12,7 @@ jobs:
         steps:
             - uses: actions/checkout@v4
               with:
-                ref: "release"
+                ref: release
             - run: npm ci
             - run: npm run build
             - uses: JS-DevTools/npm-publish@v3
