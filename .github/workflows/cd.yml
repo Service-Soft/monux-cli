@@ -1,5 +1,4 @@
 name: CD
-
 on:
     pull_request:
         types: [closed]
