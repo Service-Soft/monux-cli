@@ -119,6 +119,7 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
         await LoopbackUtilities.setupAuth(root, config, dbName);
         await LoopbackUtilities.setupLogging(root, config.name);
         await LoopbackUtilities.setupChangeSets(root, config.name);
+        await LoopbackUtilities.setupMigrations(root, config.name);
 
         const app: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
         await EnvUtilities.buildEnvironmentFileForApp(app, '', false, 'dev.docker-compose.yaml');

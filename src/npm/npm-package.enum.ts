@@ -28,5 +28,6 @@ export enum NpmPackage {
     LODASH_TYPES = '@types/lodash',
     TSC_WATCH = 'tsc-watch',
     NG_PACKAGR = 'ng-packagr',
-    TSLIB = 'tslib'
+    TSLIB = 'tslib',
+    LOOPBACK_4_MIGRATION = 'loopback4-migration'
 }

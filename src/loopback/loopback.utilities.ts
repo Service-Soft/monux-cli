@@ -590,4 +590,26 @@ export abstract class LoopbackUtilities {
         ]);
         await TsUtilities.addToConstructorBody(applicationTs, 'this.setupChangeSets();');
     }
+
+    /**
+     * Sets up database migrations.
+     * @param root - THe root of the loopback app.
+     * @param name - The name of the loopback app.
+     */
+    static async setupMigrations(root: string, name: string): Promise<void> {
+        await NpmUtilities.install(name, [NpmPackage.LOOPBACK_4_MIGRATION]);
+        const applicationTs: string = getPath(root, 'src', 'application.ts');
+        await TsUtilities.addImportStatements(
+            applicationTs,
+            [
+                {
+                    defaultImport: false,
+                    element: 'MigrationComponent',
+                    path: NpmPackage.LOOPBACK_4_MIGRATION
+                }
+            ]
+        );
+        await TsUtilities.addToConstructorBody(applicationTs, 'this.component(MigrationComponent);');
+        await FsUtilities.mkdir(getPath(root, 'migrations'));
+    }
 }
