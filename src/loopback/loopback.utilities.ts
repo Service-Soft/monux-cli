@@ -610,6 +610,6 @@ export abstract class LoopbackUtilities {
             ]
         );
         await TsUtilities.addToConstructorBody(applicationTs, 'this.component(MigrationComponent);');
-        await FsUtilities.mkdir(getPath(root, 'migrations'));
+        await FsUtilities.mkdir(getPath(root, 'src', 'migrations'));
     }
 }
