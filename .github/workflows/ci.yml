@@ -6,6 +6,9 @@ on:
 jobs:
     lint:
         runs-on: ubuntu-latest
+        # branch creation also triggers this file
+        # This is here to prevent that
+        if: github.event.head_commit.parent_count > 0
         steps:
             - uses: actions/checkout@v4
             - run: npm ci
@@ -13,6 +16,9 @@ jobs:
             - run: npm run lint
     test:
         runs-on: ubuntu-latest
+        # branch creation also triggers this file
+        # This is here to prevent that
+        if: github.event.head_commit.parent_count > 0
         steps:
             - uses: actions/checkout@v4
             - run: npm ci
