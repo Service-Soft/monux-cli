@@ -3,5 +3,6 @@
 dist
 tmp
 /out-tsc
+coverage
 # node_modules
 node_modules

@@ -2,12 +2,13 @@
 import { AddLoopbackConfiguration } from '../commands/add/add-loopback';
 import { ENVIRONMENT_MODEL_TS_FILE_NAME } from '../constants';
 import { CPUtilities, FsUtilities } from '../encapsulation';
-import { DefaultEnvKeys, EnvUtilities } from '../env';
+import { DefaultEnvKeys, EnvironmentVariableKey, EnvUtilities } from '../env';
 import { TsUtilities } from '../ts';
-import { generatePlaceholderPassword, getPath, optionsToCliString, toKebabCase, toPascalCase, toSnakeCase } from '../utilities';
+import { generatePlaceholderPassword, getPath, optionsToCliString, toKebabCase, toPascalCase } from '../utilities';
 import { LbDatabaseConfig } from './lb-database-config.model';
 import { NpmPackage, NpmUtilities } from '../npm';
 import { adminControllerContent } from './admin-controller.content';
+import { adminModelContent } from './admin-model.content';
 import { fullAdminModelContent } from './full-admin-model.content';
 import { newAdminModelContent } from './new-admin-model.content';
 
@@ -197,13 +198,8 @@ export abstract class LoopbackUtilities {
         await this.createMailService(root, config);
         await this.createBiometricCredentialsService(root, config);
         await this.createAdminFiles(root, dbName);
-
-        const emailEnvKey: string = `${toSnakeCase(config.name)}_default_user_email`;
-        const passwordEnvKey: string = `${toSnakeCase(config.name)}_default_user_password`;
-
-        await this.applyAuthToIndexTs(root, config, emailEnvKey, passwordEnvKey);
-
-        await this.setupAuthVariables(root, config, emailEnvKey, passwordEnvKey);
+        await this.applyAuthToIndexTs(root, config);
+        await this.setupAuthVariables(root, config);
     }
 
     private static async createBiometricCredentialsService(root: string, config: AddLoopbackConfiguration): Promise<void> {
@@ -229,27 +225,8 @@ export abstract class LoopbackUtilities {
     }
 
     private static async createAdminFiles(root: string, dbName: string): Promise<void> {
-        await this.runCommand(root, 'model Admin', { '--skip-install': true, '--yes': true });
         const adminModelTs: string = getPath(root, 'src', 'models', 'admin.model.ts');
-        await FsUtilities.replaceInFile(adminModelTs, 'extends Entity', 'extends ChangeSetEntity');
-        await FsUtilities.replaceInFile(adminModelTs, 'Entity, ', '');
-        await TsUtilities.addToStartOfClass(adminModelTs, [
-            '',
-            '    @property({',
-            '        type: \'string\',',
-            '        required: true',
-            '    })',
-            '    name!: string;',
-            '',
-            '    @belongsTo(() => BaseUser)',
-            '    baseUserId!: string;'
-        ]);
-        await TsUtilities.addImportStatements(adminModelTs, [
-            { defaultImport: false, element: 'ChangeSetEntity', path: NpmPackage.LBX_CHANGE_SETS },
-            // eslint-disable-next-line sonar/no-duplicate-string
-            { defaultImport: false, element: 'belongsTo', path: '@loopback/repository' },
-            { defaultImport: false, element: 'BaseUser', path: NpmPackage.LBX_JWT }
-        ]);
+        await FsUtilities.createFile(adminModelTs, adminModelContent);
 
         await this.runCommand(
             root,
@@ -356,29 +333,30 @@ export abstract class LoopbackUtilities {
 
     private static async setupAuthVariables(
         root: string,
-        config: AddLoopbackConfiguration,
-        emailEnvKey: string,
-        passwordEnvKey: string
+        config: AddLoopbackConfiguration
     ): Promise<void> {
+        const emailEnvKey: EnvironmentVariableKey = DefaultEnvKeys.defaultUserEmail(config.name);
+        const passwordEnvKey: EnvironmentVariableKey = DefaultEnvKeys.defaultUserPassword(config.name);
+
         await EnvUtilities.addStaticVariable({ key: emailEnvKey, required: true, type: 'string', value: config.defaultUserEmail });
         await EnvUtilities.addStaticVariable({ key: passwordEnvKey, required: true, type: 'string', value: config.defaultUserPassword });
         await EnvUtilities.addStaticVariable(
-            { key: 'access_token_secret', required: true, type: 'string', value: generatePlaceholderPassword() }
+            { key: DefaultEnvKeys.ACCESS_TOKEN_SECRET, required: true, type: 'string', value: generatePlaceholderPassword() }
         );
         await EnvUtilities.addStaticVariable(
-            { key: 'refresh_token_secret', required: true, type: 'string', value: generatePlaceholderPassword() }
+            { key: DefaultEnvKeys.REFRESH_TOKEN_SECRET, required: true, type: 'string', value: generatePlaceholderPassword() }
         );
         await EnvUtilities.addStaticVariable(
-            { key: 'webserver_mail_user', required: true, type: 'string', value: undefined }
+            { key: DefaultEnvKeys.WEBSERVER_MAIL_USER, required: true, type: 'string', value: undefined }
         );
         await EnvUtilities.addStaticVariable(
-            { key: 'webserver_mail_password', required: true, type: 'string', value: undefined }
+            { key: DefaultEnvKeys.WEBSERVER_MAIL_PASSWORD, required: true, type: 'string', value: undefined }
         );
         await EnvUtilities.addStaticVariable(
-            { key: 'webserver_mail_host', required: true, type: 'string', value: undefined }
+            { key: DefaultEnvKeys.WEBSERVER_MAIL_HOST, required: true, type: 'string', value: undefined }
         );
         await EnvUtilities.addStaticVariable(
-            { key: 'webserver_mail_port', required: true, type: 'number', value: undefined }
+            { key: DefaultEnvKeys.WEBSERVER_MAIL_PORT, required: true, type: 'number', value: undefined }
         );
 
         const environmentModel: string = getPath(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
@@ -398,9 +376,7 @@ export abstract class LoopbackUtilities {
 
     private static async applyAuthToIndexTs(
         root: string,
-        config: AddLoopbackConfiguration,
-        emailEnvKey: string,
-        passwordEnvKey: string
+        config: AddLoopbackConfiguration
     ): Promise<void> {
         const indexTs: string = getPath(root, 'src', 'index.ts');
         await TsUtilities.addImportStatements(
@@ -413,6 +389,9 @@ export abstract class LoopbackUtilities {
             ]
         );
         await FsUtilities.replaceInFile(indexTs, 'return app', 'await createDefaultData(app);\n    return app');
+
+        const emailEnvKey: EnvironmentVariableKey = DefaultEnvKeys.defaultUserEmail(config.name);
+        const passwordEnvKey: EnvironmentVariableKey = DefaultEnvKeys.defaultUserPassword(config.name);
         await FsUtilities.updateFile(indexTs, [
             '',
             `async function createDefaultData(app: ${toPascalCase(config.name)}Application): Promise<void> {`,

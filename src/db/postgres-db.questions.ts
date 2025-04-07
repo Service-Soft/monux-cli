@@ -1,6 +1,5 @@
 import { QuestionsFor } from '../encapsulation';
 import { OmitStrict } from '../types';
-import { WorkspaceUtilities } from '../workspace';
 import { DbType } from './db-type.enum';
 
 /**
@@ -12,29 +11,23 @@ export type PostgresDbConfig = {
      */
     type: DbType.POSTGRES,
     /**
-     * The name of the postgres service.
+     * The name of the database.
      */
-    name: string,
+    databaseName: string,
     /**
-     * The name of the default database to create.
+     * The name of the docker postgres service.
      */
-    database: string
+    dbServiceName: string
 };
 
 /**
  * Questions for getting a postgres db config.
  */
-export const postgresDbConfigQuestions: QuestionsFor<OmitStrict<PostgresDbConfig, 'type'>> = {
-    name: {
+export const postgresDbConfigQuestions: QuestionsFor<OmitStrict<PostgresDbConfig, 'type' | 'databaseName'>> = {
+    dbServiceName: {
         type: 'input',
-        message: 'Name',
+        message: 'Compose service name',
         required: true,
         default: 'db'
-    },
-    database: {
-        type: 'input',
-        message: 'Database',
-        required: true,
-        default: async () => (await WorkspaceUtilities.getConfig())?.name
     }
 };

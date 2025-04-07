@@ -2,12 +2,12 @@
 import { faker } from '@faker-js/faker';
 
 import { fakeUniqueString } from './helpers';
-import { EnvVariable } from '../../env';
+import { EnvironmentVariableKey, EnvVariable } from '../../env';
 
 export function fakeEnvVariable(data?: Partial<EnvVariable>): EnvVariable {
     const type: 'string' | 'number' = faker.helpers.arrayElement(['string', 'number']);
     return {
-        key: fakeUniqueString(),
+        key: fakeUniqueString() as EnvironmentVariableKey,
         value: type === 'string' ? faker.lorem.word() : faker.number.int(),
         required: faker.datatype.boolean(),
         type: type,

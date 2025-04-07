@@ -126,11 +126,10 @@ async function createCspellWords(): Promise<void> {
  */
 async function createEslintConfig(): Promise<void> {
     await FsUtilities.createFile(ESLINT_CONFIG_FILE_NAME, [
-        'config = require(\'eslint-config-service-soft\');',
+        'import { configs } from \'eslint-config-service-soft\';',
         '',
-        '// eslint-disable-next-line jsdoc/require-description',
         '/** @type {import(\'eslint\').Linter.Config} */',
-        'module.exports = [...config];'
+        'export default [...config];'
     ]);
 }
 

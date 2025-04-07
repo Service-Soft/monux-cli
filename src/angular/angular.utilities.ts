@@ -174,11 +174,10 @@ export abstract class AngularUtilities {
         titleSuffix: string
     ): Promise<void> {
         await NpmUtilities.install(name, [NpmPackage.NGX_MATERIAL_AUTH]);
-        const apiBaseUrlVariableName: string = DefaultEnvKeys.baseUrl(apiName);
         await EnvUtilities.addProjectVariableKey(
             name,
             getPath(projectRoot, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
-            apiBaseUrlVariableName,
+            DefaultEnvKeys.baseUrl(apiName),
             false
         );
         await EnvUtilities.addProjectVariableKey(
@@ -551,6 +550,7 @@ export abstract class AngularUtilities {
         if (navElement.addTo === 'array') {
             return navElement.element.path;
         }
+        // eslint-disable-next-line typescript/switch-exhaustiveness-check
         switch (navElement?.element.type) {
             case NavElementTypes.TITLE_WITH_INTERNAL_LINK: {
                 return typeof navElement.element.link.route === 'string' ? undefined : navElement.element.link.route.path;

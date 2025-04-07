@@ -14,18 +14,18 @@ const mockConstants: MockConstants = getMockConstants('env-utilities');
 describe('EnvUtilities', () => {
     beforeEach(async () => {
         await FileMockUtilities.setup(mockConstants);
-        await EnvUtilities.init('test.com', mockConstants.PROJECT_DIR);
+        await EnvUtilities.init('test.com');
     });
 
     test('addStaticVariable', async () => {
         const variable: EnvVariable = fakeEnvVariable();
-        await EnvUtilities.addStaticVariable(variable, mockConstants.PROJECT_DIR);
+        await EnvUtilities.addStaticVariable(variable);
 
         const lines: string[] = await FsUtilities.readFileLines(mockConstants.ENV);
         expect(lines[2]).toEqual(`${variable.key}=${variable.value}`);
 
         const variable2: EnvVariable = fakeEnvVariable();
-        await EnvUtilities.addStaticVariable(variable2, mockConstants.PROJECT_DIR);
+        await EnvUtilities.addStaticVariable(variable2);
 
         const lines2: string[] = await FsUtilities.readFileLines(mockConstants.ENV);
         expect(lines2[3]).toEqual(`${variable2.key}=${variable2.value}`);
@@ -42,8 +42,7 @@ describe('EnvUtilities', () => {
         const subDomain: string = 'admin';
 
         await EnvUtilities.addStaticVariable(
-            { key: DefaultEnvKeys.port(name), value: port, required: true, type: 'number' },
-            mockConstants.PROJECT_DIR
+            { key: DefaultEnvKeys.port(name), value: port, required: true, type: 'number' }
         );
         await EnvUtilities.addCalculatedVariable(
             {
@@ -63,12 +62,10 @@ describe('EnvUtilities', () => {
                 },
                 required: true,
                 type: 'string'
-            },
-            mockConstants.PROJECT_DIR
+            }
         );
         await EnvUtilities.addStaticVariable(
-            { key: DefaultEnvKeys.subDomain(name), value: subDomain, required: true, type: 'string' },
-            mockConstants.PROJECT_DIR
+            { key: DefaultEnvKeys.subDomain(name), value: subDomain, required: true, type: 'string' }
         );
         await EnvUtilities.addCalculatedVariable(
             {
@@ -88,8 +85,7 @@ describe('EnvUtilities', () => {
                 },
                 required: true,
                 type: 'string'
-            },
-            mockConstants.PROJECT_DIR
+            }
         );
 
         const environmentModelFilePath: string = getPath(mockConstants.PROJECT_DIR, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
@@ -162,46 +158,46 @@ describe('EnvUtilities', () => {
             '};'
         ]);
 
-        const devBaseUrl: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.baseUrl('test'), mockConstants.PROJECT_DIR, 'dev.docker-compose.yaml');
-        const devDomain: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.domain('test'), mockConstants.PROJECT_DIR, 'dev.docker-compose.yaml');
+        const devBaseUrl: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.baseUrl('test'), 'dev.docker-compose.yaml');
+        const devDomain: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.domain('test'), 'dev.docker-compose.yaml');
         expect(devBaseUrl).toEqual('http://localhost:4201');
         expect(devDomain).toEqual('localhost:4201');
 
-        const localBaseUrl: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.baseUrl('test'), mockConstants.PROJECT_DIR, 'local.docker-compose.yaml');
-        const localDomain: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.domain('test'), mockConstants.PROJECT_DIR, 'local.docker-compose.yaml');
+        const localBaseUrl: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.baseUrl('test'), 'local.docker-compose.yaml');
+        const localDomain: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.domain('test'), 'local.docker-compose.yaml');
         expect(localBaseUrl).toEqual('http://admin.localhost');
         expect(localDomain).toEqual('admin.localhost');
 
-        const prodBaseUrl: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.baseUrl('test'), mockConstants.PROJECT_DIR, 'docker-compose.yaml');
-        const prodDomain: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.domain('test'), mockConstants.PROJECT_DIR, 'docker-compose.yaml');
+        const prodBaseUrl: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.baseUrl('test'), 'docker-compose.yaml');
+        const prodDomain: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.domain('test'), 'docker-compose.yaml');
         expect(prodBaseUrl).toEqual('https://admin.test.com');
         expect(prodDomain).toEqual('admin.test.com');
     });
 
     test('validate', async () => {
         const variable: EnvVariable = fakeEnvVariable({ required: true, type: 'number', value: 42 });
-        await EnvUtilities.addStaticVariable(variable, mockConstants.PROJECT_DIR);
-        const errorMessages: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(mockConstants.PROJECT_DIR);
+        await EnvUtilities.addStaticVariable(variable);
+        const errorMessages: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate();
         expect(errorMessages.length).toEqual(0);
 
         await FsUtilities.replaceInFile(mockConstants.ENV, '42', 'test');
-        const errorMessages2: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(mockConstants.PROJECT_DIR);
+        const errorMessages2: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate();
         expect(errorMessages2.length).toEqual(1);
         expect(errorMessages2[0].value).toEqual(EnvValidationErrorMessage.NUMBER);
 
         await FsUtilities.updateFile(mockConstants.ENV, '', 'replace');
-        const errorMessages3: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(mockConstants.PROJECT_DIR);
+        const errorMessages3: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate();
         expect(errorMessages3.length).toEqual(3);
         expect(errorMessages3[0].value).toEqual(EnvValidationErrorMessage.REQUIRED);
 
         await FsUtilities.rm(mockConstants.ENV);
-        const errorMessages4: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(mockConstants.PROJECT_DIR);
+        const errorMessages4: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate();
         expect(errorMessages4.length).toEqual(1);
         expect(errorMessages4[0].value).toEqual(EnvValidationErrorMessage.FILE_DOES_NOT_EXIST);
     });
 
     test('setupProjectEnvironment', async () => {
-        await EnvUtilities.setupProjectEnvironment(mockConstants.ANGULAR_APP_DIR, true, mockConstants.PROJECT_DIR);
+        await EnvUtilities.setupProjectEnvironment(mockConstants.ANGULAR_APP_DIR, true);
 
         const environmentModelLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_ENVIRONMENT_MODEL);
         expect(environmentModelLines).toEqual([

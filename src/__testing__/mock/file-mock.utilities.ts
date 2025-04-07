@@ -13,7 +13,7 @@ export abstract class FileMockUtilities {
             DOCKER_COMPOSE_YAML: this.createEmptyFile,
             DEV_DOCKER_COMPOSE_YAML: this.createEmptyFile,
             LOCAL_DOCKER_COMPOSE_YAML: this.createEmptyFile,
-            ANGULAR_ESLINT_CONFIG_JS: this.createEmptyFile,
+            ANGULAR_ESLINT_CONFIG_MJS: this.createEmptyFile,
             ANGULAR_PACKAGE_JSON: this.createAngularPackageJson,
             ANGULAR_APP_COMPONENT_TS: this.createAppComponentTsFile,
             ANGULAR_APP_COMPONENT_HTML: this.createEmptyFile,
@@ -35,9 +35,9 @@ export abstract class FileMockUtilities {
         contentOverrides: Partial<Record<keyof FileMockConstants, string | string[]>> = {}
     ): Promise<void> {
         await FsUtilities.rm(mockConstants.PROJECT_DIR);
+        CPUtilities['cwd'] = mockConstants.PROJECT_DIR;
         await this.mockFolders(mockConstants);
         await this.mockFiles(filesToMock, contentOverrides, mockConstants);
-        CPUtilities['cwd'] = mockConstants.PROJECT_DIR;
     }
 
     private static async mockFolders(mockConstants: MockConstants): Promise<void> {
@@ -170,7 +170,7 @@ export abstract class FileMockUtilities {
         ], true, false);
     }
 
-    private static async createGlobalEnvModel(mockConstants: MockConstants): Promise<void> {
-        await EnvUtilities['createGlobalEnvironmentModel'](mockConstants.PROJECT_DIR);
+    private static async createGlobalEnvModel(): Promise<void> {
+        await EnvUtilities['createGlobalEnvironmentModel']();
     }
 }

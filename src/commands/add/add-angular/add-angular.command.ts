@@ -93,8 +93,7 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
                 },
                 config.port,
                 true,
-                config.subDomain,
-                root
+                config.subDomain
             ),
             AngularUtilities.updateAngularJson(
                 getPath(root, ANGULAR_JSON_FILE_NAME),
@@ -103,11 +102,7 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
             AngularUtilities.setupMaterial(root)
         ]);
 
-        const prodRootDomain: string = await EnvUtilities.getEnvVariable(
-            DefaultEnvKeys.PROD_ROOT_DOMAIN,
-            '',
-            'dev.docker-compose.yaml'
-        );
+        const prodRootDomain: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.PROD_ROOT_DOMAIN, 'dev.docker-compose.yaml');
         const fullDomain: string = config.subDomain ? `${config.subDomain}.${prodRootDomain}` : prodRootDomain;
 
         await AngularUtilities.setupNavigation(root, config.name);
@@ -127,7 +122,7 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
         await NpmUtilities.updatePackageJson(config.name, { scripts: { start: `ng serve --port ${config.port}` } });
 
         const app: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
-        await EnvUtilities.buildEnvironmentFileForApp(app, '', false, 'dev.docker-compose.yaml');
+        await EnvUtilities.buildEnvironmentFileForApp(app, false, 'dev.docker-compose.yaml');
     }
 
     private async setupTailwind(root: string): Promise<void> {

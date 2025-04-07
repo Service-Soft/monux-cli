@@ -1,6 +1,8 @@
 import inquirer from 'inquirer';
 import { BuiltInQuestion, Answers } from 'inquirer/dist/cjs/types/types';
 
+import { exitWithInterrupt, isErrorWithSignal, isExitPromptError } from '../commands';
+
 /**
  * Inquirer Questions to get the generic object result.
  */
@@ -28,11 +30,16 @@ export abstract class InquirerUtilities {
     private static async getResultForQuestion<T>(question: BuiltInQuestion | QuestionsFor<T>): Promise<T> {
         if (this.isQuestion(question)) {
             try {
-                const answers: Answers = await inquirer.prompt([question]);
-                return answers[''] as T;
+                const res: T = await this.inquire(question);
+                return res;
             }
-            catch {
-                process.exit();
+            catch (error) {
+                if (isExitPromptError(error) || (isErrorWithSignal(error) && error.signal === 'SIGINT')) {
+                    exitWithInterrupt();
+                }
+                else {
+                    throw error;
+                }
             }
         }
         const res: T = {} as T;
@@ -45,5 +52,10 @@ export abstract class InquirerUtilities {
     private static isQuestion<T>(question: BuiltInQuestion | QuestionsFor<T>): question is BuiltInQuestion {
         const q: BuiltInQuestion = question as BuiltInQuestion;
         return q.type != undefined && q.message != undefined;
+    }
+
+    private static async inquire<T>(question: BuiltInQuestion): Promise<T> {
+        const answers: Answers = await inquirer.prompt([question]);
+        return answers[''] as T;
     }
 }

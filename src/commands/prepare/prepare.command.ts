@@ -29,9 +29,7 @@ const prepareConfigQuestions: QuestionsFor<PrepareConfig> = {
  * @param fileName - The docker compose file get the variables for.
  */
 export async function runPrepare(fileName: DockerComposeFileName | undefined): Promise<void> {
-    if (!fileName) {
-        fileName = (await InquirerUtilities.prompt(prepareConfigQuestions)).fileName;
-    }
+    fileName ??= (await InquirerUtilities.prompt(prepareConfigQuestions)).fileName;
     await buildEnv(fileName);
     await buildRobotsTxtFiles(fileName);
     await buildDbInitFiles(fileName);

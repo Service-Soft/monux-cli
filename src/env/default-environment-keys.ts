@@ -9,11 +9,34 @@ export abstract class DefaultEnvKeys {
      * The variable that defines if eg. Robots.txt should be genereated that allow crawling.
      */
     static readonly IS_PUBLIC: 'is_public' = 'is_public';
-
     /**
      * The variable that define the root domain to use in production, like test.com.
      */
     static readonly PROD_ROOT_DOMAIN: 'prod_root_domain' = 'prod_root_domain';
+    /**
+     * The variable that is used to generate access tokens.
+     */
+    static readonly ACCESS_TOKEN_SECRET: 'access_token_secret' = 'access_token_secret';
+    /**
+     * The variable that is used to generate refresh tokens.
+     */
+    static readonly REFRESH_TOKEN_SECRET: 'refresh_token_secret' = 'refresh_token_secret';
+    /**
+     * The username/email variable of the webserver user for automatic emails.
+     */
+    static readonly WEBSERVER_MAIL_USER: 'webserver_mail_user' = 'webserver_mail_user';
+    /**
+     * The password variable of the webserver user for automatic emails.
+     */
+    static readonly WEBSERVER_MAIL_PASSWORD: 'webserver_mail_password' = 'webserver_mail_password';
+    /**
+     * The host variable of the webserver for automatic emails.
+     */
+    static readonly WEBSERVER_MAIL_HOST: 'webserver_mail_host' = 'webserver_mail_host';
+    /**
+     * The port variable of the webserver for automatic emails.
+     */
+    static readonly WEBSERVER_MAIL_PORT: 'webserver_mail_port' = 'webserver_mail_port';
 
     /**
      * The domain environment variable key for the project with the given name.
@@ -52,29 +75,68 @@ export abstract class DefaultEnvKeys {
     }
 
     /**
-     * The database user environment variable key for the project with the given name.
-     * @param projectName - The name of the project to get the environment variable key for.
+     * The database user environment variable key for the database with the given name.
+     * @param dbServiceName - The docker service name of the database.
+     * @param databaseName - The name of the database to get the environment variable key for.
      * @returns The environment variable key.
      */
-    static dbUser(projectName: string): EnvironmentVariableKey {
-        return `${toSnakeCase(projectName)}_db_user` as EnvironmentVariableKey;
+    static dbUser(dbServiceName: string, databaseName: string): EnvironmentVariableKey {
+        return `${toSnakeCase(dbServiceName)}_${toSnakeCase(databaseName)}_db_user` as EnvironmentVariableKey;
     }
 
     /**
-     * The database password environment variable key for the project with the given name.
-     * @param projectName - The name of the project to get the environment variable key for.
+     * The database password environment variable key for the database with the given name.
+     * @param dbServiceName - The docker service name of the database.
+     * @param databaseName - The name of the database to get the environment variable key for.
      * @returns The environment variable key.
      */
-    static dbPassword(projectName: string): EnvironmentVariableKey {
-        return `${toSnakeCase(projectName)}_db_password` as EnvironmentVariableKey;
+    static dbPassword(dbServiceName: string, databaseName: string): EnvironmentVariableKey {
+        return `${toSnakeCase(dbServiceName)}_${toSnakeCase(databaseName)}_db_password` as EnvironmentVariableKey;
     }
 
     /**
-     * The database name environment variable key for the project with the given name.
-     * @param projectName - The name of the project to get the environment variable key for.
+     * The host environment variable key for the docker service with the given name.
+     * @param dbServiceName - The docker service name of the database.
      * @returns The environment variable key.
      */
-    static dbName(projectName: string): EnvironmentVariableKey {
-        return `${toSnakeCase(projectName)}_database` as EnvironmentVariableKey;
+    static dbHost(dbServiceName: string): EnvironmentVariableKey {
+        return `${toSnakeCase(dbServiceName)}_db_host` as EnvironmentVariableKey;
+    }
+
+    /**
+     * The root password variable key for the docker service with the given name.
+     * @param dbServiceName - The docker service name of the database.
+     * @returns The environment variable key.
+     */
+    static dbRootPassword(dbServiceName: string): EnvironmentVariableKey {
+        return `${toSnakeCase(dbServiceName)}_db_root_password` as EnvironmentVariableKey;
+    }
+
+    /**
+     * The database name environment variable key for the database with the given name.
+     * @param dbServiceName - The docker service name of the database.
+     * @param databaseName - The name of the database to get the environment variable key for.
+     * @returns The environment variable key.
+     */
+    static dbName(dbServiceName: string, databaseName: string): EnvironmentVariableKey {
+        return `${toSnakeCase(dbServiceName)}_${toSnakeCase(databaseName)}_database` as EnvironmentVariableKey;
+    }
+
+    /**
+     * The email environment variable key for the default user to create on initialization.
+     * @param apiProjectName - The docker service name of the api to create the user for.
+     * @returns The environment variable key.
+     */
+    static defaultUserEmail(apiProjectName: string): EnvironmentVariableKey {
+        return `${toSnakeCase(apiProjectName)}_default_user_email` as EnvironmentVariableKey;
+    }
+
+    /**
+     * The password environment variable key for the default user to create on initialization.
+     * @param apiProjectName - The docker service name of the api to create the user for.
+     * @returns The environment variable key.
+     */
+    static defaultUserPassword(apiProjectName: string): EnvironmentVariableKey {
+        return `${toSnakeCase(apiProjectName)}_default_user_password` as EnvironmentVariableKey;
     }
 }

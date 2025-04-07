@@ -136,6 +136,7 @@ export abstract class JsonUtilities {
             case 'symbol': {
                 return String(value);
             }
+            case 'undefined':
             default: {
                 throw new Error(`Could not stringify property with type ${typeof value}:\n ${value}`);
             }

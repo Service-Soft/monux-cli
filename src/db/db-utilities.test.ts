@@ -19,16 +19,18 @@ describe('DbUtilities', () => {
     });
 
     test('createPostgresDatabase', async () => {
-        await DbUtilities['createPostgresDatabase']('postgresDb', 'test', mockConstants.PROJECT_DIR);
+        const DB_SERVICE_NAME: string = 'postgresDb';
+        const DATABASE_NAME: string = 'test';
+
+        await DbUtilities['createPostgresDatabase'](DB_SERVICE_NAME, DATABASE_NAME);
         await DbUtilities['addDbInitConfig'](
-            'postgresDb',
+            DB_SERVICE_NAME,
             {
                 type: DbType.POSTGRES,
-                nameEnvVariable: DefaultEnvKeys.dbName('test'),
-                passwordEnvVariable: DefaultEnvKeys.dbPassword('test'),
-                userEnvVariable: DefaultEnvKeys.dbUser('test')
-            },
-            mockConstants.PROJECT_DIR
+                nameEnvVariable: DefaultEnvKeys.dbName(DB_SERVICE_NAME, DATABASE_NAME),
+                passwordEnvVariable: DefaultEnvKeys.dbPassword(DB_SERVICE_NAME, DATABASE_NAME),
+                userEnvVariable: DefaultEnvKeys.dbUser(DB_SERVICE_NAME, DATABASE_NAME)
+            }
         );
         const dockerComposeContent: string[] = await FsUtilities.readFileLines(mockConstants.DOCKER_COMPOSE_YAML);
         const devDockerComposeContent: string[] = await FsUtilities.readFileLines(mockConstants.DEV_DOCKER_COMPOSE_YAML);
@@ -44,7 +46,7 @@ describe('DbUtilities', () => {
             '            - postgres-db-data:/var/lib/postgresql/data',
             '            - ./databases/postgres-db/init:/docker-entrypoint-initdb.d',
             '        environment:',
-            '            POSTGRES_PASSWORD: \${postgres_db_root_password}',
+            '            POSTGRES_PASSWORD: \${postgres_db_db_root_password}',
             '',
             'volumes:',
             '    postgres-db-data:'
@@ -61,7 +63,7 @@ describe('DbUtilities', () => {
             '            - postgres-db-data:/var/lib/postgresql/data',
             '            - ./databases/postgres-db/init:/docker-entrypoint-initdb.d',
             '        environment:',
-            '            POSTGRES_PASSWORD: \${postgres_db_root_password}',
+            '            POSTGRES_PASSWORD: \${postgres_db_db_root_password}',
             '',
             'volumes:',
             '    postgres-db-data:'
@@ -69,24 +71,26 @@ describe('DbUtilities', () => {
         expect(initConfig).toEqual([
             '{',
             '    "type": "postgres",',
-            '    "nameEnvVariable": "test_database",',
-            '    "passwordEnvVariable": "test_db_password",',
-            '    "userEnvVariable": "test_db_user"',
+            '    "nameEnvVariable": "postgres_db_test_database",',
+            '    "passwordEnvVariable": "postgres_db_test_db_password",',
+            '    "userEnvVariable": "postgres_db_test_db_user"',
             '}'
         ]);
     });
 
     test('createMariaDbDatabase', async () => {
-        await DbUtilities['createMariaDbDatabase']('mariaDb', 'test', mockConstants.PROJECT_DIR);
+        const DB_SERVICE_NAME: string = 'mariaDb';
+        const DATABASE_NAME: string = 'test';
+
+        await DbUtilities['createMariaDbDatabase'](DB_SERVICE_NAME, DATABASE_NAME);
         await DbUtilities['addDbInitConfig'](
-            'mariaDb',
+            DB_SERVICE_NAME,
             {
                 type: DbType.MARIADB,
-                nameEnvVariable: DefaultEnvKeys.dbName('test'),
-                passwordEnvVariable: DefaultEnvKeys.dbPassword('test'),
-                userEnvVariable: DefaultEnvKeys.dbUser('test')
-            },
-            mockConstants.PROJECT_DIR
+                nameEnvVariable: DefaultEnvKeys.dbName(DB_SERVICE_NAME, DATABASE_NAME),
+                passwordEnvVariable: DefaultEnvKeys.dbPassword(DB_SERVICE_NAME, DATABASE_NAME),
+                userEnvVariable: DefaultEnvKeys.dbUser(DB_SERVICE_NAME, DATABASE_NAME)
+            }
         );
 
         const dockerComposeContent: string[] = await FsUtilities.readFileLines(mockConstants.DOCKER_COMPOSE_YAML);
@@ -103,7 +107,7 @@ describe('DbUtilities', () => {
             '            - maria-db-data:/var/lib/mysql',
             '            - ./databases/maria-db/init:/docker-entrypoint-initdb.d',
             '        environment:',
-            '            MARIADB_ROOT_PASSWORD: \${maria_db_root_password}',
+            '            MARIADB_ROOT_PASSWORD: \${maria_db_db_root_password}',
             '',
             'volumes:',
             '    maria-db-data:'
@@ -120,7 +124,7 @@ describe('DbUtilities', () => {
             '            - maria-db-data:/var/lib/mysql',
             '            - ./databases/maria-db/init:/docker-entrypoint-initdb.d',
             '        environment:',
-            '            MARIADB_ROOT_PASSWORD: \${maria_db_root_password}',
+            '            MARIADB_ROOT_PASSWORD: \${maria_db_db_root_password}',
             '',
             'volumes:',
             '    maria-db-data:'
@@ -128,43 +132,47 @@ describe('DbUtilities', () => {
         expect(initConfig).toEqual([
             '{',
             '    "type": "mariadb",',
-            '    "nameEnvVariable": "test_database",',
-            '    "passwordEnvVariable": "test_db_password",',
-            '    "userEnvVariable": "test_db_user"',
+            '    "nameEnvVariable": "maria_db_test_database",',
+            '    "passwordEnvVariable": "maria_db_test_db_password",',
+            '    "userEnvVariable": "maria_db_test_db_user"',
             '}'
         ]);
     });
 
     test('createInitFiles', async () => {
-        await DbUtilities['createMariaDbDatabase']('mariaDb', 'test', mockConstants.PROJECT_DIR);
+        const MARIADB_SERVICE_NAME: string = 'mariaDb';
+        const MARIADB_DATABASE_NAME: string = 'test';
+
+        const POSTGRES_SERVICE_NAME: string = 'postgresDb';
+        const POSTGRES_DATABASE_NAME: string = 'test2';
+
+        await DbUtilities['createMariaDbDatabase'](MARIADB_SERVICE_NAME, MARIADB_DATABASE_NAME);
         await DbUtilities['addDbInitConfig'](
-            'mariaDb',
+            MARIADB_SERVICE_NAME,
             {
                 type: DbType.MARIADB,
-                nameEnvVariable: DefaultEnvKeys.dbName('test'),
-                passwordEnvVariable: DefaultEnvKeys.dbPassword('test'),
-                userEnvVariable: DefaultEnvKeys.dbUser('test')
-            },
-            mockConstants.PROJECT_DIR
+                nameEnvVariable: DefaultEnvKeys.dbName(MARIADB_SERVICE_NAME, MARIADB_DATABASE_NAME),
+                passwordEnvVariable: DefaultEnvKeys.dbPassword(MARIADB_SERVICE_NAME, MARIADB_DATABASE_NAME),
+                userEnvVariable: DefaultEnvKeys.dbUser(MARIADB_SERVICE_NAME, MARIADB_DATABASE_NAME)
+            }
         );
-        await DbUtilities['createPostgresDatabase']('postgresDb', 'test2', mockConstants.PROJECT_DIR);
+        await DbUtilities['createPostgresDatabase'](POSTGRES_SERVICE_NAME, POSTGRES_DATABASE_NAME);
         await DbUtilities['addDbInitConfig'](
-            'postgresDb',
+            POSTGRES_SERVICE_NAME,
             {
                 type: DbType.POSTGRES,
-                nameEnvVariable: DefaultEnvKeys.dbName('test2'),
-                passwordEnvVariable: DefaultEnvKeys.dbPassword('test2'),
-                userEnvVariable: DefaultEnvKeys.dbUser('test2')
-            },
-            mockConstants.PROJECT_DIR
+                nameEnvVariable: DefaultEnvKeys.dbName(POSTGRES_SERVICE_NAME, POSTGRES_DATABASE_NAME),
+                passwordEnvVariable: DefaultEnvKeys.dbPassword(POSTGRES_SERVICE_NAME, POSTGRES_DATABASE_NAME),
+                userEnvVariable: DefaultEnvKeys.dbUser(POSTGRES_SERVICE_NAME, POSTGRES_DATABASE_NAME)
+            }
         );
 
-        await DbUtilities.createInitFiles('dev.docker-compose.yaml', mockConstants.PROJECT_DIR);
+        await DbUtilities.createInitFiles('dev.docker-compose.yaml');
 
         const initShContent: string[] = await FsUtilities.readFileLines(getPath(mockConstants.PROJECT_DIR, DATABASES_DIRECTORY_NAME, 'postgres-db', 'init', '0.sh'));
-        const postgresPassword: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.dbPassword('test2'), mockConstants.PROJECT_DIR, 'dev.docker-compose.yaml');
+        const postgresPassword: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.dbPassword(POSTGRES_SERVICE_NAME, POSTGRES_DATABASE_NAME), 'dev.docker-compose.yaml');
         const initSqlContent: string[] = await FsUtilities.readFileLines(getPath(mockConstants.PROJECT_DIR, DATABASES_DIRECTORY_NAME, 'maria-db', 'init', '0.sql'));
-        const mariadbPassword: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.dbPassword('test'), mockConstants.PROJECT_DIR, 'dev.docker-compose.yaml');
+        const mariadbPassword: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.dbPassword(MARIADB_SERVICE_NAME, MARIADB_DATABASE_NAME), 'dev.docker-compose.yaml');
 
         expect(initShContent).toEqual([
             '#!/bin/bash',

@@ -25,5 +25,6 @@ function transformValue(value: unknown, separator: string): string {
     if (typeof value === 'object') {
         return `${separator}'${JsonUtilities.stringify(value)}'`;
     }
+    // eslint-disable-next-line typescript/no-base-to-string
     return `${separator}${value}`;
 }
