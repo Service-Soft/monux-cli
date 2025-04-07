@@ -243,7 +243,6 @@ export abstract class DockerUtilities {
      * @param port - The port used in development.
      * @param addTraefik - Whether or not the service should be exposed via traefik.
      * @param subDomain - The domain of the service. Optional.
-     * @param rootPath - The root path.
      * Defaults to "" (which creates the file in the current directory).
      * @param composeFileName - The name of the compose file.
      * Defaults to docker-compose.yaml.
@@ -253,10 +252,9 @@ export abstract class DockerUtilities {
         port: number,
         addTraefik: boolean,
         subDomain?: string,
-        rootPath: string = '',
         composeFileName: DockerComposeFileName = PROD_DOCKER_COMPOSE_FILE_NAME
     ): Promise<void> {
-        const composePath: string = getPath(rootPath, composeFileName);
+        const composePath: string = getPath(composeFileName);
         const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
 
         const labels: string[] = addTraefik ? this.getTraefikLabels(service.name, port, composeFileName, subDomain) : [];
@@ -265,20 +263,18 @@ export abstract class DockerUtilities {
         await FsUtilities.updateFile(composePath, this.composeDefinitionToYaml(definition), 'replace');
 
         if (composeFileName === PROD_DOCKER_COMPOSE_FILE_NAME) {
-            await this.addServiceToCompose(service, port, addTraefik, subDomain, rootPath, LOCAL_DOCKER_COMPOSE_FILE_NAME);
+            await this.addServiceToCompose(service, port, addTraefik, subDomain, LOCAL_DOCKER_COMPOSE_FILE_NAME);
             if (!addTraefik) {
                 return;
             }
 
             await EnvUtilities.addStaticVariable(
-                { key: DefaultEnvKeys.port(service.name), value: port, required: true, type: 'number' },
-                rootPath
+                { key: DefaultEnvKeys.port(service.name), value: port, required: true, type: 'number' }
             );
 
             if (subDomain) {
                 await EnvUtilities.addStaticVariable(
-                    { key: DefaultEnvKeys.subDomain(service.name), value: subDomain, required: true, type: 'string' },
-                    rootPath
+                    { key: DefaultEnvKeys.subDomain(service.name), value: subDomain, required: true, type: 'string' }
                 );
                 await EnvUtilities.addCalculatedVariable(
                     {
@@ -298,8 +294,7 @@ export abstract class DockerUtilities {
                         },
                         required: true,
                         type: 'string'
-                    },
-                    rootPath
+                    }
                 );
                 await EnvUtilities.addCalculatedVariable(
                     {
@@ -320,8 +315,7 @@ export abstract class DockerUtilities {
                         },
                         required: true,
                         type: 'string'
-                    },
-                    rootPath
+                    }
                 );
             }
             else {
@@ -343,8 +337,7 @@ export abstract class DockerUtilities {
                         },
                         required: true,
                         type: 'string'
-                    },
-                    rootPath
+                    }
                 );
                 await EnvUtilities.addCalculatedVariable(
                     {
@@ -364,13 +357,12 @@ export abstract class DockerUtilities {
                         },
                         required: true,
                         type: 'string'
-                    },
-                    rootPath
+                    }
                 );
             }
         }
 
-        const environmentModelFilePath: string = getPath(rootPath, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
+        const environmentModelFilePath: string = getPath(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
         await FsUtilities.replaceAllInFile(environmentModelFilePath, '\'PORT_PLACEHOLDER\'', `env.${DefaultEnvKeys.port(service.name)}`);
         await FsUtilities.replaceAllInFile(
             environmentModelFilePath,
@@ -386,11 +378,10 @@ export abstract class DockerUtilities {
 
     /**
      * Gets all services from the docker compose file.
-     * @param rootPath - The root path of the monorepo.
      * @returns The parsed services.
      */
-    static async getComposeServices(rootPath: string = ''): Promise<ComposeService[]> {
-        const composePath: string = getPath(rootPath, PROD_DOCKER_COMPOSE_FILE_NAME);
+    static async getComposeServices(): Promise<ComposeService[]> {
+        const composePath: string = getPath(PROD_DOCKER_COMPOSE_FILE_NAME);
         const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
         return definition.services;
     }
@@ -398,15 +389,13 @@ export abstract class DockerUtilities {
     /**
      * Adds a volume to the docker compose file.
      * @param volume - The volume to add.
-     * @param rootPath - The root path of the monorepo.
      * @param composeFileName - The name of the compose file.
      */
     static async addVolumeToCompose(
         volume: string,
-        rootPath: string = '',
         composeFileName: string = PROD_DOCKER_COMPOSE_FILE_NAME
     ): Promise<void> {
-        const composePath: string = getPath(rootPath, composeFileName);
+        const composePath: string = getPath(composeFileName);
         const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
         definition.volumes.push(volume);
         await FsUtilities.updateFile(composePath, this.composeDefinitionToYaml(definition), 'replace');

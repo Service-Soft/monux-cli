@@ -14,7 +14,7 @@ describe('DockerUtilities', () => {
         await FileMockUtilities.setup(mockConstants);
 
         const fakeEmail: string = faker.internet.email();
-        await EnvUtilities.init('test.com', mockConstants.PROJECT_DIR);
+        await EnvUtilities.init('test.com');
         await DockerUtilities.createComposeFiles(fakeEmail, mockConstants.PROJECT_DIR);
 
         const initialDockerComposeContent: string[] = await FsUtilities.readFileLines(mockConstants.DOCKER_COMPOSE_YAML);
@@ -47,7 +47,7 @@ describe('DockerUtilities', () => {
 
     test('createDockerCompose with prod service', async () => {
         const def: ComposeService = fakeComposeService();
-        await DockerUtilities.addServiceToCompose(def, 4200, true, def.name, mockConstants.PROJECT_DIR);
+        await DockerUtilities.addServiceToCompose(def, 4200, true, def.name);
         const fileContent: ComposeDefinition = await DockerUtilities['yamlToComposeDefinition'](mockConstants.DOCKER_COMPOSE_YAML);
         const service: ComposeService = fileContent.services[1];
         expect({

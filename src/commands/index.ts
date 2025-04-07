@@ -14,3 +14,6 @@ export * from './down-dev';
 export * from './run-all';
 export * from './up-local';
 export * from './is-command.function';
+export * from './is-error-with-signal.function';
+export * from './is-exit-prompt-error.function';
+export * from './exit-with-interrupt.function';

@@ -25,3 +25,12 @@ redirections
 redirectregex
 wwwredirect
 sslresolver
+stringstring
+monux
+postgresql
+postgres
+TRAEFIK
+traefik
+mariadb
+MARIADB
+dts

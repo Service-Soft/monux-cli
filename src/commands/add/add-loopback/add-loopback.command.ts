@@ -4,14 +4,14 @@ import { APPS_DIRECTORY_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, DOCKER_FILE_NAME, E
 import { DbUtilities } from '../../../db';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, QuestionsFor } from '../../../encapsulation';
-import { EnvUtilities } from '../../../env';
+import { DefaultEnvKeys, EnvironmentVariableKey, EnvUtilities } from '../../../env';
 import { EslintUtilities } from '../../../eslint';
 import { LbDatabaseConfig, LoopbackUtilities } from '../../../loopback';
 import { NpmPackage, NpmUtilities } from '../../../npm';
 import { TsUtilities } from '../../../ts';
 import { TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
-import { getPath, toKebabCase, toPascalCase, toSnakeCase } from '../../../utilities';
+import { getPath, toKebabCase, toPascalCase } from '../../../utilities';
 import { WorkspaceUtilities } from '../../../workspace';
 import { AddCommand } from '../models';
 import { AddConfiguration } from '../models/add-configuration.model';
@@ -82,17 +82,17 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
 
     override async run(): Promise<void> {
         const config: AddLoopbackConfiguration = await this.getConfig();
-        const dbName: string = await DbUtilities.configureDb(config.name);
+        const { dbServiceName, databaseName } = await DbUtilities.configureDb(config.name);
         const root: string = await this.createProject(config);
         await EnvUtilities.setupProjectEnvironment(root, false);
-        await this.createLoopbackDatasource(dbName, root, config.name);
+        await this.createLoopbackDatasource(dbServiceName, databaseName, root, config.name);
 
         await Promise.all([
             this.setupTsConfig(config.name),
             this.updateApplicationTs(root),
             this.updateIndexTs(root, config.port),
             this.updateOpenApiSpec(root, config.port),
-            EslintUtilities.setupProjectEslint(root, true, false, TS_CONFIG_FILE_NAME),
+            EslintUtilities.setupProjectEslint(root, true, TS_CONFIG_FILE_NAME),
             DockerUtilities.addServiceToCompose(
                 {
                     name: config.name,
@@ -116,13 +116,13 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
             }
         });
         await NpmUtilities.install(config.name, [NpmPackage.TSC_WATCH], true);
-        await LoopbackUtilities.setupAuth(root, config, dbName);
+        await LoopbackUtilities.setupAuth(root, config, dbServiceName);
         await LoopbackUtilities.setupLogging(root, config.name);
         await LoopbackUtilities.setupChangeSets(root, config.name);
         await LoopbackUtilities.setupMigrations(root, config.name);
 
         const app: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
-        await EnvUtilities.buildEnvironmentFileForApp(app, '', false, 'dev.docker-compose.yaml');
+        await EnvUtilities.buildEnvironmentFileForApp(app, false, 'dev.docker-compose.yaml');
     }
 
     private async updateDockerFile(root: string): Promise<void> {
@@ -166,19 +166,27 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
         );
     }
 
-    private async createLoopbackDatasource(dbName: string, root: string, name: string): Promise<void> {
+    /**
+     * Creates a loopback datasource.
+     * @param dbServiceName - The name of the docker database service.
+     * @param databaseName - The name of the database.
+     * @param root - The root of the loopback project.
+     * @param projectName - The name of the loopback app.
+     */
+    private async createLoopbackDatasource(dbServiceName: string, databaseName: string, root: string, projectName: string): Promise<void> {
         const lbDatabaseConfig: LbDatabaseConfig = {
-            name: dbName,
+            name: databaseName,
             connector: 'postgres' as 'postgresql'
         } as LbDatabaseConfig;
-        await NpmUtilities.install(name, [NpmPackage.LOOPBACK_CONNECTOR_POSTGRES]);
-        await LoopbackUtilities.runCommand(root, `datasource ${dbName}`, { '--config': lbDatabaseConfig, '--yes': true });
+        await NpmUtilities.install(projectName, [NpmPackage.LOOPBACK_CONNECTOR_POSTGRES]);
+        await LoopbackUtilities.runCommand(root, `datasource ${databaseName}`, { '--config': lbDatabaseConfig, '--yes': true });
 
-        const PASSWORD_ENV_VARIABLE: string = `${toSnakeCase(name)}_db_password`;
-        const USER_ENV_VARIABLE: string = `${toSnakeCase(name)}_db_user`;
-        const DATABASE_ENV_VARIABLE: string = `${toSnakeCase(name)}_database`;
-        const HOST_ENV_VARIABLE: string = `${toSnakeCase(dbName)}_host`;
-        const dataSourcePath: string = getPath(root, 'src', 'datasources', `${toKebabCase(dbName)}.datasource.ts`);
+        const PASSWORD_ENV_VARIABLE: EnvironmentVariableKey = DefaultEnvKeys.dbPassword(dbServiceName, databaseName);
+        const USER_ENV_VARIABLE: EnvironmentVariableKey = DefaultEnvKeys.dbUser(dbServiceName, databaseName);
+        const DATABASE_ENV_VARIABLE: EnvironmentVariableKey = DefaultEnvKeys.dbName(dbServiceName, databaseName);
+        const HOST_ENV_VARIABLE: EnvironmentVariableKey = DefaultEnvKeys.dbHost(dbServiceName);
+
+        const dataSourcePath: string = getPath(root, 'src', 'datasources', `${toKebabCase(databaseName)}.datasource.ts`);
         await TsUtilities.addImportStatements(
             dataSourcePath,
             [{ defaultImport: false, element: 'environment', path: '../environment/environment' }]
@@ -206,24 +214,24 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
         await FsUtilities.replaceInFile(
             dataSourcePath,
             '  static readonly defaultConfig = config;',
-            `\n  static readonly INJECTION_KEY: string = 'datasources.${dbName}';`
+            `\n  static readonly INJECTION_KEY: string = 'datasources.${databaseName}';`
         );
         await FsUtilities.replaceInFile(
             dataSourcePath,
             // eslint-disable-next-line stylistic/max-len
-            `  constructor(\n    @inject('datasources.config.${dbName}', {optional: true})\n    dsConfig: object = config,\n  ) {\n    super(dsConfig);\n  }`,
+            `  constructor(\n    @inject('datasources.config.${databaseName}', {optional: true})\n    dsConfig: object = config,\n  ) {\n    super(dsConfig);\n  }`,
             '    constructor() {\n        super(config);\n    }'
         );
         const environmentModel: string = getPath(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
 
-        await EnvUtilities.addProjectVariableKey(name, environmentModel, PASSWORD_ENV_VARIABLE, true);
-        await EnvUtilities.addProjectVariableKey(name, environmentModel, USER_ENV_VARIABLE, true);
-        await EnvUtilities.addProjectVariableKey(name, environmentModel, DATABASE_ENV_VARIABLE, true);
-        await EnvUtilities.addProjectVariableKey(name, environmentModel, HOST_ENV_VARIABLE, true);
+        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, PASSWORD_ENV_VARIABLE, true);
+        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, USER_ENV_VARIABLE, true);
+        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, DATABASE_ENV_VARIABLE, true);
+        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, HOST_ENV_VARIABLE, true);
     }
 
     private async createProject(config: AddLoopbackConfiguration): Promise<string> {
-        await LoopbackUtilities.runCommand(APPS_DIRECTORY_NAME, `new ${config.name}`, {
+        await LoopbackUtilities.runCommand(getPath(APPS_DIRECTORY_NAME), `new ${config.name}`, {
             '--yes': true,
             '--config': {
                 docker: true,

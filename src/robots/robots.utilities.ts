@@ -14,10 +14,9 @@ export abstract class RobotsUtilities {
     /**
      * Automatically creates robots.txt files for every project with a sitemap.xml.
      * @param fileName - The docker compose file get the variables for.
-     * @param rootPath - The root of the monorepo.
      */
-    static async createRobotsTxtFiles(fileName: DockerComposeFileName, rootPath: string = ''): Promise<void> {
-        const environmentFilePath: string = getPath(rootPath, ENV_FILE_NAME);
+    static async createRobotsTxtFiles(fileName: DockerComposeFileName): Promise<void> {
+        const environmentFilePath: string = getPath(ENV_FILE_NAME);
         if (!(await FsUtilities.readFile(environmentFilePath)).includes(`${DefaultEnvKeys.IS_PUBLIC}=`)) {
             return;
         }
@@ -28,7 +27,7 @@ export abstract class RobotsUtilities {
             return await FsUtilities.exists(sitemapPath);
         });
         await Promise.all(apps.map(async a => {
-            return this.createRobotsTxtForApp(a, fileName, rootPath);
+            return this.createRobotsTxtForApp(a, fileName);
         }));
     }
 
@@ -36,24 +35,22 @@ export abstract class RobotsUtilities {
      * Create a robots.txt file for the provided app.
      * @param app - The app to generate the robots.txt for.
      * @param fileName - The docker compose file get the variables for.
-     * @param rootPath - The path of the monorepo.
      */
     static async createRobotsTxtForApp(
         app: Dirent,
-        fileName: DockerComposeFileName,
-        rootPath: string = ''
+        fileName: DockerComposeFileName
     ): Promise<void> {
         const robotsTxtPath: string = getPath(app.parentPath, app.name, 'src', ROBOTS_FILE_NAME);
         await FsUtilities.rm(robotsTxtPath);
 
-        const isPublic: boolean = await EnvUtilities.getEnvVariable(DefaultEnvKeys.IS_PUBLIC, rootPath, fileName);
+        const isPublic: boolean = await EnvUtilities.getEnvVariable(DefaultEnvKeys.IS_PUBLIC, fileName);
 
         const content: string[] = [
             'User-agent: *',
             `${isPublic ? 'Allow' : 'Disallow'}: /`
         ];
 
-        const baseUrl: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.baseUrl(app.name), rootPath, fileName);
+        const baseUrl: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.baseUrl(app.name), fileName);
         content.push('', `${baseUrl}/${SITEMAP_FILE_NAME}`);
 
         await FsUtilities.createFile(robotsTxtPath, content);

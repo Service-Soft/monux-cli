@@ -17,7 +17,7 @@ export type MockConstants = {
     // eslint-disable-next-line jsdoc/require-jsdoc
     readonly LOCAL_DOCKER_COMPOSE_YAML: string,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly ANGULAR_ESLINT_CONFIG_JS: string,
+    readonly ANGULAR_ESLINT_CONFIG_MJS: string,
     // eslint-disable-next-line jsdoc/require-jsdoc
     readonly ANGULAR_PACKAGE_JSON: string,
     // eslint-disable-next-line jsdoc/require-jsdoc
@@ -96,7 +96,7 @@ export function getMockConstants(projectName: string): MockConstants {
         DEV_DOCKER_COMPOSE_YAML: getPath(PROJECT_DIR, DEV_DOCKER_COMPOSE_FILE_NAME),
         LOCAL_DOCKER_COMPOSE_YAML: getPath(PROJECT_DIR, LOCAL_DOCKER_COMPOSE_FILE_NAME),
         ANGULAR_PACKAGE_JSON: getPath(ANGULAR_APP_DIR, PACKAGE_JSON_FILE_NAME),
-        ANGULAR_ESLINT_CONFIG_JS: getPath(ANGULAR_APP_DIR, ESLINT_CONFIG_FILE_NAME),
+        ANGULAR_ESLINT_CONFIG_MJS: getPath(ANGULAR_APP_DIR, ESLINT_CONFIG_FILE_NAME),
         ANGULAR_APP_NAME: ANGULAR_APP_NAME,
         ANGULAR_APP_DIR: ANGULAR_APP_DIR,
         ANGULAR_APP_COMPONENT_TS: getPath(ANGULAR_APP_DIR, 'src', 'app', 'app.component.ts'),

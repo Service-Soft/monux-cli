@@ -1,6 +1,5 @@
 import { QuestionsFor } from '../encapsulation';
 import { OmitStrict } from '../types';
-import { WorkspaceUtilities } from '../workspace';
 import { DbType } from './db-type.enum';
 
 /**
@@ -14,27 +13,21 @@ export type MariaDbConfig = {
     /**
      * The name of the mariadb service.
      */
-    name: string,
+    dbServiceName: string,
     /**
      * The name of the default database to create.
      */
-    database: string
+    databaseName: string
 };
 
 /**
  * Questions for getting a maria db config.
  */
-export const mariaDbConfigQuestions: QuestionsFor<OmitStrict<MariaDbConfig, 'type'>> = {
-    name: {
+export const mariaDbConfigQuestions: QuestionsFor<OmitStrict<MariaDbConfig, 'type' | 'databaseName'>> = {
+    dbServiceName: {
         type: 'input',
-        message: 'Name',
+        message: 'Compose service name',
         required: true,
         default: 'db'
-    },
-    database: {
-        type: 'input',
-        message: 'Database',
-        required: true,
-        default: async () => (await WorkspaceUtilities.getConfig())?.name
     }
 };

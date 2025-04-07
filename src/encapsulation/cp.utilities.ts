@@ -1,5 +1,6 @@
 import { execSync, ExecSyncOptions } from 'child_process';
 
+import { exitWithInterrupt, isErrorWithSignal, isExitPromptError } from '../commands';
 import { ChalkUtilities } from './chalk.utilities';
 
 /**
@@ -26,19 +27,12 @@ export abstract class CPUtilities {
             execSync(command, options);
         }
         catch (error) {
-            if (this.isErrorWithSignal(error) && error.signal === 'SIGINT') {
-                // eslint-disable-next-line no-console
-                console.log(ChalkUtilities.secondary('\nProcess interrupted (Ctrl+C)'));
-                process.exit(130);
+            if (isExitPromptError(error) || (isErrorWithSignal(error) && error.signal === 'SIGINT')) {
+                exitWithInterrupt();
             }
-            else {
-                throw error;
-            }
+            // eslint-disable-next-line no-console
+            console.error(ChalkUtilities.error(`Command failed: ${command}`));
+            process.exit(0);
         }
-    }
-
-    // eslint-disable-next-line jsdoc/require-jsdoc
-    private static isErrorWithSignal(error: unknown): error is { signal: string } {
-        return typeof error === 'object' && error !== null && 'signal' in error;
     }
 }
