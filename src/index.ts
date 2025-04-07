@@ -16,7 +16,7 @@ async function main(): Promise<void> {
     const command: string = args[0];
 
     if (!isCommand(command)) {
-        await runRun(...args);
+        runRun(...args);
         return;
     }
 

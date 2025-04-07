@@ -7,8 +7,9 @@ import { exitWithError } from './exit-with-error.function';
 import { PACKAGE_JSON_FILE_NAME } from '../constants';
 import { NativeNpmCommands, PackageJson } from '../npm';
 import { getPath } from '../utilities';
+import { isCommand } from './is-command.function';
 
-const allKnownCommands: Command[] = Object.values(Command);
+const TOO_MANY_ARGUMENTS_ERROR_MESSAGE: string = 'Error parsing the command: Too many arguments.';
 
 /**
  * Validates the user input.
@@ -20,40 +21,57 @@ export async function validateInput(args: string[]): Promise<void> {
         return;
     }
 
-    const command: Command = args[0] as Command;
-    if (!allKnownCommands.includes(command) && args.length > 1) {
+    const command: string = args[0];
+
+    if (!isCommand(command)) {
+        if (args.length === 1) {
+            exitWithError(`Error: Unknown command ${command}.`);
+        }
         await validateRunInput(...args);
         return;
     }
 
-    if (!allKnownCommands.includes(command)) {
-        exitWithError(`Error: Unknown command ${command}.`);
-        return;
-    }
-
-    if (args.length > 1 && !args[1].startsWith('-')) {
-        exitWithError('Error parsing the command: Too many arguments.');
-        return;
-    }
-
-    if ([
-        Command.ADD,
-        Command.A,
-        Command.PREPARE,
-        Command.P,
-        Command.D,
-        Command.DOWN,
-        Command.DD,
-        Command.DOWN_DEV,
-        Command.U,
-        Command.UP,
-        Command.UD,
-        Command.UP_DEV,
-        Command.GENERATE_PAGE,
-        Command.UP_LOCAL,
-        Command.UL
-    ].includes(command)) {
-        await validateInsideWorkspace();
+    switch (command) {
+        case Command.HELP:
+        case Command.H:
+        case Command.VERSION:
+        case Command.V:
+        case Command.INIT:
+        case Command.I: {
+            validateMaxLength(args.length, 1);
+            return;
+        }
+        case Command.A:
+        case Command.ADD:
+        case Command.PREPARE:
+        case Command.P:
+        case Command.UP:
+        case Command.U:
+        case Command.DOWN:
+        case Command.D:
+        case Command.UP_DEV:
+        case Command.UD:
+        case Command.DOWN_DEV:
+        case Command.DD:
+        case Command.UP_LOCAL:
+        case Command.UL:
+        case Command.DOWN_LOCAL:
+        case Command.DL:
+        case Command.GENERATE_PAGE:
+        case Command.GP: {
+            await validateInsideWorkspace();
+            validateMaxLength(args.length, 1);
+            return;
+        }
+        case Command.RUN_MANY:
+        case Command.RUN_ALL:
+        case Command.RA: {
+            if (args.length === 1) {
+                exitWithError('Error: No npm script specified to run in all projects.');
+            }
+            await validateInsideWorkspace();
+            return;
+        }
     }
 }
 
@@ -74,10 +92,6 @@ async function validateRunInput(...args: string[]): Promise<void> {
         return;
     }
 
-    if (args.length > 2) {
-        exitWithError('Error parsing the command: Too many arguments.');
-        return;
-    }
     const npmScript: string = args[1];
     const file: PackageJson = await FsUtilities.parseFileAs<PackageJson>(getPath(packageJson.parentPath, packageJson.name));
 
@@ -92,5 +106,12 @@ async function validateInsideWorkspace(): Promise<void> {
     // eslint-disable-next-line typescript/strict-boolean-expressions
     if (!config?.isWorkspace) {
         exitWithError('This command can only be run inside a workspace');
+    }
+}
+
+// eslint-disable-next-line jsdoc/require-jsdoc
+function validateMaxLength(value: number, maxLength: number): void {
+    if (value > maxLength) {
+        exitWithError(TOO_MANY_ARGUMENTS_ERROR_MESSAGE);
     }
 }
