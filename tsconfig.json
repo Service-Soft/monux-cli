@@ -26,5 +26,5 @@
         "useUnknownInCatchVariables": true
     },
     "exclude": ["src/__testing__"],
-    "include": ["src"]
+    "include": ["src", "jest.config.mjs"]
 }

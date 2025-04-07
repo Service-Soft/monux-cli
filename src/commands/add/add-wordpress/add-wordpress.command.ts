@@ -38,11 +38,11 @@ export class AddWordpressCommand extends AddCommand<AddWordpressConfiguration> {
             value: 'localhost'
         });
         await EnvUtilities.addStaticVariable({ key: DefaultEnvKeys.baseUrl(config.name), required: true, type: 'string', value: 'http://localhost' });
-        const dbName: string = await DbUtilities.configureDb(config.name, DbType.MARIADB);
-        await this.createProject(config, dbName);
+        const { dbServiceName } = await DbUtilities.configureDb(config.name, DbType.MARIADB);
+        await this.createProject(config, dbServiceName);
     }
 
-    private async createProject(config: AddWordpressConfiguration, dbHost: string, version: string = '6.1'): Promise<void> {
+    private async createProject(config: AddWordpressConfiguration, dbServiceName: string, version: string = '6.1'): Promise<void> {
         const DB_PASSWORD_ENV_VARIABLE: string = `${toSnakeCase(config.name)}_db_password`;
         const DB_USER_ENV_VARIABLE: string = `${toSnakeCase(config.name)}_db_user`;
         const DB_NAME_ENV_VARIABLE: string = `${toSnakeCase(config.name)}_database`;
@@ -58,7 +58,7 @@ export class AddWordpressCommand extends AddCommand<AddWordpressConfiguration> {
             environment: [
                 {
                     key: 'WORDPRESS_DB_HOST',
-                    value: dbHost
+                    value: dbServiceName
                 },
                 {
                     key: 'WORDPRESS_DB_USER',
@@ -89,9 +89,8 @@ export class AddWordpressCommand extends AddCommand<AddWordpressConfiguration> {
             80,
             false,
             undefined,
-            undefined,
             DEV_DOCKER_COMPOSE_FILE_NAME
         );
-        await DockerUtilities.addVolumeToCompose(`${toKebabCase(config.name)}-data`, undefined, DEV_DOCKER_COMPOSE_FILE_NAME);
+        await DockerUtilities.addVolumeToCompose(`${toKebabCase(config.name)}-data`, DEV_DOCKER_COMPOSE_FILE_NAME);
     }
 }

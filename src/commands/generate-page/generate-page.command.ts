@@ -63,7 +63,6 @@ export async function runGeneratePage(): Promise<void> {
     const projectRoot: Dirent = await WorkspaceUtilities.findProjectOrFail(options.projectName);
     const domain: string = await EnvUtilities.getEnvVariable(
         DefaultEnvKeys.domain(options.projectName),
-        '',
         'dev.docker-compose.yaml'
     );
 

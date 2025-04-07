@@ -3,6 +3,7 @@ import { Dirent } from 'fs';
 import { APPS_DIRECTORY_NAME, LIBS_DIRECTORY_NAME, WORKSPACE_FILE_NAME } from '../constants';
 import { FsUtilities, JsonUtilities } from '../encapsulation';
 import { WorkspaceConfig } from './workspace-config.model';
+import { getPath } from '../utilities';
 
 /**
  * Utilities for the root workspace.
@@ -91,10 +92,10 @@ export abstract class WorkspaceUtilities {
     }
 
     private static async getApps(): Promise<Dirent[]> {
-        return (await FsUtilities.readdir(APPS_DIRECTORY_NAME)).filter(d => d.isDirectory());
+        return (await FsUtilities.readdir(getPath(APPS_DIRECTORY_NAME))).filter(d => d.isDirectory());
     }
 
     private static async getLibs(): Promise<Dirent[]> {
-        return (await FsUtilities.readdir(LIBS_DIRECTORY_NAME)).filter(d => d.isDirectory());
+        return (await FsUtilities.readdir(getPath(LIBS_DIRECTORY_NAME))).filter(d => d.isDirectory());
     }
 }

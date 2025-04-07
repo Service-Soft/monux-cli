@@ -77,7 +77,6 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
 
         const prodRootDomain: string = await EnvUtilities.getEnvVariable(
             DefaultEnvKeys.PROD_ROOT_DOMAIN,
-            '',
             'dev.docker-compose.yaml'
         );
         const domain: string = config.subDomain ? `${config.subDomain}.${prodRootDomain}` : prodRootDomain;
@@ -117,7 +116,7 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
         }
         await NpmUtilities.updatePackageJson(config.name, { scripts: { start: `ng serve --port ${config.port}` } });
         const app: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
-        await EnvUtilities.buildEnvironmentFileForApp(app, '', true, 'dev.docker-compose.yaml');
+        await EnvUtilities.buildEnvironmentFileForApp(app, true, 'dev.docker-compose.yaml');
     }
 
     private async createDefaultPages(root: string, titleSuffix: string, domain: string): Promise<void> {

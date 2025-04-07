@@ -15,13 +15,12 @@ describe('EslintUtilities', () => {
 
     test('setupProjectEslint', async () => {
         await EslintUtilities.setupProjectEslint(mockConstants.ANGULAR_APP_DIR, true);
-        const lines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_ESLINT_CONFIG_JS);
+        const lines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_ESLINT_CONFIG_MJS);
         expect(lines).toEqual([
-            'baseConfig = require(\'../../eslint.config\');',
+            'import baseConfig from \'../../eslint.config.mjs\';',
             '',
-            '// eslint-disable-next-line jsdoc/require-description',
             '/** @type {import(\'eslint\').Linter.Config} */',
-            'module.exports = [',
+            'export default [',
             '    ...baseConfig,',
             '    {',
             '        files: [\'**/*.ts\'],',
@@ -32,7 +31,7 @@ describe('EslintUtilities', () => {
             '        }',
             '    },',
             '    {',
-            '        files: [\'**/*.ts\', \'**/*.handlebars\', \'**/*.html\', \'**/*.js\', \'**/*.json\'],',
+            '        files: [\'**/*.ts\', \'**/*.handlebars\', \'**/*.html\', \'**/*.js\', \'**/*.mjs\', \'**/*.cjs\', \'**/*.json\'],',
             '        rules: {',
             '            \'jsdoc/require-jsdoc\': \'off\',',
             '            \'cspell/spellchecker\': [',

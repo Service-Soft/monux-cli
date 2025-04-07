@@ -74,7 +74,7 @@ export const GLOBAL_ENVIRONMENT_MODEL_FILE_NAME: string = 'global-environment.mo
 /**
  * The name of the eslint config file.
  */
-export const ESLINT_CONFIG_FILE_NAME: string = 'eslint.config.js';
+export const ESLINT_CONFIG_FILE_NAME: string = 'eslint.config.mjs';
 
 /**
  * The name of the tailwind config file.
