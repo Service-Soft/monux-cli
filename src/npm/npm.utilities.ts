@@ -61,12 +61,10 @@ export abstract class NpmUtilities {
     /**
      * Runs the given npm script in the project with the provided name.
      * @param projectName - The project to run the npm script in.
-     * @param npmScript - The npm script to run.
+     * @param commands - The npm script to run.
      */
-    static async run(projectName: string, npmScript: NpmScript): Promise<void> {
-        const project: Dirent = await WorkspaceUtilities.findProjectOrFail(projectName);
-        const projectPath: string = getPath(project.parentPath, project.name);
-        CPUtilities.execSync(`cd ${projectPath} && npm run ${npmScript}`);
+    static run(projectName: string, commands: string): void {
+        CPUtilities.execSync(`npm run ${commands} --workspace=${projectName}`);
     }
 
     /**

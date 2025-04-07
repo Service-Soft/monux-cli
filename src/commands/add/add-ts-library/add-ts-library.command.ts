@@ -55,7 +55,7 @@ export class AddTsLibraryCommand extends AddCommand<TsLibraryConfiguration> {
 
         await FsUtilities.createFile(getPath(root, 'src', 'index.ts'), '');
         await NpmUtilities.install(config.name, [NpmPackage.VITE_PLUGIN_DTS], true);
-        await NpmUtilities.run(config.name, 'build');
+        NpmUtilities.run(config.name, 'build');
         await this.installInProjects(config);
     }
 
