@@ -6,6 +6,24 @@ import { WorkspaceConfig } from './workspace-config.model';
 import { getPath } from '../utilities';
 
 /**
+ * Definition for a single project inside the apps or libs dir.
+ */
+export type WorkspaceProject = {
+    /**
+     * The name of the project/folder.
+     */
+    name: string,
+    /**
+     * The string to use for the --workspace option of the npm cli.
+     */
+    npmWorkspaceString: string,
+    /**
+     * The path to the project folder.
+     */
+    path: string
+};
+
+/**
  * Utilities for the root workspace.
  */
 export abstract class WorkspaceUtilities {
@@ -50,8 +68,8 @@ export abstract class WorkspaceUtilities {
      * @param name - The name of the project to find.
      * @returns The found directory or undefined.
      */
-    static async findProject(name: string): Promise<Dirent | undefined> {
-        const allProjects: Dirent[] = await this.getProjects();
+    static async findProject(name: string): Promise<WorkspaceProject | undefined> {
+        const allProjects: WorkspaceProject[] = await this.getProjects();
         return allProjects.find(p => p.name === name);
     }
 
@@ -61,8 +79,8 @@ export abstract class WorkspaceUtilities {
      * @returns The found directory.
      * @throws When no project with the given name was found.
      */
-    static async findProjectOrFail(name: string): Promise<Dirent> {
-        const res: Dirent | undefined = await this.findProject(name);
+    static async findProjectOrFail(name: string): Promise<WorkspaceProject> {
+        const res: WorkspaceProject | undefined = await this.findProject(name);
         if (res == undefined) {
             throw new Error(`project with name ${name} does not exist`);
         }
@@ -74,7 +92,7 @@ export abstract class WorkspaceUtilities {
      * @param filter - Filter to only return libraries, apps or all projects.
      * @returns An array of directories.
      */
-    static async getProjects(filter: 'libs' | 'apps' | 'all' = 'all'): Promise<Dirent[]> {
+    static async getProjects(filter: 'libs' | 'apps' | 'all' = 'all'): Promise<WorkspaceProject[]> {
         switch (filter) {
             case 'apps': {
                 return await this.getApps();
@@ -91,11 +109,27 @@ export abstract class WorkspaceUtilities {
         }
     }
 
-    private static async getApps(): Promise<Dirent[]> {
-        return (await FsUtilities.readdir(getPath(APPS_DIRECTORY_NAME))).filter(d => d.isDirectory());
+    private static async getApps(): Promise<WorkspaceProject[]> {
+        const dirs: Dirent[] = (await FsUtilities.readdir(getPath(APPS_DIRECTORY_NAME))).filter(d => d.isDirectory());
+        return dirs.map(d => {
+            const res: WorkspaceProject = {
+                name: d.name,
+                npmWorkspaceString: `${APPS_DIRECTORY_NAME}/${d.name}`,
+                path: getPath(d.parentPath, d.name)
+            };
+            return res;
+        });
     }
 
-    private static async getLibs(): Promise<Dirent[]> {
-        return (await FsUtilities.readdir(getPath(LIBS_DIRECTORY_NAME))).filter(d => d.isDirectory());
+    private static async getLibs(): Promise<WorkspaceProject[]> {
+        const dirs: Dirent[] = (await FsUtilities.readdir(getPath(LIBS_DIRECTORY_NAME))).filter(d => d.isDirectory());
+        return dirs.map(d => {
+            const res: WorkspaceProject = {
+                name: d.name,
+                npmWorkspaceString: `${LIBS_DIRECTORY_NAME}/${d.name}`,
+                path: getPath(d.parentPath, d.name)
+            };
+            return res;
+        });
     }
 }

@@ -1,5 +1,3 @@
-import { Dirent } from 'fs';
-
 import { APPS_DIRECTORY_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, GIT_IGNORE_FILE_NAME, TS_CONFIG_FILE_NAME } from '../../../constants';
 import { DbUtilities } from '../../../db';
 import { DockerUtilities } from '../../../docker';
@@ -12,7 +10,7 @@ import { TsUtilities } from '../../../ts';
 import { TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
 import { getPath, toKebabCase, toPascalCase } from '../../../utilities';
-import { WorkspaceUtilities } from '../../../workspace';
+import { WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
 import { AddCommand } from '../models';
 import { AddConfiguration } from '../models/add-configuration.model';
 
@@ -121,7 +119,7 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
         await LoopbackUtilities.setupChangeSets(root, config.name);
         await LoopbackUtilities.setupMigrations(root, config.name);
 
-        const app: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
+        const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name);
         await EnvUtilities.buildEnvironmentFileForApp(app, false, 'dev.docker-compose.yaml');
     }
 
@@ -242,16 +240,15 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
                 vscode: false
             }
         });
-        const newProject: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
-        const root: string = getPath(newProject.parentPath, newProject.name);
+        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name);
         await Promise.all([
-            FsUtilities.rm(getPath(root, 'src', '__tests__')),
-            FsUtilities.rm(getPath(root, GIT_IGNORE_FILE_NAME)),
-            FsUtilities.rm(getPath(root, 'DEVELOPING.md')),
-            FsUtilities.rm(getPath(root, 'src', 'controllers', 'ping.controller.ts')),
-            FsUtilities.updateFile(getPath(root, 'src', 'controllers', 'index.ts'), '', 'replace')
+            FsUtilities.rm(getPath(newProject.path, 'src', '__tests__')),
+            FsUtilities.rm(getPath(newProject.path, GIT_IGNORE_FILE_NAME)),
+            FsUtilities.rm(getPath(newProject.path, 'DEVELOPING.md')),
+            FsUtilities.rm(getPath(newProject.path, 'src', 'controllers', 'ping.controller.ts')),
+            FsUtilities.updateFile(getPath(newProject.path, 'src', 'controllers', 'index.ts'), '', 'replace')
         ]);
-        const indexTs: string = getPath(root, 'src', 'index.ts');
+        const indexTs: string = getPath(newProject.path, 'src', 'index.ts');
         await FsUtilities.replaceInFile(
             indexTs,
             'async function main(options: ApplicationConfig = {})',
@@ -277,7 +274,7 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
             '|| \'127.0.0.1\'',
             '?? \'127.0.0.1\''
         );
-        return root;
+        return newProject.path;
     }
 
     private async setupTsConfig(projectName: string): Promise<void> {
