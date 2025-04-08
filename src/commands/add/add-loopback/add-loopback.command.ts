@@ -100,7 +100,7 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
                     },
                     volumes: [{ path: `/${config.name}` }]
                 },
-                config.port,
+                3000,
                 true,
                 config.subDomain
             ),

@@ -89,7 +89,7 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
                     volumes: [{ path: `/${config.name}` }]
                     // labels: DockerUtilities.getTraefikLabels(config.name, 4000, domain)
                 },
-                config.port,
+                4000,
                 true,
                 config.subDomain
             ),
