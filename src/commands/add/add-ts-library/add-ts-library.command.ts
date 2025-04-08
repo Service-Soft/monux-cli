@@ -1,4 +1,3 @@
-import { Dirent } from 'fs';
 
 import { GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, TS_CONFIG_FILE_NAME } from '../../../constants';
 import { CPUtilities, FsUtilities, QuestionsFor } from '../../../encapsulation';
@@ -7,7 +6,7 @@ import { NpmPackage, NpmUtilities } from '../../../npm';
 import { TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
 import { getPath } from '../../../utilities';
-import { WorkspaceConfig, WorkspaceUtilities } from '../../../workspace';
+import { WorkspaceConfig, WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
 import { AddCommand } from '../models/add-command.class';
 import { AddConfiguration } from '../models/add-configuration.model';
 
@@ -55,12 +54,12 @@ export class AddTsLibraryCommand extends AddCommand<TsLibraryConfiguration> {
 
         await FsUtilities.createFile(getPath(root, 'src', 'index.ts'), '');
         await NpmUtilities.install(config.name, [NpmPackage.VITE_PLUGIN_DTS], true);
-        NpmUtilities.run(config.name, 'build');
+        await NpmUtilities.run(config.name, 'build');
         await this.installInProjects(config);
     }
 
     private async installInProjects(config: TsLibraryConfiguration): Promise<void> {
-        const projects: Dirent[] = await WorkspaceUtilities.getProjects('apps');
+        const projects: WorkspaceProject[] = await WorkspaceUtilities.getProjects('apps');
         const npmPackage: string = `${config.scope}/${config.name}`;
         await Promise.all(projects.map((p) => NpmUtilities.install(p.name, [npmPackage as NpmPackage])));
     }

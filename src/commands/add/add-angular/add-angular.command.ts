@@ -1,6 +1,4 @@
 /* eslint-disable no-console */
-import { Dirent } from 'fs';
-
 import { AngularUtilities, NavElementTypes } from '../../../angular';
 import { ANGULAR_JSON_FILE_NAME, APP_CONFIG_FILE_NAME, APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, GIT_IGNORE_FILE_NAME } from '../../../constants';
 import { DockerUtilities } from '../../../docker';
@@ -12,7 +10,7 @@ import { TailwindUtilities } from '../../../tailwind';
 import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
 import { getPath, toPascalCase } from '../../../utilities';
-import { WorkspaceUtilities } from '../../../workspace';
+import { WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
 import { AddCommand } from '../models/add-command.class';
 import { AddConfiguration } from '../models/add-configuration.model';
 
@@ -121,7 +119,7 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
 
         await NpmUtilities.updatePackageJson(config.name, { scripts: { start: `ng serve --port ${config.port}` } });
 
-        const app: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
+        const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name);
         await EnvUtilities.buildEnvironmentFileForApp(app, false, 'dev.docker-compose.yaml');
     }
 
@@ -191,14 +189,13 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
             `new ${config.name}`,
             { '--skip-git': true, '--style': 'css', '--inline-style': true, '--ssr': true }
         );
-        const newProject: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
-        const root: string = getPath(newProject.parentPath, newProject.name);
-        await FsUtilities.updateFile(getPath(root, 'src', 'app', 'app.component.html'), '', 'replace');
-        await AngularUtilities.addProvider(root, 'provideHttpClient(withInterceptorsFromDi(), withFetch())', [
+        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name);
+        await FsUtilities.updateFile(getPath(newProject.path, 'src', 'app', 'app.component.html'), '', 'replace');
+        await AngularUtilities.addProvider(newProject.path, 'provideHttpClient(withInterceptorsFromDi(), withFetch())', [
             { defaultImport: false, element: 'provideHttpClient', path: '@angular/common/http' },
             { defaultImport: false, element: 'withInterceptorsFromDi', path: '@angular/common/http' }
         ]);
-        return root;
+        return newProject.path;
     }
 
     private async cleanUp(root: string): Promise<void> {

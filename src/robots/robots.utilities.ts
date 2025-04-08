@@ -1,10 +1,8 @@
-import { Dirent } from 'fs';
-
 import { DockerComposeFileName, ENV_FILE_NAME, ROBOTS_FILE_NAME, SITEMAP_FILE_NAME } from '../constants';
 import { FsUtilities } from '../encapsulation';
 import { DefaultEnvKeys, EnvUtilities } from '../env';
 import { filterAsync, getPath } from '../utilities';
-import { WorkspaceUtilities } from '../workspace';
+import { WorkspaceProject, WorkspaceUtilities } from '../workspace';
 
 /**
  * Utilities for working with robots.txt files.
@@ -22,8 +20,8 @@ export abstract class RobotsUtilities {
         }
 
         // Only projects that have a sitemap file get a robots.txt file.
-        const apps: Dirent[] = await filterAsync(await WorkspaceUtilities.getProjects('apps'), async a => {
-            const sitemapPath: string = getPath(a.parentPath, a.name, 'src', SITEMAP_FILE_NAME);
+        const apps: WorkspaceProject[] = await filterAsync(await WorkspaceUtilities.getProjects('apps'), async a => {
+            const sitemapPath: string = getPath(a.path, 'src', SITEMAP_FILE_NAME);
             return await FsUtilities.exists(sitemapPath);
         });
         await Promise.all(apps.map(async a => {
@@ -37,10 +35,10 @@ export abstract class RobotsUtilities {
      * @param fileName - The docker compose file get the variables for.
      */
     static async createRobotsTxtForApp(
-        app: Dirent,
+        app: WorkspaceProject,
         fileName: DockerComposeFileName
     ): Promise<void> {
-        const robotsTxtPath: string = getPath(app.parentPath, app.name, 'src', ROBOTS_FILE_NAME);
+        const robotsTxtPath: string = getPath(app.path, 'src', ROBOTS_FILE_NAME);
         await FsUtilities.rm(robotsTxtPath);
 
         const isPublic: boolean = await EnvUtilities.getEnvVariable(DefaultEnvKeys.IS_PUBLIC, fileName);
@@ -51,7 +49,7 @@ export abstract class RobotsUtilities {
         ];
 
         const baseUrl: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.baseUrl(app.name), fileName);
-        content.push('', `${baseUrl}/${SITEMAP_FILE_NAME}`);
+        content.push('', `Sitemap: ${baseUrl}/${SITEMAP_FILE_NAME}`);
 
         await FsUtilities.createFile(robotsTxtPath, content);
     }

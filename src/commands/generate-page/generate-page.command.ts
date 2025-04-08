@@ -1,11 +1,9 @@
-import { Dirent } from 'fs';
-
 import { AddNavElementConfig, AngularUtilities, NavElementTypes } from '../../angular';
 import { ANGULAR_ROUTES_FILE_NAME } from '../../constants';
 import { FsUtilities, InquirerUtilities, QuestionsFor } from '../../encapsulation';
 import { DefaultEnvKeys, EnvUtilities } from '../../env';
 import { getPath, toKebabCase, toPascalCase } from '../../utilities';
-import { WorkspaceUtilities } from '../../workspace';
+import { WorkspaceProject, WorkspaceUtilities } from '../../workspace';
 
 /**
  * Options for generating an angular page.
@@ -35,7 +33,7 @@ const LOAD_COMPONENT_PLACEHOLDER: string = 'LOAD_COMPONENT_PLACEHOLDER';
  * Runs the generate page cli command.
  */
 export async function runGeneratePage(): Promise<void> {
-    const apps: Dirent[] = await WorkspaceUtilities.getProjects('apps');
+    const apps: WorkspaceProject[] = await WorkspaceUtilities.getProjects('apps');
     const questions: QuestionsFor<GeneratePageOptions> = {
         projectName: {
             message: 'Project',
@@ -60,7 +58,7 @@ export async function runGeneratePage(): Promise<void> {
     };
 
     const options: GeneratePageOptions = await InquirerUtilities.prompt(questions);
-    const projectRoot: Dirent = await WorkspaceUtilities.findProjectOrFail(options.projectName);
+    const projectRoot: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(options.projectName);
     const domain: string = await EnvUtilities.getEnvVariable(
         DefaultEnvKeys.domain(options.projectName),
         'dev.docker-compose.yaml'
@@ -81,10 +79,10 @@ export async function runGeneratePage(): Promise<void> {
         rowIndex: 0
     };
 
-    await AngularUtilities.generatePage(getPath(projectRoot.parentPath, projectRoot.name), options.pageName, navElement, domain);
+    await AngularUtilities.generatePage(projectRoot.path, options.pageName, navElement, domain);
     const pageName: string = toKebabCase(options.pageName);
     await FsUtilities.replaceInFile(
-        getPath(projectRoot.parentPath, projectRoot.name, 'src', 'app', ANGULAR_ROUTES_FILE_NAME),
+        getPath(projectRoot.path, 'src', 'app', ANGULAR_ROUTES_FILE_NAME),
         `\'${LOAD_COMPONENT_PLACEHOLDER}\'`,
         `() => import(\'./pages/${pageName}/${pageName}.component\').then(m => m.${toPascalCase(options.pageName)}Component)`
     );
