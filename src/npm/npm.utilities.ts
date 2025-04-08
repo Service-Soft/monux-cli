@@ -1,7 +1,5 @@
-import { Dirent } from 'fs';
-
 import { CPUtilities, FsUtilities, JsonUtilities } from '../encapsulation';
-import { WorkspaceUtilities } from '../workspace';
+import { WorkspaceProject, WorkspaceUtilities } from '../workspace';
 import { PackageJson } from './package-json.model';
 import { PACKAGE_JSON_FILE_NAME } from '../constants';
 import { NpmPackage } from './npm-package.enum';
@@ -63,8 +61,9 @@ export abstract class NpmUtilities {
      * @param projectName - The project to run the npm script in.
      * @param commands - The npm script to run.
      */
-    static run(projectName: string, commands: string): void {
-        CPUtilities.execSync(`npm run ${commands} --workspace=${projectName}`);
+    static async run(projectName: string, commands: string): Promise<void> {
+        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName);
+        CPUtilities.execSync(`npm run ${commands} --workspace=${project.npmWorkspaceString}`);
     }
 
     /**
@@ -82,11 +81,10 @@ export abstract class NpmUtilities {
      * @param development - Whether or not the packages will be installed with -D or not.
      */
     static async install(projectName: string, npmPackages: NpmPackage[], development: boolean = false): Promise<void> {
-        const project: Dirent = await WorkspaceUtilities.findProjectOrFail(projectName);
-        const projectPath: string = getPath(project.parentPath, project.name);
+        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName);
 
         const installCommand: string = development ? 'npm i -D' : 'npm i';
-        CPUtilities.execSync(`cd ${projectPath} && ${installCommand} ${npmPackages.join(' ')}`);
+        CPUtilities.execSync(`cd ${project.path} && ${installCommand} ${npmPackages.join(' ')}`);
     }
 
     /**
@@ -105,8 +103,8 @@ export abstract class NpmUtilities {
      * @param data - The data to update the package.json with.
      */
     static async updatePackageJson(projectName: string, data: Partial<PackageJson>): Promise<void> {
-        const project: Dirent = await WorkspaceUtilities.findProjectOrFail(projectName);
-        const packageJsonPath: string = getPath(project.parentPath, project.name, PACKAGE_JSON_FILE_NAME);
+        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName);
+        const packageJsonPath: string = getPath(project.path, PACKAGE_JSON_FILE_NAME);
         await this.updatePackageJsonFile(packageJsonPath, data);
     }
 

@@ -1,11 +1,10 @@
-import { Dirent } from 'fs';
 
 import { DockerComposeFileName, ENV_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME } from '../constants';
 import { FileLine, FsUtilities, JsonUtilities } from '../encapsulation';
 import { ParseObjectResult, TsUtilities } from '../ts';
 import { KeyValue, OmitStrict } from '../types';
 import { getPath } from '../utilities';
-import { WorkspaceUtilities } from '../workspace';
+import { WorkspaceProject, WorkspaceUtilities } from '../workspace';
 import { DefaultEnvKeys } from './default-environment-keys';
 import { EnvironmentVariableKey } from './environment-variable-key.model';
 
@@ -80,7 +79,7 @@ export abstract class EnvUtilities {
      * @param fileName - The docker compose file to build the variables for.
      */
     static async buildEnvironmentFiles(fileName: DockerComposeFileName): Promise<void> {
-        const apps: Dirent[] = await WorkspaceUtilities.getProjects('apps');
+        const apps: WorkspaceProject[] = await WorkspaceUtilities.getProjects('apps');
         await Promise.all(apps.map(a => this.buildEnvironmentFileForApp(a, true, fileName)));
     }
 
@@ -91,18 +90,18 @@ export abstract class EnvUtilities {
      * @param fileName - The docker compose file to build the variables for.
      */
     static async buildEnvironmentFileForApp(
-        app: Dirent,
+        app: WorkspaceProject,
         failOnMissingVariable: boolean,
         fileName: DockerComposeFileName
     ): Promise<void> {
-        const environmentFolder: string = getPath(app.parentPath, app.name, 'src', 'environment');
+        const environmentFolder: string = getPath(app.path, 'src', 'environment');
         const variableKeys: EnvironmentVariableKey[] = await this.getProjectVariableKeys(
             getPath(environmentFolder, ENVIRONMENT_MODEL_TS_FILE_NAME)
         );
 
         // TODO: The first time getPath fails here because
         await FsUtilities.rm(getPath(environmentFolder, ENVIRONMENT_TS_FILE_NAME));
-        await this.createProjectEnvironmentFile(getPath(app.parentPath, app.name), variableKeys, failOnMissingVariable, fileName);
+        await this.createProjectEnvironmentFile(app.path, variableKeys, failOnMissingVariable, fileName);
     }
 
     /**
@@ -127,7 +126,7 @@ export abstract class EnvUtilities {
         const newValue: string = firstLine.content.includes('defineVariables([]') ? `defineVariables(['${variable}']` : `defineVariables(['${variable}', `;
         await FsUtilities.replaceInFile(environmentModelPath, oldValue, newValue);
 
-        const app: Dirent = await WorkspaceUtilities.findProjectOrFail(name);
+        const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(name);
         await this.buildEnvironmentFileForApp(app, failOnMissingVariable, 'dev.docker-compose.yaml');
     }
 

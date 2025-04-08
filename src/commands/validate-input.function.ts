@@ -1,7 +1,7 @@
 import { Dirent } from 'fs';
 
 import { FsUtilities } from '../encapsulation';
-import { WorkspaceConfig, WorkspaceUtilities } from '../workspace';
+import { WorkspaceConfig, WorkspaceProject, WorkspaceUtilities } from '../workspace';
 import { Command } from './command.enum';
 import { exitWithError } from './exit-with-error.function';
 import { PACKAGE_JSON_FILE_NAME } from '../constants';
@@ -79,10 +79,9 @@ export async function validateInput(args: string[]): Promise<void> {
 async function validateRunInput(...args: string[]): Promise<void> {
     const project: string = args[0];
     await validateInsideWorkspace();
-    const foundProject: Dirent = await WorkspaceUtilities.findProjectOrFail(project);
+    const foundProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(project);
 
-    const foundProjectPath: string = getPath(foundProject.parentPath, foundProject.name);
-    const packageJson: Dirent | undefined = (await FsUtilities.readdir(foundProjectPath)).find(f => f.name === PACKAGE_JSON_FILE_NAME);
+    const packageJson: Dirent | undefined = (await FsUtilities.readdir(foundProject.path)).find(f => f.name === PACKAGE_JSON_FILE_NAME);
     if (!packageJson) {
         exitWithError(`The provided project "${project}" does not contain a ${PACKAGE_JSON_FILE_NAME} file`);
         return;

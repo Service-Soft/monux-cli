@@ -1,5 +1,3 @@
-import { Dirent } from 'fs';
-
 import { AngularUtilities } from '../../../angular';
 import { ANGULAR_JSON_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, PACKAGE_JSON_FILE_NAME } from '../../../constants';
 import { FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
@@ -10,7 +8,7 @@ import { TailwindUtilities } from '../../../tailwind';
 import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
 import { getPath, mergeDeep } from '../../../utilities';
-import { WorkspaceConfig, WorkspaceUtilities } from '../../../workspace';
+import { WorkspaceConfig, WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
 import { AddCommand } from '../models';
 import { AddConfiguration } from '../models/add-configuration.model';
 
@@ -120,9 +118,8 @@ export class AddAngularLibraryCommand extends AddCommand<AddAngularLibraryConfig
             [PACKAGE_JSON_FILE_NAME]
         );
 
-        const newProject: Dirent = await WorkspaceUtilities.findProjectOrFail(config.name);
-        const root: string = getPath(newProject.parentPath, newProject.name);
-        return { root, oldPackageJson };
+        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name);
+        return { root: newProject.path, oldPackageJson };
     }
 
     private async setupTsConfig(root: string, projectName: string): Promise<void> {

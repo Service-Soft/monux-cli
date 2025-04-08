@@ -1,4 +1,3 @@
-import { Dirent } from 'fs';
 
 import { Provider, EnvironmentProviders } from '@angular/core';
 import { NavbarRow, NavRoute } from 'ngx-material-navigation';
@@ -15,7 +14,7 @@ import { AddNavElementConfig } from './add-nav-element-config.model';
 import { getPath, mergeDeep, optionsToCliString } from '../utilities';
 import { NavElementTypes } from './nav-element-types.enum';
 import { RobotsUtilities } from '../robots';
-import { WorkspaceUtilities } from '../workspace';
+import { WorkspaceProject, WorkspaceUtilities } from '../workspace';
 import { adminsPageTsContent, getAdminModelContent, getAdminServiceContent, baseEntityModelContent, changeSetServiceContent, changeSetsComponentHtmlContent, changeSetsComponentTsContent, lodashUtilitiesContent } from './content';
 import { authServiceContent } from './content/auth-service.content';
 import { offlineServiceContent } from './content/offline-service.content';
@@ -619,7 +618,7 @@ export abstract class AngularUtilities {
      * @param projectName - The name of the project.
      */
     static async addSitemapAndRobots(root: string, projectName: string): Promise<void> {
-        const app: Dirent = await WorkspaceUtilities.findProjectOrFail(projectName);
+        const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName);
         await RobotsUtilities.createRobotsTxtForApp(app, 'dev.docker-compose.yaml');
         await FsUtilities.createFile(getPath(root, 'src', SITEMAP_FILE_NAME), [
             '<?xml version="1.0" encoding="UTF-8"?>',
