@@ -330,7 +330,7 @@ export abstract class EnvUtilities {
                 continue;
             }
             if (def.type === 'boolean' && (v === 'true' || v === 'false')) {
-                res.push({ key: key as EnvironmentVariableKey, value: Boolean(v), type: def.type, required: def.required });
+                res.push({ key: key as EnvironmentVariableKey, value: v === 'true', type: def.type, required: def.required });
                 continue;
             }
             if (def.type === 'number' && !Number.isNaN(Number(v))) {

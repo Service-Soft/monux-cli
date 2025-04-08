@@ -18,22 +18,27 @@ describe('EnvUtilities', () => {
     });
 
     test('addStaticVariable', async () => {
-        const variable: EnvVariable = fakeEnvVariable();
-        await EnvUtilities.addStaticVariable(variable);
+        for (let i: number = 0; i < 50; i++) {
+            await FileMockUtilities.setup(mockConstants);
+            await EnvUtilities.init('test.com');
 
-        const lines: string[] = await FsUtilities.readFileLines(mockConstants.ENV);
-        expect(lines[2]).toEqual(`${variable.key}=${variable.value}`);
+            const variable: EnvVariable = fakeEnvVariable();
+            await EnvUtilities.addStaticVariable(variable);
 
-        const variable2: EnvVariable = fakeEnvVariable();
-        await EnvUtilities.addStaticVariable(variable2);
+            const lines: string[] = await FsUtilities.readFileLines(mockConstants.ENV);
+            expect(lines[2]).toEqual(`${variable.key}=${variable.value}`);
 
-        const lines2: string[] = await FsUtilities.readFileLines(mockConstants.ENV);
-        expect(lines2[3]).toEqual(`${variable2.key}=${variable2.value}`);
+            const variable2: EnvVariable = fakeEnvVariable();
+            await EnvUtilities.addStaticVariable(variable2);
 
-        const globalEnvLines: string[] = await FsUtilities.readFileLines(mockConstants.GLOBAL_ENV_MODEL);
+            const lines2: string[] = await FsUtilities.readFileLines(mockConstants.ENV);
+            expect(lines2[3]).toEqual(`${variable2.key}=${variable2.value}`);
 
-        expect(globalEnvLines[7]).toEqual(`    ${variable.key}${variable.required ? '' : '?'}: ${variable.type},`);
-        expect(globalEnvLines[8]).toEqual(`    ${variable2.key}${variable2.required ? '' : '?'}: ${variable2.type}`);
+            const globalEnvLines: string[] = await FsUtilities.readFileLines(mockConstants.GLOBAL_ENV_MODEL);
+
+            expect(globalEnvLines[7]).toEqual(`    ${variable.key}${variable.required ? '' : '?'}: ${variable.type},`);
+            expect(globalEnvLines[8]).toEqual(`    ${variable2.key}${variable2.required ? '' : '?'}: ${variable2.type}`);
+        }
     });
 
     test('addCalculatedVariable', async () => {
