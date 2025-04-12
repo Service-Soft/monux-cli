@@ -291,6 +291,7 @@ export abstract class DbUtilities {
             required: true,
             type: 'string'
         });
+        // TODO: make calculated variable either "localhost" for dev or "serviceName" for local/prod.
         await EnvUtilities.addStaticVariable({
             key: HOST_ENV_VARIABLE,
             value: 'localhost',
@@ -367,6 +368,7 @@ export abstract class DbUtilities {
             required: true,
             type: 'string'
         });
+        // TODO: make calculated variable either "localhost" for dev or "serviceName" for local/prod.
         await EnvUtilities.addStaticVariable({
             key: HOST_ENV_VARIABLE,
             value: 'localhost',

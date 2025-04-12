@@ -223,6 +223,7 @@ describe('EnvUtilities', () => {
 
         const environmentLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_ENVIRONMENT);
         expect(environmentLines).toEqual([
+            '/* eslint-disable cspell/spellchecker */',
             'import { Environment } from \'./environment.model\';',
             '',
             'export const environment: Environment = {',

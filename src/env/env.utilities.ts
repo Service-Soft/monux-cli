@@ -151,7 +151,7 @@ export abstract class EnvUtilities {
      */
     static async setupProjectEnvironment(projectPath: string, disableCommentRule: boolean): Promise<void> {
         await FsUtilities.createFile(
-            getPath(projectPath, 'src', 'environment', 'environment.model.ts'),
+            getPath(projectPath, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
             [
                 // eslint-disable-next-line stylistic/max-len
                 (disableCommentRule ? '/* eslint-disable jsdoc/require-jsdoc */\n' : '') + 'import { GlobalEnvironment } from \'../../../../global-environment.model\';',
@@ -181,6 +181,7 @@ export abstract class EnvUtilities {
         await FsUtilities.createFile(
             getPath(projectPath, 'src', 'environment', ENVIRONMENT_TS_FILE_NAME),
             [
+                '/* eslint-disable cspell/spellchecker */',
                 'import { Environment } from \'./environment.model\';',
                 '',
                 `export const environment: Environment = {${variables.map(v => this.stringifyEnvKeyValue(v)).join(',')}\n};`

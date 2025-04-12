@@ -14,6 +14,7 @@ export async function runRun(...args: string[]): Promise<void> {
     const commands: string = args.slice(1).join(' ');
     if (!nativeCommand) {
         await NpmUtilities.run(projectName, commands);
+        return;
     }
 
     const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName);
