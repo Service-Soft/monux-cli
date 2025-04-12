@@ -31,6 +31,7 @@ export class AddWordpressCommand extends AddCommand<AddWordpressConfiguration> {
 
     override async run(): Promise<void> {
         const config: AddWordpressConfiguration = await this.getConfig();
+        // TODO: make calculated variables based on subDomain and port.
         await EnvUtilities.addStaticVariable({
             key: DefaultEnvKeys.domain(config.name),
             required: true,

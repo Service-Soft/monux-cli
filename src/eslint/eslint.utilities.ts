@@ -1,7 +1,7 @@
 
 import { ESLINT_CONFIG_FILE_NAME, PACKAGE_JSON_FILE_NAME } from '../constants';
 import { FsUtilities } from '../encapsulation';
-import { NpmUtilities } from '../npm';
+import { NpmPackage, NpmUtilities } from '../npm';
 import { getPath } from '../utilities';
 
 /**
@@ -32,8 +32,10 @@ export abstract class EslintUtilities {
         await FsUtilities.createFile(
             getPath(root, ESLINT_CONFIG_FILE_NAME),
             [
+                `import { cspellOptions } from '${NpmPackage.ESLINT_CONFIG_SERVICE_SOFT}';`,
                 `import baseConfig from '${baseEslintConfigPath}';`,
                 '',
+                '// eslint-disable-next-line jsdoc/require-description',
                 '/** @type {import(\'eslint\').Linter.Config} */',
                 'export default [',
                 '\t...baseConfig,',
@@ -46,11 +48,11 @@ export abstract class EslintUtilities {
                 '\t\t}',
                 '\t},',
                 '\t{',
-                '\t\tfiles: [\'**/*.ts\', \'**/*.handlebars\', \'**/*.html\', \'**/*.js\', \'**/*.mjs\', \'**/*.cjs\', \'**/*.json\'],',
                 '\t\trules: {' + (disableCommentRule ? '\n\t\t\t\'jsdoc/require-jsdoc\': \'off\',' : ''),
                 '\t\t\t\'cspell/spellchecker\': [',
                 '\t\t\t\t\'warn\',',
                 '\t\t\t\t{',
+                '\t\t\t\t\t...cspellOptions,',
                 '\t\t\t\t\tcustomWordListFile: \'../../cspell.words.txt\'',
                 '\t\t\t\t}',
                 '\t\t\t]',

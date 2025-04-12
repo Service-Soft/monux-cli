@@ -19,6 +19,7 @@ describe('EslintUtilities', () => {
         expect(lines).toEqual([
             'import baseConfig from \'../../eslint.config.mjs\';',
             '',
+            '// eslint-disable-next-line jsdoc/require-description',,
             '/** @type {import(\'eslint\').Linter.Config} */',
             'export default [',
             '    ...baseConfig,',
