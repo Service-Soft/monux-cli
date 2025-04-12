@@ -17,9 +17,10 @@ describe('EslintUtilities', () => {
         await EslintUtilities.setupProjectEslint(mockConstants.ANGULAR_APP_DIR, true);
         const lines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_ESLINT_CONFIG_MJS);
         expect(lines).toEqual([
+            'import { cspellOptions } from \'eslint-config-service-soft\';',
             'import baseConfig from \'../../eslint.config.mjs\';',
             '',
-            '// eslint-disable-next-line jsdoc/require-description',,
+            '// eslint-disable-next-line jsdoc/require-description',
             '/** @type {import(\'eslint\').Linter.Config} */',
             'export default [',
             '    ...baseConfig,',
@@ -32,12 +33,12 @@ describe('EslintUtilities', () => {
             '        }',
             '    },',
             '    {',
-            '        files: [\'**/*.ts\', \'**/*.handlebars\', \'**/*.html\', \'**/*.js\', \'**/*.mjs\', \'**/*.cjs\', \'**/*.json\'],',
             '        rules: {',
             '            \'jsdoc/require-jsdoc\': \'off\',',
             '            \'cspell/spellchecker\': [',
             '                \'warn\',',
             '                {',
+            '                    ...cspellOptions,',
             '                    customWordListFile: \'../../cspell.words.txt\'',
             '                }',
             '            ]',
