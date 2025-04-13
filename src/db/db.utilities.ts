@@ -1,6 +1,6 @@
 import { Dirent } from 'fs';
 
-import { DATABASES_DIRECTORY_NAME, DEV_DOCKER_COMPOSE_FILE_NAME, DockerComposeFileName } from '../constants';
+import { DATABASES_DIRECTORY_NAME, DEV_DOCKER_COMPOSE_FILE_NAME, DockerComposeFileName, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME } from '../constants';
 import { ComposeService, DockerUtilities } from '../docker';
 import { FsUtilities, InquirerUtilities, JsonUtilities, QuestionsFor } from '../encapsulation';
 import { DefaultEnvKeys, EnvironmentVariableKey, EnvUtilities } from '../env';
@@ -132,7 +132,7 @@ export abstract class DbUtilities {
         const baseDbQuestions: QuestionsFor<DbConfig> = {
             dbServiceName: {
                 type: 'select',
-                message: 'Compose service',
+                message: 'Database compose service',
                 choices: ['NEW', ...(await this.getAvailableDatabases()).map(db => db.name)],
                 default: 'NEW'
             },
@@ -230,12 +230,6 @@ export abstract class DbUtilities {
     }
 
     private static async createMariaDbDatabase(dbServiceName: string, databaseName: string): Promise<void> {
-        const PASSWORD_ENV_VARIABLE: EnvironmentVariableKey = DefaultEnvKeys.dbPassword(dbServiceName, databaseName);
-        const USER_ENV_VARIABLE: EnvironmentVariableKey = DefaultEnvKeys.dbUser(dbServiceName, databaseName);
-        const DATABASE_ENV_VARIABLE: EnvironmentVariableKey = DefaultEnvKeys.dbName(dbServiceName, databaseName);
-        const HOST_ENV_VARIABLE: EnvironmentVariableKey = DefaultEnvKeys.dbHost(dbServiceName);
-        const ROOT_PASSWORD_ENV_VARIABLE: EnvironmentVariableKey = DefaultEnvKeys.dbRootPassword(dbServiceName);
-
         const user: string = `${toSnakeCase(databaseName)}_user`;
         const password: string = generatePlaceholderPassword();
         const rootPassword: string = generatePlaceholderPassword();
@@ -256,7 +250,7 @@ export abstract class DbUtilities {
             environment: [
                 {
                     key: 'MARIADB_ROOT_PASSWORD',
-                    value: `\${${ROOT_PASSWORD_ENV_VARIABLE}}`
+                    value: `\${${DefaultEnvKeys.dbRootPassword(dbServiceName)}}`
                 }
             ]
         };
@@ -274,45 +268,57 @@ export abstract class DbUtilities {
         );
         await DockerUtilities.addVolumeToCompose(`${toKebabCase(dbServiceName)}-data`, DEV_DOCKER_COMPOSE_FILE_NAME);
         await EnvUtilities.addStaticVariable({
-            key: PASSWORD_ENV_VARIABLE,
+            key: DefaultEnvKeys.dbPassword(dbServiceName, databaseName),
             value: password,
             required: true,
             type: 'string'
         });
         await EnvUtilities.addStaticVariable({
-            key: USER_ENV_VARIABLE,
+            key: DefaultEnvKeys.dbUser(dbServiceName, databaseName),
             value: user,
             required: true,
             type: 'string'
         });
         await EnvUtilities.addStaticVariable({
-            key: DATABASE_ENV_VARIABLE,
+            key: DefaultEnvKeys.dbName(dbServiceName, databaseName),
             value: databaseName,
             required: true,
             type: 'string'
         });
-        // TODO: make calculated variable either "localhost" for dev or "serviceName" for local/prod.
         await EnvUtilities.addStaticVariable({
-            key: HOST_ENV_VARIABLE,
-            value: 'localhost',
-            required: true,
-            type: 'string'
-        });
-        await EnvUtilities.addStaticVariable({
-            key: ROOT_PASSWORD_ENV_VARIABLE,
+            key: DefaultEnvKeys.dbRootPassword(dbServiceName),
             value: rootPassword,
             required: true,
             type: 'string'
         });
+
+        await EnvUtilities.addCalculatedVariable({
+            key: DefaultEnvKeys.dbHost(dbServiceName),
+            required: true,
+            type: 'string',
+            value: (env, fileName) => {
+                switch (fileName) {
+                    case 'dev.docker-compose.yaml': {
+                        return 'localhost';
+                    }
+                    case 'docker-compose.yaml':
+                    case 'local.docker-compose.yaml': {
+                        return 'DB_SERVICE_NAME_PLACEHOLDER';
+                    }
+                }
+
+            }
+        });
+
+        const environmentModelFilePath: string = getPath(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
+        await FsUtilities.replaceInFile(
+            environmentModelFilePath,
+            'DB_SERVICE_NAME_PLACEHOLDER',
+            dbServiceName
+        );
     }
 
     private static async createPostgresDatabase(dbServiceName: string, databaseName: string): Promise<void> {
-        const PASSWORD_ENV_VARIABLE: EnvironmentVariableKey = DefaultEnvKeys.dbPassword(dbServiceName, databaseName);
-        const USER_ENV_VARIABLE: EnvironmentVariableKey = DefaultEnvKeys.dbUser(dbServiceName, databaseName);
-        const DATABASE_ENV_VARIABLE: EnvironmentVariableKey = DefaultEnvKeys.dbName(dbServiceName, databaseName);
-        const HOST_ENV_VARIABLE: EnvironmentVariableKey = DefaultEnvKeys.dbHost(dbServiceName);
-        const ROOT_PASSWORD_ENV_VARIABLE: EnvironmentVariableKey = DefaultEnvKeys.dbRootPassword(dbServiceName);
-
         const user: string = `${toSnakeCase(databaseName)}_user`;
         const password: string = generatePlaceholderPassword();
         const rootPassword: string = generatePlaceholderPassword();
@@ -333,7 +339,7 @@ export abstract class DbUtilities {
             environment: [
                 {
                     key: 'POSTGRES_PASSWORD',
-                    value: `\${${ROOT_PASSWORD_ENV_VARIABLE}}`
+                    value: `\${${DefaultEnvKeys.dbRootPassword(dbServiceName)}}`
                 }
             ]
         };
@@ -351,36 +357,53 @@ export abstract class DbUtilities {
         );
         await DockerUtilities.addVolumeToCompose(`${toKebabCase(dbServiceName)}-data`, DEV_DOCKER_COMPOSE_FILE_NAME);
         await EnvUtilities.addStaticVariable({
-            key: PASSWORD_ENV_VARIABLE,
+            key: DefaultEnvKeys.dbPassword(dbServiceName, databaseName),
             value: password,
             required: true,
             type: 'string'
         });
         await EnvUtilities.addStaticVariable({
-            key: USER_ENV_VARIABLE,
+            key: DefaultEnvKeys.dbUser(dbServiceName, databaseName),
             value: user,
             required: true,
             type: 'string'
         });
         await EnvUtilities.addStaticVariable({
-            key: DATABASE_ENV_VARIABLE,
+            key: DefaultEnvKeys.dbName(dbServiceName, databaseName),
             value: databaseName,
             required: true,
             type: 'string'
         });
-        // TODO: make calculated variable either "localhost" for dev or "serviceName" for local/prod.
         await EnvUtilities.addStaticVariable({
-            key: HOST_ENV_VARIABLE,
-            value: 'localhost',
-            required: true,
-            type: 'string'
-        });
-        await EnvUtilities.addStaticVariable({
-            key: ROOT_PASSWORD_ENV_VARIABLE,
+            key: DefaultEnvKeys.dbRootPassword(dbServiceName),
             value: rootPassword,
             required: true,
             type: 'string'
         });
+
+        await EnvUtilities.addCalculatedVariable({
+            key: DefaultEnvKeys.dbHost(dbServiceName),
+            required: true,
+            type: 'string',
+            value: (env, fileName) => {
+                switch (fileName) {
+                    case 'dev.docker-compose.yaml': {
+                        return 'localhost';
+                    }
+                    case 'docker-compose.yaml':
+                    case 'local.docker-compose.yaml': {
+                        return 'DB_SERVICE_NAME_PLACEHOLDER';
+                    }
+                }
+
+            }
+        });
+        const environmentModelFilePath: string = getPath(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
+        await FsUtilities.replaceInFile(
+            environmentModelFilePath,
+            'DB_SERVICE_NAME_PLACEHOLDER',
+            dbServiceName
+        );
     }
 
     private static isDatabaseService(service: ComposeService): boolean {

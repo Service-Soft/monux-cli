@@ -2,7 +2,7 @@
 import { AddLoopbackConfiguration } from '../commands/add/add-loopback';
 import { ENVIRONMENT_MODEL_TS_FILE_NAME } from '../constants';
 import { CPUtilities, FsUtilities } from '../encapsulation';
-import { DefaultEnvKeys, EnvironmentVariableKey, EnvUtilities } from '../env';
+import { DefaultEnvKeys, EnvUtilities } from '../env';
 import { TsUtilities } from '../ts';
 import { generatePlaceholderPassword, getPath, optionsToCliString, toKebabCase, toPascalCase } from '../utilities';
 import { LbDatabaseConfig } from './lb-database-config.model';
@@ -335,11 +335,18 @@ export abstract class LoopbackUtilities {
         root: string,
         config: AddLoopbackConfiguration
     ): Promise<void> {
-        const emailEnvKey: EnvironmentVariableKey = DefaultEnvKeys.defaultUserEmail(config.name);
-        const passwordEnvKey: EnvironmentVariableKey = DefaultEnvKeys.defaultUserPassword(config.name);
-
-        await EnvUtilities.addStaticVariable({ key: emailEnvKey, required: true, type: 'string', value: config.defaultUserEmail });
-        await EnvUtilities.addStaticVariable({ key: passwordEnvKey, required: true, type: 'string', value: config.defaultUserPassword });
+        await EnvUtilities.addStaticVariable({
+            key: DefaultEnvKeys.defaultUserEmail(config.name),
+            required: true,
+            type: 'string',
+            value: config.defaultUserEmail
+        });
+        await EnvUtilities.addStaticVariable({
+            key: DefaultEnvKeys.defaultUserPassword(config.name),
+            required: true,
+            type: 'string',
+            value: config.defaultUserPassword
+        });
         await EnvUtilities.addStaticVariable(
             { key: DefaultEnvKeys.ACCESS_TOKEN_SECRET, required: true, type: 'string', value: generatePlaceholderPassword() }
         );
@@ -360,8 +367,8 @@ export abstract class LoopbackUtilities {
         );
 
         const environmentModel: string = getPath(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, emailEnvKey, true);
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, passwordEnvKey, true);
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.defaultUserEmail(config.name), true);
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.defaultUserPassword(config.name), true);
         await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'access_token_secret', true);
         await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'refresh_token_secret', true);
         await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'webserver_mail_user', true);
@@ -390,20 +397,19 @@ export abstract class LoopbackUtilities {
         );
         await FsUtilities.replaceInFile(indexTs, 'return app', 'await createDefaultData(app);\n    return app');
 
-        const emailEnvKey: EnvironmentVariableKey = DefaultEnvKeys.defaultUserEmail(config.name);
-        const passwordEnvKey: EnvironmentVariableKey = DefaultEnvKeys.defaultUserPassword(config.name);
         await FsUtilities.updateFile(indexTs, [
             '',
             `async function createDefaultData(app: ${toPascalCase(config.name)}Application): Promise<void> {`,
             '    const adminController: AdminController = await app.get<AdminController>(\'controllers.AdminController\');',
             // eslint-disable-next-line stylistic/max-len
             '    const baseUserRepository: BaseUserRepository<Roles> = await app.get<BaseUserRepository<Roles>>(\'repositories.BaseUserRepository\');',
-            `    if (!await baseUserRepository.findOne({ where: { email: environment.${emailEnvKey} } })) {`,
+            // eslint-disable-next-line stylistic/max-len
+            `    if (!await baseUserRepository.findOne({ where: { email: environment.${DefaultEnvKeys.defaultUserEmail(config.name)} } })) {`,
             // eslint-disable-next-line stylistic/max-len
             '        const newAdmin: Omit<NewAdmin, DefaultEntityOmitKeys | \'changeSets\' | \'id\' | \'baseUserId\' | \'createdAt\' | \'updatedAt\' | \'updatedBy\' | \'createdBy\'> = {',
             '            name: \'Root\',',
-            `            password: environment.${passwordEnvKey},`,
-            `            email: environment.${emailEnvKey}`,
+            `            password: environment.${DefaultEnvKeys.defaultUserPassword(config.name)},`,
+            `            email: environment.${DefaultEnvKeys.defaultUserEmail(config.name)}`,
             '        };',
             '        await adminController.create(newAdmin);',
             '    }',

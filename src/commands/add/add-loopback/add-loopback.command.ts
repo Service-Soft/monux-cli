@@ -2,7 +2,7 @@ import { APPS_DIRECTORY_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, DOCKER_FILE_NAME, E
 import { DbUtilities } from '../../../db';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, QuestionsFor } from '../../../encapsulation';
-import { DefaultEnvKeys, EnvironmentVariableKey, EnvUtilities } from '../../../env';
+import { DefaultEnvKeys, EnvUtilities } from '../../../env';
 import { EslintUtilities } from '../../../eslint';
 import { LbDatabaseConfig, LoopbackUtilities } from '../../../loopback';
 import { NpmPackage, NpmUtilities } from '../../../npm';
@@ -179,11 +179,6 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
         await NpmUtilities.install(projectName, [NpmPackage.LOOPBACK_CONNECTOR_POSTGRES]);
         await LoopbackUtilities.runCommand(root, `datasource ${databaseName}`, { '--config': lbDatabaseConfig, '--yes': true });
 
-        const PASSWORD_ENV_VARIABLE: EnvironmentVariableKey = DefaultEnvKeys.dbPassword(dbServiceName, databaseName);
-        const USER_ENV_VARIABLE: EnvironmentVariableKey = DefaultEnvKeys.dbUser(dbServiceName, databaseName);
-        const DATABASE_ENV_VARIABLE: EnvironmentVariableKey = DefaultEnvKeys.dbName(dbServiceName, databaseName);
-        const HOST_ENV_VARIABLE: EnvironmentVariableKey = DefaultEnvKeys.dbHost(dbServiceName);
-
         const dataSourcePath: string = getPath(root, 'src', 'datasources', `${toKebabCase(databaseName)}.datasource.ts`);
         await TsUtilities.addImportStatements(
             dataSourcePath,
@@ -197,11 +192,11 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
             [
                 'const config = {',
                 '  url: \'\',',
-                `  host: environment.${HOST_ENV_VARIABLE},`,
+                `  host: environment.${DefaultEnvKeys.dbHost(dbServiceName)},`,
                 '  port: 5432,',
-                `  user: environment.${USER_ENV_VARIABLE},`,
-                `  password: environment.${PASSWORD_ENV_VARIABLE},`,
-                `  database: environment.${DATABASE_ENV_VARIABLE},`
+                `  user: environment.${DefaultEnvKeys.dbUser(dbServiceName, databaseName)},`,
+                `  password: environment.${DefaultEnvKeys.dbPassword(dbServiceName, databaseName)},`,
+                `  database: environment.${DefaultEnvKeys.dbName(dbServiceName, databaseName)},`
             ].join('\n')
         );
         await FsUtilities.replaceInFile(
@@ -222,10 +217,15 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
         );
         const environmentModel: string = getPath(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
 
-        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, PASSWORD_ENV_VARIABLE, true);
-        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, USER_ENV_VARIABLE, true);
-        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, DATABASE_ENV_VARIABLE, true);
-        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, HOST_ENV_VARIABLE, true);
+        await EnvUtilities.addProjectVariableKey(
+            projectName,
+            environmentModel,
+            DefaultEnvKeys.dbPassword(dbServiceName, databaseName),
+            true
+        );
+        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, DefaultEnvKeys.dbUser(dbServiceName, databaseName), true);
+        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, DefaultEnvKeys.dbName(dbServiceName, databaseName), true);
+        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, DefaultEnvKeys.dbHost(dbServiceName), true);
     }
 
     private async createProject(config: AddLoopbackConfiguration): Promise<string> {

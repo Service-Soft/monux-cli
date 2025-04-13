@@ -2,9 +2,9 @@ import { DEV_DOCKER_COMPOSE_FILE_NAME } from '../../../constants';
 import { DbType, DbUtilities } from '../../../db';
 import { ComposeService, DockerUtilities } from '../../../docker';
 import { QuestionsFor } from '../../../encapsulation';
-import { DefaultEnvKeys, EnvUtilities } from '../../../env';
+import { DefaultEnvKeys } from '../../../env';
 import { OmitStrict } from '../../../types';
-import { toKebabCase, toSnakeCase } from '../../../utilities';
+import { toKebabCase } from '../../../utilities';
 import { AddCommand, AddConfiguration } from '../models';
 
 /**
@@ -31,22 +31,16 @@ export class AddWordpressCommand extends AddCommand<AddWordpressConfiguration> {
 
     override async run(): Promise<void> {
         const config: AddWordpressConfiguration = await this.getConfig();
-        // TODO: make calculated variables based on subDomain and port.
-        await EnvUtilities.addStaticVariable({
-            key: DefaultEnvKeys.domain(config.name),
-            required: true,
-            type: 'string',
-            value: 'localhost'
-        });
-        await EnvUtilities.addStaticVariable({ key: DefaultEnvKeys.baseUrl(config.name), required: true, type: 'string', value: 'http://localhost' });
-        const { dbServiceName } = await DbUtilities.configureDb(config.name, DbType.MARIADB);
-        await this.createProject(config, dbServiceName);
+        const { dbServiceName, databaseName } = await DbUtilities.configureDb(config.name, DbType.MARIADB);
+        await this.createProject(config, dbServiceName, databaseName);
     }
 
-    private async createProject(config: AddWordpressConfiguration, dbServiceName: string, version: string = '6.1'): Promise<void> {
-        const DB_PASSWORD_ENV_VARIABLE: string = `${toSnakeCase(config.name)}_db_password`;
-        const DB_USER_ENV_VARIABLE: string = `${toSnakeCase(config.name)}_db_user`;
-        const DB_NAME_ENV_VARIABLE: string = `${toSnakeCase(config.name)}_database`;
+    private async createProject(
+        config: AddWordpressConfiguration,
+        dbServiceName: string,
+        databaseName: string,
+        version: string = '6.1'
+    ): Promise<void> {
         const serviceDefinition: ComposeService = {
             name: config.name,
             image: `wordpress:${version}`,
@@ -63,15 +57,15 @@ export class AddWordpressCommand extends AddCommand<AddWordpressConfiguration> {
                 },
                 {
                     key: 'WORDPRESS_DB_USER',
-                    value: `\${${DB_USER_ENV_VARIABLE}}`
+                    value: `\${${DefaultEnvKeys.dbUser(dbServiceName, databaseName)}}`
                 },
                 {
                     key: 'WORDPRESS_DB_PASSWORD',
-                    value: `\${${DB_PASSWORD_ENV_VARIABLE}}`
+                    value: `\${${DefaultEnvKeys.dbPassword(dbServiceName, databaseName)}}`
                 },
                 {
                     key: 'WORDPRESS_DB_NAME',
-                    value: `\${${DB_NAME_ENV_VARIABLE}}`
+                    value: `\${${DefaultEnvKeys.dbName(dbServiceName, databaseName)}}`
                 }
             ]
         };
