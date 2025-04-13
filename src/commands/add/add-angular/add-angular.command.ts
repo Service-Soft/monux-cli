@@ -192,8 +192,10 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
         const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name);
         await FsUtilities.updateFile(getPath(newProject.path, 'src', 'app', 'app.component.html'), '', 'replace');
         await AngularUtilities.addProvider(newProject.path, 'provideHttpClient(withInterceptorsFromDi(), withFetch())', [
+            // eslint-disable-next-line sonar/no-duplicate-string
             { defaultImport: false, element: 'provideHttpClient', path: '@angular/common/http' },
-            { defaultImport: false, element: 'withInterceptorsFromDi', path: '@angular/common/http' }
+            { defaultImport: false, element: 'withInterceptorsFromDi', path: '@angular/common/http' },
+            { defaultImport: false, element: 'withFetch', path: '@angular/common/http' }
         ]);
         return newProject.path;
     }

@@ -15,7 +15,7 @@ describe('AddLoopbackCommand', () => {
             'Email of the default user': 'test@test.com',
             'Password of the default user': 'stringstring',
             'Name of the frontend where the reset password ui is implemented': 'admin',
-            'Compose service': 'NEW',
+            'Database compose service': 'NEW',
             'Compose service name': 'db',
             'Database name': 'sandbox',
             'database type': DbType.POSTGRES
