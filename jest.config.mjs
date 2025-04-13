@@ -9,7 +9,7 @@ const config = {
     bail: true,
     modulePathIgnorePatterns: ['tmp'],
     // coverage
-    collectCoverage: true, // TODO: enable
+    collectCoverage: true,
     coverageDirectory: '<rootDir>/__testing__/coverage',
     coveragePathIgnorePatterns: [
         '/node_modules/',

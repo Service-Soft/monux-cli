@@ -809,7 +809,7 @@ export abstract class AngularUtilities {
                 { defaultImport: false, element: 'OfflineService', path: './services/offline.service' }
             ]
         );
-        // TODO: enable OfflineRequestInterceptor
+        // TODO: enable OfflineRequestInterceptor. Need to fix parsing of provideServiceWorker first.
         // await this.addProvider(
         //     root,
         //     { provide: 'HTTP_INTERCEPTORS', useClass: 'OfflineRequestInterceptor' as any, multi: true },
