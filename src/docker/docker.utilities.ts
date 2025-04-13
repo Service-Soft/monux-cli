@@ -5,7 +5,8 @@ import { FsUtilities } from '../encapsulation';
 import { ComposeBuild, ComposeDefinition, ComposePort, ComposeService, ComposeServiceEnvironment, ComposeServiceVolume } from './compose-file.model';
 import { DefaultEnvKeys, EnvUtilities } from '../env';
 import { OmitStrict } from '../types';
-import { getPath, toSnakeCase } from '../utilities';
+import { getPath } from '../utilities';
+import { DockerTraefikUtilities } from './docker-traefik.utilities';
 
 // eslint-disable-next-line jsdoc/require-jsdoc
 type ParsedDockerComposeEnvironment = { [key: string]: string } | string[];
@@ -47,73 +48,6 @@ type ParsedDockerCompose = {
  * Utilities for docker specific code generation/manipulation.
  */
 export abstract class DockerUtilities {
-
-    private static getTraefikLabels(
-        projectName: string,
-        port: number,
-        composeFileName: DockerComposeFileName,
-        subDomain: string | undefined
-    ): string[] {
-        if (subDomain === 'www') {
-            throw new Error('The subdomain "www" is reserved and will be set automatically.');
-        }
-
-        switch (composeFileName) {
-            // eslint-disable-next-line sonar/no-duplicate-string
-            case 'dev.docker-compose.yaml': {
-                return [];
-            }
-            // eslint-disable-next-line sonar/no-duplicate-string
-            case 'local.docker-compose.yaml': {
-                return this.getTraefikLabelsForLocal(projectName, subDomain, port);
-            }
-            // eslint-disable-next-line sonar/no-duplicate-string
-            case 'docker-compose.yaml': {
-                return this.getTraefikLabelsForProd(projectName, subDomain, port);
-            }
-        }
-    }
-
-    private static getTraefikLabelsForProd(projectName: string, subDomain: string | undefined, port: number): string[] {
-        let host: string = `Host(\`\${${DefaultEnvKeys.subDomain(projectName)}}.\${${DefaultEnvKeys.PROD_ROOT_DOMAIN}}\`)`;
-        const labels: string[] = [];
-        if (!subDomain) {
-            host = `Host(\`\${${DefaultEnvKeys.PROD_ROOT_DOMAIN}}\`) || Host(\`www.\${${DefaultEnvKeys.PROD_ROOT_DOMAIN}}\`)`;
-            labels.push(
-                'traefik.http.middlewares.wwwredirect.redirectregex.regex=^https://www\.(.*)',
-                'traefik.http.middlewares.wwwredirect.redirectregex.replacement=https://$${1}',
-                `traefik.http.routers.${toSnakeCase(projectName)}.middlewares=wwwredirect`
-            );
-        }
-        labels.push(
-            'traefik.enable=true',
-            `traefik.http.routers.${toSnakeCase(projectName)}.rule=${host}`,
-            `traefik.http.routers.${toSnakeCase(projectName)}.entrypoints=web_secure`,
-            `traefik.http.routers.${toSnakeCase(projectName)}.tls.certresolver=ssl_resolver`,
-            `traefik.http.services.${toSnakeCase(projectName)}.loadbalancer.server.port=${port}`
-        );
-        return labels;
-    }
-
-    private static getTraefikLabelsForLocal(projectName: string, subDomain: string | undefined, port: number): string[] {
-        let host: string = `Host(\`\${${DefaultEnvKeys.subDomain(projectName)}}.localhost\`)`;
-        const labels: string[] = [];
-        if (!subDomain) {
-            host = 'Host(`localhost`) || Host(`www.localhost`)';
-            labels.push(
-                'traefik.http.middlewares.wwwredirect.redirectregex.regex=^http://www\.(.*)',
-                'traefik.http.middlewares.wwwredirect.redirectregex.replacement=http://$${1}',
-                `traefik.http.routers.${toSnakeCase(projectName)}.middlewares=wwwredirect`
-            );
-        }
-        labels.push(
-            'traefik.enable=true',
-            `traefik.http.routers.${toSnakeCase(projectName)}.rule=${host}`,
-            `traefik.http.routers.${toSnakeCase(projectName)}.entrypoints=web`,
-            `traefik.http.services.${toSnakeCase(projectName)}.loadbalancer.server.port=${port}`
-        );
-        return labels;
-    }
 
     /**
      * Creates the initial docker compose files at the given path.
@@ -257,7 +191,7 @@ export abstract class DockerUtilities {
         const composePath: string = getPath(composeFileName);
         const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
 
-        const labels: string[] = addTraefik ? this.getTraefikLabels(service.name, port, composeFileName, subDomain) : [];
+        const labels: string[] = addTraefik ? DockerTraefikUtilities.getTraefikLabels(service.name, port, composeFileName, subDomain) : [];
 
         definition.services.push({ ...service, labels: [...service.labels ?? [], ...labels] });
         await FsUtilities.updateFile(composePath, this.composeDefinitionToYaml(definition), 'replace');
@@ -281,12 +215,15 @@ export abstract class DockerUtilities {
                         key: DefaultEnvKeys.baseUrl(service.name),
                         value: (env, fileName) => {
                             switch (fileName) {
+                                // eslint-disable-next-line sonar/no-duplicate-string
                                 case 'dev.docker-compose.yaml': {
                                     return `http://localhost:${'PORT_PLACEHOLDER'}`;
                                 }
+                                // eslint-disable-next-line sonar/no-duplicate-string
                                 case 'local.docker-compose.yaml': {
                                     return `http://${'SUB_DOMAIN_PLACEHOLDER'}.localhost`;
                                 }
+                                // eslint-disable-next-line sonar/no-duplicate-string
                                 case 'docker-compose.yaml': {
                                     return `https://${'SUB_DOMAIN_PLACEHOLDER'}.${'PROD_ROOT_DOMAIN_PLACEHOLDER'}`;
                                 }
