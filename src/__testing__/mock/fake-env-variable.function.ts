@@ -8,7 +8,7 @@ export function fakeEnvVariable(data?: Partial<EnvVariable>): EnvVariable {
     const type: 'string' | 'number' = faker.helpers.arrayElement(['string', 'number']);
     return {
         key: fakeUniqueString() as EnvironmentVariableKey,
-        value: type === 'string' ? fakeUniqueString() : faker.number.int(),
+        value: type === 'string' ? faker.lorem.word() : faker.number.int(),
         required: faker.datatype.boolean(),
         type: type,
         ...data
