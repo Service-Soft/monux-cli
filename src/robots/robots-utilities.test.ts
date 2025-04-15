@@ -22,11 +22,15 @@ describe('RobotsUtilities', () => {
         const isPublic: boolean = await EnvUtilities.getEnvVariable(DefaultEnvKeys.IS_PUBLIC, 'dev.docker-compose.yaml');
         expect(isPublic).toBe(false);
 
-        await RobotsUtilities.createRobotsTxtForApp({
-            path: mockConstants.ANGULAR_APP_DIR,
-            name: mockConstants.ANGULAR_APP_NAME,
-            npmWorkspaceString: `apps/${mockConstants.ANGULAR_APP_NAME}`
-        }, 'dev.docker-compose.yaml');
+        await RobotsUtilities.createRobotsTxtForApp(
+            {
+                path: mockConstants.ANGULAR_APP_DIR,
+                name: mockConstants.ANGULAR_APP_NAME,
+                npmWorkspaceString: `apps/${mockConstants.ANGULAR_APP_NAME}`
+            },
+            'dev.docker-compose.yaml',
+            undefined
+        );
 
         const robotsTxt: string[] = await FsUtilities.readFileLines(getPath(mockConstants.ANGULAR_APP_DIR, 'src', ROBOTS_FILE_NAME));
         expect(robotsTxt).toEqual([

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { Command, isCommand, runAdd, runDown, runDownDev, runGeneratePage, runHelp, runInit, runPrepare, runRun, runRunAll, runUp, runUpDev, runUpLocal, runVersion } from './commands';
+import { Command, isCommand, runAdd, runDown, runDownDev, runGeneratePage, runHelp, runInit, runList, runPrepare, runRun, runRunAll, runUp, runUpDev, runUpLocal, runVersion } from './commands';
 import { runDownLocal } from './commands/down-local';
 import { validateInput } from './commands/validate-input.function';
 import { DeathUtilities, FigletUtilities } from './encapsulation';
@@ -85,6 +85,16 @@ async function main(): Promise<void> {
         case Command.RA:
         case Command.RUN_MANY: {
             runRunAll(args[1]);
+            return;
+        }
+        case Command.LIST:
+        case Command.LS: {
+            await runList(false);
+            return;
+        }
+        case Command.LIST_ALL:
+        case Command.LA: {
+            await runList(true);
             return;
         }
     }

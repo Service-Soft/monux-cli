@@ -15,7 +15,7 @@ describe('DockerUtilities', () => {
 
         const fakeEmail: string = faker.internet.email();
         await EnvUtilities.init('test.com');
-        await DockerUtilities.createComposeFiles(fakeEmail, mockConstants.PROJECT_DIR);
+        await DockerUtilities.createComposeFiles(fakeEmail);
 
         const initialDockerComposeContent: string[] = await FsUtilities.readFileLines(mockConstants.DOCKER_COMPOSE_YAML);
         expect(initialDockerComposeContent).toEqual([

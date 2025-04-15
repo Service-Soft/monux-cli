@@ -79,35 +79,33 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
         );
         const domain: string = config.subDomain ? `${config.subDomain}.${prodRootDomain}` : prodRootDomain;
 
-        await AngularUtilities.addSitemapAndRobots(root, config.name);
+        await AngularUtilities.addSitemapAndRobots(root, config.name, domain);
 
-        await Promise.all([
-            this.cleanUp(root),
-            this.setupTsConfig(root, config.name),
-            this.createDockerfile(root, config),
-            AngularUtilities.setupNavigation(root, config.name),
-            EslintUtilities.setupProjectEslint(root, true),
-            this.setupTailwind(root),
-            DockerUtilities.addServiceToCompose(
-                {
-                    name: config.name,
-                    build: {
-                        dockerfile: `./${root}/${DOCKER_FILE_NAME}`,
-                        context: '.'
-                    },
-                    volumes: [{ path: `/${config.name}` }]
+        await this.cleanUp(root);
+        await this.setupTsConfig(root, config.name);
+        await this.createDockerfile(root, config);
+        await AngularUtilities.setupNavigation(root, config.name);
+        await EslintUtilities.setupProjectEslint(root, true);
+        await this.setupTailwind(root);
+        await DockerUtilities.addServiceToCompose(
+            {
+                name: config.name,
+                build: {
+                    dockerfile: `./${root}/${DOCKER_FILE_NAME}`,
+                    context: '.'
                 },
-                4000,
-                true,
-                config.subDomain
-            ),
-            AngularUtilities.updateAngularJson(
-                getPath(root, ANGULAR_JSON_FILE_NAME),
-                { $schema: '../../node_modules/@angular/cli/lib/config/schema.json' }
-            ),
-            AngularUtilities.setupMaterial(root),
-            EnvUtilities.setupProjectEnvironment(root, false)
-        ]);
+                volumes: [{ path: `/${config.name}` }]
+            },
+            4000,
+            true,
+            config.subDomain
+        );
+        await AngularUtilities.updateAngularJson(
+            getPath(root, ANGULAR_JSON_FILE_NAME),
+            { $schema: '../../node_modules/@angular/cli/lib/config/schema.json' }
+        );
+        await AngularUtilities.setupMaterial(root);
+        await EnvUtilities.setupProjectEnvironment(root, false);
         await this.createDefaultPages(root, config.titleSuffix, domain);
         if (config.addTracking) {
             await AngularUtilities.setupTracking(config.name);

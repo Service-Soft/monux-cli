@@ -52,18 +52,17 @@ export abstract class DockerUtilities {
     /**
      * Creates the initial docker compose files at the given path.
      * @param email - The email that should be used for the letsencrypt certificate.
-     * @param rootPath - The path of the root where to create the files.
      * Defaults to "" (which creates the file in the current directory).
      */
-    static async createComposeFiles(email: string, rootPath: string = ''): Promise<void> {
+    static async createComposeFiles(email: string): Promise<void> {
         await Promise.all([
-            this.createProdDockerCompose(email, rootPath),
-            this.createDevDockerCompose(rootPath),
-            this.createLocalDockerCompose(rootPath)
+            this.createProdDockerCompose(email),
+            this.createDevDockerCompose(),
+            this.createLocalDockerCompose()
         ]);
     }
 
-    private static async createDevDockerCompose(rootPath: string): Promise<void> {
+    private static async createDevDockerCompose(): Promise<void> {
         const compose: ComposeDefinition = {
             services: [
                 {
@@ -81,10 +80,10 @@ export abstract class DockerUtilities {
             networks: []
         };
         const yaml: string[] = this.composeDefinitionToYaml(compose);
-        await FsUtilities.createFile(getPath(rootPath, DEV_DOCKER_COMPOSE_FILE_NAME), yaml);
+        await FsUtilities.createFile(getPath(DEV_DOCKER_COMPOSE_FILE_NAME), yaml);
     }
 
-    private static async createLocalDockerCompose(rootPath: string): Promise<void> {
+    private static async createLocalDockerCompose(): Promise<void> {
         const compose: ComposeDefinition = {
             services: [
                 {
@@ -119,10 +118,10 @@ export abstract class DockerUtilities {
             networks: []
         };
         const yaml: string[] = this.composeDefinitionToYaml(compose);
-        await FsUtilities.createFile(getPath(rootPath, LOCAL_DOCKER_COMPOSE_FILE_NAME), yaml);
+        await FsUtilities.createFile(getPath(LOCAL_DOCKER_COMPOSE_FILE_NAME), yaml);
     }
 
-    private static async createProdDockerCompose(email: string, rootPath: string): Promise<void> {
+    private static async createProdDockerCompose(email: string): Promise<void> {
         const compose: ComposeDefinition = {
             services: [
                 {
@@ -168,7 +167,7 @@ export abstract class DockerUtilities {
             networks: []
         };
         const yaml: string[] = this.composeDefinitionToYaml(compose);
-        await FsUtilities.createFile(getPath(rootPath, PROD_DOCKER_COMPOSE_FILE_NAME), yaml);
+        await FsUtilities.createFile(getPath(PROD_DOCKER_COMPOSE_FILE_NAME), yaml);
     }
 
     /**
@@ -191,7 +190,11 @@ export abstract class DockerUtilities {
         const composePath: string = getPath(composeFileName);
         const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
 
-        const labels: string[] = addTraefik ? DockerTraefikUtilities.getTraefikLabels(service.name, port, composeFileName, subDomain) : [];
+        const labels: string[] = [];
+        if (addTraefik) {
+            const traefikLabels: string[] = DockerTraefikUtilities.getTraefikLabels(service.name, port, composeFileName, subDomain);
+            labels.push(...traefikLabels);
+        }
 
         definition.services.push({ ...service, labels: [...service.labels ?? [], ...labels] });
         await FsUtilities.updateFile(composePath, this.composeDefinitionToYaml(definition), 'replace');
