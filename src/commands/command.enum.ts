@@ -28,5 +28,9 @@ export enum Command {
     GP = 'gp',
     RUN_ALL = 'run-all',
     RUN_MANY = 'run-many',
-    RA = 'ra'
+    RA = 'ra',
+    LIST = 'list',
+    LS = 'ls',
+    LIST_ALL = 'list-all',
+    LA = 'la'
 }

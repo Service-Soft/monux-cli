@@ -1,3 +1,5 @@
+
+// eslint-disable-next-line jsdoc/require-description
 /** @type {import('ts-jest').JestConfigWithTsJest} **/
 const config = {
     testEnvironment: 'node',

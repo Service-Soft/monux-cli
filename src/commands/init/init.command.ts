@@ -9,6 +9,7 @@ import { WorkspaceUtilities } from '../../workspace';
 import { exitWithError } from '../exit-with-error.function';
 import { InitConfiguration } from './init-configuration.model';
 import { GithubUtilities } from '../../github';
+import { getPath } from '../../utilities';
 
 const initConfigQuestions: QuestionsFor<InitConfiguration> = {
     prodRootDomain: {
@@ -33,7 +34,7 @@ const initConfigQuestions: QuestionsFor<InitConfiguration> = {
  * Runs the init cli command.
  */
 export async function runInit(): Promise<void> {
-    if (await FsUtilities.exists(WORKSPACE_FILE_NAME)) {
+    if (await FsUtilities.exists(getPath(WORKSPACE_FILE_NAME))) {
         exitWithError('Error: The current directory is already a monorepo workspace');
     }
 

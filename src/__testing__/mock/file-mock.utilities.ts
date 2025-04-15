@@ -3,6 +3,7 @@ import { MockConstants, FileMockConstants, DirMockConstants } from './constants'
 import { AngularJson } from '../../angular';
 import { CPUtilities, FsUtilities, JsonUtilities } from '../../encapsulation';
 import { EnvUtilities } from '../../env';
+import { WorkspaceUtilities } from '../../workspace';
 
 export abstract class FileMockUtilities {
 
@@ -38,6 +39,7 @@ export abstract class FileMockUtilities {
         CPUtilities['cwd'] = mockConstants.PROJECT_DIR;
         await this.mockFolders(mockConstants);
         await this.mockFiles(filesToMock, contentOverrides, mockConstants);
+        await WorkspaceUtilities.createConfig();
     }
 
     private static async mockFolders(mockConstants: MockConstants): Promise<void> {

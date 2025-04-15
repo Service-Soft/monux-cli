@@ -37,7 +37,11 @@ export async function validateInput(args: string[]): Promise<void> {
         case Command.VERSION:
         case Command.V:
         case Command.INIT:
-        case Command.I: {
+        case Command.I:
+        case Command.LIST:
+        case Command.LS:
+        case Command.LIST_ALL:
+        case Command.LA: {
             validateMaxLength(args.length, 1);
             return;
         }

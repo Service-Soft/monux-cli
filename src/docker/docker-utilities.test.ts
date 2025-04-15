@@ -15,7 +15,7 @@ describe('DockerUtilities', () => {
 
         const fakeEmail: string = faker.internet.email();
         await EnvUtilities.init('test.com');
-        await DockerUtilities.createComposeFiles(fakeEmail, mockConstants.PROJECT_DIR);
+        await DockerUtilities.createComposeFiles(fakeEmail);
 
         const initialDockerComposeContent: string[] = await FsUtilities.readFileLines(mockConstants.DOCKER_COMPOSE_YAML);
         expect(initialDockerComposeContent).toEqual([
@@ -58,7 +58,9 @@ describe('DockerUtilities', () => {
                 `traefik.http.routers.${def.name}.rule=Host(\`\${${def.name}_sub_domain}.\${prod_root_domain}\`)`,
                 `traefik.http.routers.${def.name}.entrypoints=web_secure`,
                 `traefik.http.routers.${def.name}.tls.certresolver=ssl_resolver`,
-                `traefik.http.services.${def.name}.loadbalancer.server.port=4200`
+                `traefik.http.services.${def.name}.loadbalancer.server.port=4200`,
+                'traefik.http.middlewares.compression.compress=true',
+                `traefik.http.routers.${def.name}.middlewares=compression`
             ]
         }).toEqual(service);
 
@@ -71,7 +73,9 @@ describe('DockerUtilities', () => {
                 'traefik.enable=true',
                 `traefik.http.routers.${def.name}.rule=Host(\`\${${def.name}_sub_domain}.localhost\`)`,
                 `traefik.http.routers.${def.name}.entrypoints=web`,
-                `traefik.http.services.${def.name}.loadbalancer.server.port=4200`
+                `traefik.http.services.${def.name}.loadbalancer.server.port=4200`,
+                'traefik.http.middlewares.compression.compress=true',
+                `traefik.http.routers.${def.name}.middlewares=compression`
             ]
         }).toEqual(localService);
     });

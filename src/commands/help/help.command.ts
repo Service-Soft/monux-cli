@@ -30,6 +30,8 @@ export function runHelp(): void {
         `deploys the monorepo. This includes the ${ChalkUtilities.secondary(Command.PREPARE)} command.`
     );
     console.log(getCommandLabel(Command.DOWN, Command.D), 'stops the currently deployed monorepo');
+    console.log(getCommandLabel(Command.LIST, Command.LS), 'lists running monorepos with their respective docker services');
+    console.log(getCommandLabel(Command.LIST_ALL, Command.LA), 'lists all monorepos with their respective docker services');
     console.log(getCommandLabel(Command.GENERATE_PAGE, Command.GP), 'generates a new page for an angular project');
     console.log();
     console.log(`${ChalkUtilities.boldUnderline('Running an npm script')}:`);
