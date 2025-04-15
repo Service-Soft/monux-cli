@@ -1,7 +1,7 @@
 import { Dirent } from 'fs';
 
 import { APPS_DIRECTORY_NAME, LIBS_DIRECTORY_NAME, WORKSPACE_FILE_NAME } from '../constants';
-import { FsUtilities, JsonUtilities } from '../encapsulation';
+import { CPUtilities, FsUtilities, JsonUtilities } from '../encapsulation';
 import { WorkspaceConfig } from './workspace-config.model';
 import { getPath } from '../utilities';
 
@@ -32,21 +32,22 @@ export abstract class WorkspaceUtilities {
      * Creates a new workspace config file inside the current directory.
      */
     static async createConfig(): Promise<void> {
-        const cwd: string = process.cwd();
+        const cwd: string = CPUtilities['cwd'] ?? process.cwd();
         const currentDirectory: string = cwd.substring(cwd.lastIndexOf('/') + 1);
         const data: WorkspaceConfig = { isWorkspace: true, name: currentDirectory };
-        await FsUtilities.createFile(WORKSPACE_FILE_NAME, JsonUtilities.stringify(data));
+        await FsUtilities.createFile(getPath(WORKSPACE_FILE_NAME), JsonUtilities.stringify(data));
     }
 
     /**
      * Gets the workspace configuration if there is any.
+     * @param workspaceFilePath - The path of the mx workspace file. Can be used when not running in the context of a workspace.
      * @returns The found config or undefined.
      */
-    static async getConfig(): Promise<WorkspaceConfig | undefined> {
-        if (!await FsUtilities.exists(WORKSPACE_FILE_NAME)) {
+    static async getConfig(workspaceFilePath: string = getPath(WORKSPACE_FILE_NAME)): Promise<WorkspaceConfig | undefined> {
+        if (!await FsUtilities.exists(workspaceFilePath)) {
             return;
         }
-        const fileContent: string = await FsUtilities.readFile(WORKSPACE_FILE_NAME);
+        const fileContent: string = await FsUtilities.readFile(workspaceFilePath);
         return JsonUtilities.parse(fileContent);
     }
 

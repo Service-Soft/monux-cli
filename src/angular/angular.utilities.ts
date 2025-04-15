@@ -616,10 +616,11 @@ export abstract class AngularUtilities {
      * Adds a sitemap.xml and a robots.txt to a project at the given path.
      * @param root - The root of the angular project to add the files to.
      * @param projectName - The name of the project.
+     * @param domain - The domain of the project. Is needed to create the robots.txt file when the baseUrl environment variable has not been set yet.
      */
-    static async addSitemapAndRobots(root: string, projectName: string): Promise<void> {
+    static async addSitemapAndRobots(root: string, projectName: string, domain: string): Promise<void> {
         const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName);
-        await RobotsUtilities.createRobotsTxtForApp(app, 'dev.docker-compose.yaml');
+        await RobotsUtilities.createRobotsTxtForApp(app, 'dev.docker-compose.yaml', domain);
         await FsUtilities.createFile(getPath(root, 'src', SITEMAP_FILE_NAME), [
             '<?xml version="1.0" encoding="UTF-8"?>',
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">',

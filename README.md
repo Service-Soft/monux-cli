@@ -40,6 +40,7 @@ The projects that can be added to a Monux monorepo also provide a lot of functio
   - [Initializing a new monorepo](#initializing-a-new-monorepo)
   - [Adding a new project to the monorepo](#adding-a-new-project-to-the-monorepo)
   - [Running development services](#running-development-services)
+  - [Listing monorepo services](#listing-monorepo-services)
   - [Running npm scripts](#running-npm-scripts)
     - [Running npm scripts in multiple projects](#running-npm-scripts-in-multiple-projects)
   - [Handling environment variables](#handling-environment-variables)
@@ -108,6 +109,11 @@ That section also includes a guide on how to add projects manually.
 Some things like databases will be added to the monorepo solely in the docker compose.<br>
 To use these during development, the cli includes the `mx up-dev` command.
 
+## Listing monorepo services
+To list all of Monux monorepos and their respective docker services we included the `mx ls` and `mx la` commands.
+
+Where `ls` or `list` only shows monorepos with currently running docker services, while `la` or `list-all` also shows monorepos with stopped docker services.
+
 ## Running npm scripts
 To run an npm script of one of your projects you can use `mx {projectName} {npmScript}`. This works for projects in the "apps" and "libs" directories of your monorepo.
 
@@ -140,7 +146,7 @@ But instead of parsing the values from the `.env`-file during the prepare step, 
 /**
 * Defines how the CalculatedGlobalEnvironment values should be calculated.
 * This is used by the "mx prepare" command.
-* DONT CHANGE THE NAME ("calculationSchemaFor") OR FORMATTING. Otherwise Monux might not be able to detect it.
+* DON'T CHANGE THE NAME ("calculationSchemaFor") OR FORMATTING. Otherwise Monux might not be able to detect it.
 */
 const calculationSchemaFor: Record<
     keyof CalculatedGlobalEnvironment,

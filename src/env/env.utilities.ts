@@ -402,7 +402,7 @@ export abstract class EnvUtilities {
                 '/**',
                 '* Defines how the CalculatedGlobalEnvironment values should be calculated.',
                 '* This is used by the "mx prepare" command.',
-                '* DONT CHANGE THE NAME ("calculationSchemaFor") OR FORMATTING. Otherwise Monux might not be able to detect it.',
+                '* DON\'T CHANGE THE NAME ("calculationSchemaFor") OR FORMATTING. Otherwise Monux might not be able to detect it.',
                 '*/',
                 'const calculationSchemaFor: Record<',
                 '\tkeyof CalculatedGlobalEnvironment,',

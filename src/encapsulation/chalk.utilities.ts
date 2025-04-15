@@ -36,6 +36,15 @@ export abstract class ChalkUtilities {
     }
 
     /**
+     * Used to log errors in red.
+     * @param value - The value that should be logged as an error.
+     * @returns The string to log.
+     */
+    static success(...value: string[]): string {
+        return chalk.green(value);
+    }
+
+    /**
      * Used to log something in bold and underlined.
      * @param value - The value that should be logged bold and underlined.
      * @returns The string to log.

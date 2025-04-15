@@ -25,7 +25,7 @@ export abstract class RobotsUtilities {
             return await FsUtilities.exists(sitemapPath);
         });
         await Promise.all(apps.map(async a => {
-            return this.createRobotsTxtForApp(a, fileName);
+            return this.createRobotsTxtForApp(a, fileName, undefined);
         }));
     }
 
@@ -33,10 +33,12 @@ export abstract class RobotsUtilities {
      * Create a robots.txt file for the provided app.
      * @param app - The app to generate the robots.txt for.
      * @param fileName - The docker compose file get the variables for.
+     * @param domain - An optional domain. This is used when creating new projects, where the domain environment variable has not been set yet.
      */
     static async createRobotsTxtForApp(
         app: WorkspaceProject,
-        fileName: DockerComposeFileName
+        fileName: DockerComposeFileName,
+        domain: string | undefined
     ): Promise<void> {
         const robotsTxtPath: string = getPath(app.path, 'src', ROBOTS_FILE_NAME);
         await FsUtilities.rm(robotsTxtPath);
@@ -48,7 +50,7 @@ export abstract class RobotsUtilities {
             `${isPublic ? 'Allow' : 'Disallow'}: /`
         ];
 
-        const baseUrl: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.baseUrl(app.name), fileName);
+        const baseUrl: string = domain ? `https://${domain}` : await EnvUtilities.getEnvVariable(DefaultEnvKeys.baseUrl(app.name), fileName);
         content.push('', `Sitemap: ${baseUrl}/${SITEMAP_FILE_NAME}`);
 
         await FsUtilities.createFile(robotsTxtPath, content);
