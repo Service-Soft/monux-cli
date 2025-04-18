@@ -1,5 +1,5 @@
-import { DockerLabel } from '../../docker';
-import { WorkspaceConfig } from '../../workspace';
+import { WorkspaceConfig } from '../workspace';
+import { DockerLabel } from './docker-labels.enum';
 
 /**
  * Represents a Docker container's information as returned by

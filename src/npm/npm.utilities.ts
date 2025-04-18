@@ -62,7 +62,7 @@ export abstract class NpmUtilities {
      * @param commands - The npm script to run.
      */
     static async run(projectName: string, commands: string): Promise<void> {
-        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName);
+        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName, getPath('.'));
         CPUtilities.execSync(`npm run ${commands} --workspace=${project.npmWorkspaceString}`);
     }
 
@@ -81,7 +81,7 @@ export abstract class NpmUtilities {
      * @param development - Whether or not the packages will be installed with -D or not.
      */
     static async install(projectName: string, npmPackages: NpmPackage[], development: boolean = false): Promise<void> {
-        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName);
+        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName, getPath('.'));
 
         const installCommand: string = development ? 'npm i -D' : 'npm i';
         CPUtilities.execSync(`cd ${project.path} && ${installCommand} ${npmPackages.join(' ')}`);
@@ -103,7 +103,7 @@ export abstract class NpmUtilities {
      * @param data - The data to update the package.json with.
      */
     static async updatePackageJson(projectName: string, data: Partial<PackageJson>): Promise<void> {
-        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName);
+        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName, getPath('.'));
         const packageJsonPath: string = getPath(project.path, PACKAGE_JSON_FILE_NAME);
         await this.updatePackageJsonFile(packageJsonPath, data);
     }

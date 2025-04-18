@@ -58,17 +58,18 @@ export abstract class DbUtilities {
     /**
      * Creates the bash init files for setting up default databases and users.
      * @param fileName - The docker compose file get the variables for.
+     * @param rootDir - The directory of the Monux monorepo.
      */
-    static async createInitFiles(fileName: DockerComposeFileName): Promise<void> {
-        const dbs: ComposeService[] = await this.getAvailableDatabases();
+    static async createInitFiles(fileName: DockerComposeFileName, rootDir: string): Promise<void> {
+        const dbs: ComposeService[] = await this.getAvailableDatabases(rootDir);
         for (const db of dbs) {
-            const configs: DbInitConfig[] = await this.getInitConfigsForDb(db.name);
+            const configs: DbInitConfig[] = await this.getInitConfigsForDb(db.name, rootDir);
             for (let i: number = 0; i < configs.length; i++) {
-                const initFileSh: string = getPath(DATABASES_DIRECTORY_NAME, toKebabCase(db.name), 'init', `${i}.sh`);
-                const initFileSql: string = getPath(DATABASES_DIRECTORY_NAME, toKebabCase(db.name), 'init', `${i}.sql`);
+                const initFileSh: string = getPath(rootDir, DATABASES_DIRECTORY_NAME, toKebabCase(db.name), 'init', `${i}.sh`);
+                const initFileSql: string = getPath(rootDir, DATABASES_DIRECTORY_NAME, toKebabCase(db.name), 'init', `${i}.sql`);
                 await FsUtilities.rm(initFileSh);
                 await FsUtilities.rm(initFileSql);
-                await this.createInitFile(configs[i], initFileSh, initFileSql, fileName);
+                await this.createInitFile(configs[i], initFileSh, initFileSql, fileName, rootDir);
             }
         }
     }
@@ -77,11 +78,12 @@ export abstract class DbUtilities {
         config: DbInitConfig,
         initFileSh: string,
         initFileSql: string,
-        fileName: DockerComposeFileName
+        fileName: DockerComposeFileName,
+        rootDir: string
     ): Promise<void> {
-        const dbName: string = await EnvUtilities.getEnvVariable(config.nameEnvVariable, fileName);
-        const dbUser: string = await EnvUtilities.getEnvVariable(config.userEnvVariable, fileName);
-        const dbPassword: string = await EnvUtilities.getEnvVariable(config.passwordEnvVariable, fileName);
+        const dbName: string = await EnvUtilities.getEnvVariable(config.nameEnvVariable, fileName, rootDir);
+        const dbUser: string = await EnvUtilities.getEnvVariable(config.userEnvVariable, fileName, rootDir);
+        const dbPassword: string = await EnvUtilities.getEnvVariable(config.passwordEnvVariable, fileName, rootDir);
 
         switch (config.type) {
             case DbType.POSTGRES: {
@@ -115,8 +117,8 @@ export abstract class DbUtilities {
         }
     }
 
-    private static async getInitConfigsForDb(db: string): Promise<DbInitConfig[]> {
-        const dbFolder: Dirent[] = await FsUtilities.readdir(getPath(DATABASES_DIRECTORY_NAME, toKebabCase(db)));
+    private static async getInitConfigsForDb(db: string, rootDir: string): Promise<DbInitConfig[]> {
+        const dbFolder: Dirent[] = await FsUtilities.readdir(getPath(rootDir, DATABASES_DIRECTORY_NAME, toKebabCase(db)));
         const configFilePaths: string[] = dbFolder.filter(e => e.name.endsWith('.json')).map(e => getPath(e.parentPath, e.name));
         return await Promise.all(configFilePaths.map(async p => await FsUtilities.parseFileAs(p)));
     }
@@ -126,14 +128,15 @@ export abstract class DbUtilities {
      * Prompts the user for selecting an existing one or creates a new.
      * @param projectName - The name of the project to configure this database for.
      * @param dbType - The type of database to configure. If omitted, the user is prompted for input.
+     * @param rootDir - The directory of the Monux monorepo.
      * @returns The name of the database service.
      */
-    static async configureDb(projectName: string, dbType?: DbType): Promise<DbConfig> {
+    static async configureDb(projectName: string, dbType: DbType | undefined, rootDir: string): Promise<DbConfig> {
         const baseDbQuestions: QuestionsFor<DbConfig> = {
             dbServiceName: {
                 type: 'select',
                 message: 'Database compose service',
-                choices: ['NEW', ...(await this.getAvailableDatabases()).map(db => db.name)],
+                choices: ['NEW', ...(await this.getAvailableDatabases(rootDir)).map(db => db.name)],
                 default: 'NEW'
             },
             databaseName: {
@@ -146,7 +149,7 @@ export abstract class DbUtilities {
 
         if (baseDbConfig.dbServiceName !== 'NEW') {
             await this.addDbInitConfig(baseDbConfig.dbServiceName, {
-                type: await this.getDbTypeForService(baseDbConfig.dbServiceName),
+                type: await this.getDbTypeForService(baseDbConfig.dbServiceName, rootDir),
                 nameEnvVariable: DefaultEnvKeys.dbName(baseDbConfig.dbServiceName, baseDbConfig.databaseName),
                 passwordEnvVariable: DefaultEnvKeys.dbPassword(baseDbConfig.dbServiceName, baseDbConfig.databaseName),
                 userEnvVariable: DefaultEnvKeys.dbUser(baseDbConfig.dbServiceName, baseDbConfig.databaseName)
@@ -189,8 +192,8 @@ export abstract class DbUtilities {
         }
     }
 
-    private static async getDbTypeForService(serviceName: string): Promise<DbType> {
-        const foundServices: ComposeService[] = (await DbUtilities.getAvailableDatabases()).filter(s => s.name === serviceName);
+    private static async getDbTypeForService(serviceName: string, rootDir: string): Promise<DbType> {
+        const foundServices: ComposeService[] = (await this.getAvailableDatabases(rootDir)).filter(s => s.name === serviceName);
         if (!foundServices.length) {
             throw new Error(`Could not determine db type for service "${serviceName}": Not Found.`);
         }
@@ -224,8 +227,8 @@ export abstract class DbUtilities {
         }
     }
 
-    private static async getAvailableDatabases(): Promise<ComposeService[]> {
-        const services: ComposeService[] = await DockerUtilities.getComposeServices();
+    private static async getAvailableDatabases(rootDir: string): Promise<ComposeService[]> {
+        const services: ComposeService[] = await DockerUtilities.getComposeServices(rootDir);
         return services.filter(s => this.isDatabaseService(s));
     }
 
