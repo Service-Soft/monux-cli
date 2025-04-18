@@ -67,21 +67,23 @@ export abstract class WorkspaceUtilities {
     /**
      * Finds the directory of the project with the given name.
      * @param name - The name of the project to find.
+     * @param rootDir - The directory of the Monux monorepo to find the project in.
      * @returns The found directory or undefined.
      */
-    static async findProject(name: string): Promise<WorkspaceProject | undefined> {
-        const allProjects: WorkspaceProject[] = await this.getProjects();
+    static async findProject(name: string, rootDir: string): Promise<WorkspaceProject | undefined> {
+        const allProjects: WorkspaceProject[] = await this.getProjects('all', rootDir);
         return allProjects.find(p => p.name === name);
     }
 
     /**
      * Finds the directory of the project with the given name.
      * @param name - The name of the project to find.
+     * @param rootDir - The directory of the Monux monorepo to find the project in.
      * @returns The found directory.
      * @throws When no project with the given name was found.
      */
-    static async findProjectOrFail(name: string): Promise<WorkspaceProject> {
-        const res: WorkspaceProject | undefined = await this.findProject(name);
+    static async findProjectOrFail(name: string, rootDir: string): Promise<WorkspaceProject> {
+        const res: WorkspaceProject | undefined = await this.findProject(name, rootDir);
         if (res == undefined) {
             throw new Error(`project with name ${name} does not exist`);
         }
@@ -91,27 +93,28 @@ export abstract class WorkspaceUtilities {
     /**
      * Gets either all libraries, all apps or every project.
      * @param filter - Filter to only return libraries, apps or all projects.
+     * @param rootDir - The directory of the Monux monorepo to get the projects for.
      * @returns An array of directories.
      */
-    static async getProjects(filter: 'libs' | 'apps' | 'all' = 'all'): Promise<WorkspaceProject[]> {
+    static async getProjects(filter: 'libs' | 'apps' | 'all' = 'all', rootDir: string): Promise<WorkspaceProject[]> {
         switch (filter) {
             case 'apps': {
-                return await this.getApps();
+                return await this.getApps(rootDir);
             }
             case 'libs': {
-                return await this.getLibs();
+                return await this.getLibs(rootDir);
             }
             case 'all': {
                 return [
-                    ...await this.getApps(),
-                    ...await this.getLibs()
+                    ...await this.getApps(rootDir),
+                    ...await this.getLibs(rootDir)
                 ];
             }
         }
     }
 
-    private static async getApps(): Promise<WorkspaceProject[]> {
-        const dirs: Dirent[] = (await FsUtilities.readdir(getPath(APPS_DIRECTORY_NAME))).filter(d => d.isDirectory());
+    private static async getApps(rootDir: string): Promise<WorkspaceProject[]> {
+        const dirs: Dirent[] = (await FsUtilities.readdir(getPath(rootDir, APPS_DIRECTORY_NAME))).filter(d => d.isDirectory());
         return dirs.map(d => {
             const res: WorkspaceProject = {
                 name: d.name,
@@ -122,8 +125,8 @@ export abstract class WorkspaceUtilities {
         });
     }
 
-    private static async getLibs(): Promise<WorkspaceProject[]> {
-        const dirs: Dirent[] = (await FsUtilities.readdir(getPath(LIBS_DIRECTORY_NAME))).filter(d => d.isDirectory());
+    private static async getLibs(rootDir: string): Promise<WorkspaceProject[]> {
+        const dirs: Dirent[] = (await FsUtilities.readdir(getPath(rootDir, LIBS_DIRECTORY_NAME))).filter(d => d.isDirectory());
         return dirs.map(d => {
             const res: WorkspaceProject = {
                 name: d.name,

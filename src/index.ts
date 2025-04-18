@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-import { Command, isCommand, runAdd, runDown, runDownDev, runGeneratePage, runHelp, runInit, runList, runPrepare, runRun, runRunAll, runUp, runUpDev, runUpLocal, runVersion } from './commands';
-import { runDownLocal } from './commands/down-local';
-import { validateInput } from './commands/validate-input.function';
+import { Command, DownCommand, HelpCommand, VersionCommand, InitCommand, UpCommand, PrepareCommand, GeneratePageCommand, AddCommand, ListCommand, RunCommand, RunAllCommand } from './commands';
+import { resolveCommand } from './commands/resolve-command.function';
 import { DeathUtilities, FigletUtilities } from './encapsulation';
 
 DeathUtilities.death();
@@ -12,89 +11,67 @@ async function main(): Promise<void> {
 
     FigletUtilities.displayLogo();
 
-    await validateInput(args);
-    const command: string = args[0];
-
-    if (!isCommand(command)) {
-        await runRun(...args);
-        return;
-    }
+    const command: Command | 'run' = resolveCommand(args);
 
     switch (command) {
         case Command.H:
         case Command.HELP: {
-            runHelp();
+            await new HelpCommand().start(args);
             return;
         }
         case Command.VERSION:
         case Command.V: {
-            await runVersion();
+            await new VersionCommand().start(args);
             return;
         }
         case Command.INIT:
         case Command.I: {
-            await runInit();
+            await new InitCommand().start(args);
             return;
         }
         case Command.ADD:
         case Command.A: {
-            await runAdd();
+            await new AddCommand().start(args);
             return;
         }
         case Command.UP:
         case Command.U: {
-            await runUp();
+            await new UpCommand().start(args);
             return;
         }
         case Command.DOWN:
         case Command.D: {
-            runDown();
+            await new DownCommand().start(args);
             return;
         }
         case Command.PREPARE:
         case Command.P: {
-            await runPrepare(undefined);
+            await new PrepareCommand().start(args);
             return;
         }
         case Command.GENERATE_PAGE:
         case Command.GP: {
-            await runGeneratePage();
-            return;
-        }
-        case Command.UP_DEV:
-        case Command.UD: {
-            await runUpDev();
-            return;
-        }
-        case Command.DOWN_DEV:
-        case Command.DD: {
-            runDownDev();
-            return;
-        }
-        case Command.UP_LOCAL:
-        case Command.UL: {
-            await runUpLocal();
-            return;
-        }
-        case Command.DOWN_LOCAL:
-        case Command.DL: {
-            runDownLocal();
+            await new GeneratePageCommand().start(args);
             return;
         }
         case Command.RUN_ALL:
         case Command.RA:
         case Command.RUN_MANY: {
-            runRunAll(args[1]);
+            await new RunAllCommand().start(args);
             return;
         }
         case Command.LIST:
         case Command.LS: {
-            await runList(false);
+            await new ListCommand(false).start(args);
             return;
         }
         case Command.LIST_ALL:
         case Command.LA: {
-            await runList(true);
+            await new ListCommand(true).start(args);
+            return;
+        }
+        case 'run': {
+            await new RunCommand().start(args);
             return;
         }
     }

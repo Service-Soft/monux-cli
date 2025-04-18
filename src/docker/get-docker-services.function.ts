@@ -1,11 +1,11 @@
 import { execSync } from 'child_process';
 
-import { FullyParsedDockerService, StringifiedDockerServiceWithParsedLabels, isFullyParsedDockerService, StringifiedDockerService } from './stringified-docker-service.model';
-import { WORKSPACE_FILE_NAME } from '../../constants';
-import { DockerLabel } from '../../docker';
-import { JsonUtilities } from '../../encapsulation';
-import { getPath } from '../../utilities';
-import { WorkspaceConfig, WorkspaceUtilities } from '../../workspace';
+import { DockerLabel } from '.';
+import { WORKSPACE_FILE_NAME } from '../constants';
+import { JsonUtilities } from '../encapsulation';
+import { getPath } from '../utilities';
+import { WorkspaceConfig, WorkspaceUtilities } from '../workspace';
+import { FullyParsedDockerService, isFullyParsedDockerService, StringifiedDockerService, StringifiedDockerServiceWithParsedLabels } from './stringified-docker-service.model';
 
 /**
  * Gets all docker services that come from a project with an mx.workspace.json.

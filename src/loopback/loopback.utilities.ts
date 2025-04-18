@@ -367,18 +367,42 @@ export abstract class LoopbackUtilities {
         );
 
         const environmentModel: string = getPath(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.defaultUserEmail(config.name), true);
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.defaultUserPassword(config.name), true);
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'access_token_secret', true);
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'refresh_token_secret', true);
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'webserver_mail_user', true);
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'webserver_mail_password', true);
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'webserver_mail_host', true);
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'webserver_mail_port', true);
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.baseUrl(config.frontendName), false);
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.baseUrl(config.name), false);
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.IS_PUBLIC, false);
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.domain(config.frontendName), false);
+        await EnvUtilities.addProjectVariableKey(
+            config.name,
+            environmentModel,
+            DefaultEnvKeys.defaultUserEmail(config.name),
+            true,
+            getPath('.')
+        );
+        await EnvUtilities.addProjectVariableKey(
+            config.name,
+            environmentModel,
+            DefaultEnvKeys.defaultUserPassword(config.name),
+            true,
+            getPath('.')
+        );
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'access_token_secret', true, getPath('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'refresh_token_secret', true, getPath('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'webserver_mail_user', true, getPath('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'webserver_mail_password', true, getPath('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'webserver_mail_host', true, getPath('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'webserver_mail_port', true, getPath('.'));
+        await EnvUtilities.addProjectVariableKey(
+            config.name,
+            environmentModel,
+            DefaultEnvKeys.baseUrl(config.frontendName),
+            false,
+            getPath('.')
+        );
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.baseUrl(config.name), false, getPath('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.IS_PUBLIC, false, getPath('.'));
+        await EnvUtilities.addProjectVariableKey(
+            config.name,
+            environmentModel,
+            DefaultEnvKeys.domain(config.frontendName),
+            false,
+            getPath('.')
+        );
     }
 
     private static async applyAuthToIndexTs(

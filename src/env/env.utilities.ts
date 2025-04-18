@@ -77,10 +77,11 @@ export abstract class EnvUtilities {
     /**
      * Builds the environment files based on the model and the root .env file.
      * @param fileName - The docker compose file to build the variables for.
+     * @param rootDir - The directory of the Monux monorepo.
      */
-    static async buildEnvironmentFiles(fileName: DockerComposeFileName): Promise<void> {
-        const apps: WorkspaceProject[] = await WorkspaceUtilities.getProjects('apps');
-        await Promise.all(apps.map(a => this.buildEnvironmentFileForApp(a, true, fileName)));
+    static async buildEnvironmentFiles(fileName: DockerComposeFileName, rootDir: string): Promise<void> {
+        const apps: WorkspaceProject[] = await WorkspaceUtilities.getProjects('apps', rootDir);
+        await Promise.all(apps.map(a => this.buildEnvironmentFileForApp(a, true, fileName, rootDir)));
     }
 
     /**
@@ -88,11 +89,13 @@ export abstract class EnvUtilities {
      * @param app - The app to build the environment file for.
      * @param failOnMissingVariable - Whether or not the build should fail when a variable is missing.
      * @param fileName - The docker compose file to build the variables for.
+     * @param rootDir - The directory of the Monux monorepo.
      */
     static async buildEnvironmentFileForApp(
         app: WorkspaceProject,
         failOnMissingVariable: boolean,
-        fileName: DockerComposeFileName
+        fileName: DockerComposeFileName,
+        rootDir: string
     ): Promise<void> {
         const environmentFolder: string = getPath(app.path, 'src', 'environment');
         const variableKeys: EnvironmentVariableKey[] = await this.getProjectVariableKeys(
@@ -101,7 +104,7 @@ export abstract class EnvUtilities {
 
         // TODO: The first time getPath fails here because
         await FsUtilities.rm(getPath(environmentFolder, ENVIRONMENT_TS_FILE_NAME));
-        await this.createProjectEnvironmentFile(app.path, variableKeys, failOnMissingVariable, fileName);
+        await this.createProjectEnvironmentFile(app.path, variableKeys, failOnMissingVariable, fileName, rootDir);
     }
 
     /**
@@ -110,12 +113,14 @@ export abstract class EnvUtilities {
      * @param environmentModelPath - The path of the projects environment model.
      * @param variable - The variable to add.
      * @param failOnMissingVariable - Whether or not the build should fail when a variable is missing.
+     * @param rootDir - The directory of the Monux monorepo.
      */
     static async addProjectVariableKey(
         name: string,
         environmentModelPath: string,
         variable: EnvironmentVariableKey,
-        failOnMissingVariable: boolean
+        failOnMissingVariable: boolean,
+        rootDir: string
     ): Promise<void> {
         const lines: string[] = await FsUtilities.readFileLines(environmentModelPath);
         const firstLine: FileLine = await FsUtilities.findLineWithContent(lines, 'defineVariables(');
@@ -126,8 +131,8 @@ export abstract class EnvUtilities {
         const newValue: string = firstLine.content.includes('defineVariables([]') ? `defineVariables(['${variable}']` : `defineVariables(['${variable}', `;
         await FsUtilities.replaceInFile(environmentModelPath, oldValue, newValue);
 
-        const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(name);
-        await this.buildEnvironmentFileForApp(app, failOnMissingVariable, 'dev.docker-compose.yaml');
+        const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(name, rootDir);
+        await this.buildEnvironmentFileForApp(app, failOnMissingVariable, 'dev.docker-compose.yaml', rootDir);
     }
 
     private static async getProjectVariableKeys(environmentModelPath: string): Promise<EnvironmentVariableKey[]> {
@@ -168,16 +173,17 @@ export abstract class EnvUtilities {
                 '}'
             ]
         );
-        await this.createProjectEnvironmentFile(projectPath, [], true, 'dev.docker-compose.yaml');
+        await this.createProjectEnvironmentFile(projectPath, [], true, 'dev.docker-compose.yaml', '.');
     }
 
     private static async createProjectEnvironmentFile(
         projectPath: string,
         variableKeys: EnvironmentVariableKey[],
         failOnMissingVariable: boolean,
-        fileName: DockerComposeFileName
+        fileName: DockerComposeFileName,
+        rootDir: string
     ): Promise<void> {
-        const variables: EnvVariable[] = await this.getEnvVariables(variableKeys, failOnMissingVariable, fileName);
+        const variables: EnvVariable[] = await this.getEnvVariables(variableKeys, failOnMissingVariable, fileName, rootDir);
         await FsUtilities.createFile(
             getPath(projectPath, 'src', 'environment', ENVIRONMENT_TS_FILE_NAME),
             [
@@ -197,21 +203,24 @@ export abstract class EnvUtilities {
     private static async getEnvVariables(
         variableKeys: EnvironmentVariableKey[] | undefined,
         failOnMissingVariable: boolean,
-        fileName: DockerComposeFileName
+        fileName: DockerComposeFileName,
+        rootDir: string
     ): Promise<EnvVariable[]> {
-        const keys: VariableKeys = await this.splitVariableKeys(variableKeys, failOnMissingVariable);
-        const staticVariables: EnvVariable[] = await this.getStaticEnvVariables(keys.static, failOnMissingVariable);
+        const keys: VariableKeys = await this.splitVariableKeys(variableKeys, failOnMissingVariable, rootDir);
+        const staticVariables: EnvVariable[] = await this.getStaticEnvVariables(keys.static, failOnMissingVariable, rootDir);
         const calculatedVariables: EnvVariable[] = await this.getCalculatedEnvVariables(
             keys.calculated,
             failOnMissingVariable,
-            fileName
+            fileName,
+            rootDir
         );
         return [...staticVariables, ...calculatedVariables];
     }
 
     private static async splitVariableKeys(
         variableKeys: EnvironmentVariableKey[] | undefined,
-        failOnMissingVariable: boolean
+        failOnMissingVariable: boolean,
+        rootDir: string
     ): Promise<VariableKeys> {
         if (variableKeys == undefined) {
             return { static: undefined, calculated: undefined };
@@ -221,12 +230,12 @@ export abstract class EnvUtilities {
         }
 
         const staticVariableDefinitions: OmitStrict<EnvVariable, 'value'>[] = await this.getVariableDefinitions(
-            getPath(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
+            getPath(rootDir, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
             // eslint-disable-next-line sonar/no-duplicate-string
             'StaticGlobalEnvironment = {'
         );
         const calculatedVariableDefinitions: OmitStrict<EnvVariable, 'value'>[] = await this.getVariableDefinitions(
-            getPath(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
+            getPath(rootDir, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
             // eslint-disable-next-line sonar/no-duplicate-string
             'CalculatedGlobalEnvironment = {'
         );
@@ -251,13 +260,14 @@ export abstract class EnvUtilities {
     private static async getCalculatedEnvVariables(
         variableKeys: EnvironmentVariableKey[] | undefined,
         failOnMissingVariable: boolean,
-        fileName: DockerComposeFileName
+        fileName: DockerComposeFileName,
+        rootDir: string
     ): Promise<EnvVariable[]> {
-        const staticVariables: EnvVariable[] = await this.getStaticEnvVariables(undefined, failOnMissingVariable);
+        const staticVariables: EnvVariable[] = await this.getStaticEnvVariables(undefined, failOnMissingVariable, rootDir);
         const staticVariableObject: Record<string, EnvValue> = staticVariables.reduce((p, c) => p = { ...p, [c.key]: c.value }, {});
 
         const calculatedVariableDefinitions: OmitStrict<EnvVariable, 'value'>[] = await this.getVariableDefinitions(
-            getPath(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
+            getPath(rootDir, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
             'CalculatedGlobalEnvironment = {'
         );
 
@@ -266,7 +276,7 @@ export abstract class EnvUtilities {
                 string,
                 (env: Record<string, EnvValue>, fileName: DockerComposeFileName) => EnvValue
             >
-        > = await TsUtilities.getObjectStartingWith(getPath(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME), '> = {');
+        > = await TsUtilities.getObjectStartingWith(getPath(rootDir, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME), '> = {');
 
         const res: EnvVariable[] = [];
         for (const key in definition.result) {
@@ -307,11 +317,12 @@ export abstract class EnvUtilities {
     // eslint-disable-next-line sonar/cognitive-complexity
     private static async getStaticEnvVariables(
         variableKeys: EnvironmentVariableKey[] | undefined,
-        failOnMissingVariable: boolean
+        failOnMissingVariable: boolean,
+        rootDir: string
     ): Promise<EnvVariable[]> {
-        const lines: string[] = await FsUtilities.readFileLines(getPath(ENV_FILE_NAME));
+        const lines: string[] = await FsUtilities.readFileLines(getPath(rootDir, ENV_FILE_NAME));
         const staticVariableDefinitions: OmitStrict<EnvVariable, 'value'>[] = await this.getVariableDefinitions(
-            getPath(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
+            getPath(rootDir, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
             'StaticGlobalEnvironment = {'
         );
         const res: EnvVariable[] = [];
@@ -352,13 +363,15 @@ export abstract class EnvUtilities {
      * Gets the value for the given environment variable.
      * @param variable - The variable to get the value of.
      * @param fileName - The docker compose file to build the variables for.
+     * @param rootDir - The directory of the Monux monorepo.
      * @returns The value of the provided variable.
      */
     static async getEnvVariable<T extends EnvValue>(
         variable: EnvironmentVariableKey,
-        fileName: DockerComposeFileName
+        fileName: DockerComposeFileName,
+        rootDir: string
     ): Promise<T> {
-        const envValues: EnvVariable[] = await this.getEnvVariables([variable], false, fileName);
+        const envValues: EnvVariable[] = await this.getEnvVariables([variable], false, fileName, rootDir);
         if (!envValues.length) {
             throw new Error(`Could not find env value ${variable}`);
         }
@@ -422,10 +435,11 @@ export abstract class EnvUtilities {
 
     /**
      * Validates the .env file.
+     * @param rootDir - The directory of the Monux monorepo.
      * @returns An array of error messages mapped to the keys that caused them.
      */
-    static async validate(): Promise<KeyValue<EnvValidationErrorMessage>[]> {
-        if (!await FsUtilities.exists(getPath(ENV_FILE_NAME))) {
+    static async validate(rootDir: string): Promise<KeyValue<EnvValidationErrorMessage>[]> {
+        if (!await FsUtilities.exists(getPath(rootDir, ENV_FILE_NAME))) {
             return [
                 {
                     key: ENV_FILE_NAME,
@@ -434,10 +448,10 @@ export abstract class EnvUtilities {
             ];
         }
 
-        const envValues: EnvVariable[] = await this.getStaticEnvVariables(undefined, true);
+        const envValues: EnvVariable[] = await this.getStaticEnvVariables(undefined, true, rootDir);
 
         const staticVariableDefinitions: OmitStrict<EnvVariable, 'value'>[] = await this.getVariableDefinitions(
-            getPath(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
+            getPath(rootDir, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
             'StaticGlobalEnvironment = {'
         );
 

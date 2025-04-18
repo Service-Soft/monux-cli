@@ -1,22 +1,56 @@
-import { CPUtilities } from '../../encapsulation';
-import { NativeNpmCommands, NpmUtilities } from '../../npm';
+import { Dirent } from 'fs';
+
+import { CPUtilities, FsUtilities } from '../../encapsulation';
+import { NativeNpmCommands, NpmUtilities, PackageJson } from '../../npm';
+import { exitWithError, getPath } from '../../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../../workspace';
+import { BaseCommand } from '../base-command.model';
+import { RunConfiguration } from './run-configuration.model';
+import { PACKAGE_JSON_FILE_NAME } from '../../constants';
 
 /**
- * Runs the run cli command.
- * @param args - The passed cli commands.
+ * Runs either a native npm command or a script from the package.json.
  */
-export async function runRun(...args: string[]): Promise<void> {
-    const projectName: string = args[0];
-    const npmScript: string = args[1];
-    const nativeCommand: boolean = Object.values(NativeNpmCommands).includes(npmScript as NativeNpmCommands);
+export class RunCommand extends BaseCommand<RunConfiguration> {
+    protected override insideWorkspace: boolean = true;
+    protected override maxLength: undefined = undefined;
 
-    const commands: string = args.slice(1).join(' ');
-    if (!nativeCommand) {
-        await NpmUtilities.run(projectName, commands);
-        return;
+    protected override async run(config: RunConfiguration): Promise<void> {
+        if (!config.isNativeCommand) {
+            await NpmUtilities.run(config.projectName, config.commands);
+            return;
+        }
+        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.projectName, getPath('.'));
+        CPUtilities.execSync(`npm ${config.commands} --workspace=${project.npmWorkspaceString}`);
     }
 
-    const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName);
-    CPUtilities.execSync(`npm ${commands} --workspace=${project.npmWorkspaceString}`);
+    protected override resolveInput(args: string[]): RunConfiguration {
+        return {
+            projectName: args[0],
+            isNativeCommand: Object.values(NativeNpmCommands).includes(args[1] as NativeNpmCommands),
+            commands: args.slice(1).join(' ')
+        };
+    }
+
+    protected override async validate(args: string[]): Promise<void> {
+        const project: string = args[0];
+        await this.validateInsideWorkspace();
+        const foundProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(project, getPath('.'));
+
+        const packageJson: Dirent | undefined = (await FsUtilities.readdir(foundProject.path)).find(f => f.name === PACKAGE_JSON_FILE_NAME);
+        if (!packageJson) {
+            exitWithError(`The provided project "${project}" does not contain a ${PACKAGE_JSON_FILE_NAME} file`);
+        }
+
+        if (Object.values(NativeNpmCommands).includes(args[1] as NativeNpmCommands)) {
+            return;
+        }
+
+        const npmScript: string = args[1];
+        const file: PackageJson = await FsUtilities.parseFileAs<PackageJson>(getPath(packageJson.parentPath, packageJson.name));
+
+        if (!Object.keys(file.scripts).includes(npmScript)) {
+            exitWithError(`The project "${project}" does not contain the provided script "${npmScript}"`);
+        }
+    }
 }

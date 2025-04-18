@@ -59,7 +59,7 @@ export abstract class TsConfigUtilities {
      * @param data - The data to update the tsconfig with.
      */
     static async updateTsConfig(projectName: string, data: Partial<TsConfig>): Promise<void> {
-        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName);
+        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName, getPath('.'));
         const tsConfigPath: string = getPath(project.path, TS_CONFIG_FILE_NAME);
         await this.update(tsConfigPath, data);
     }

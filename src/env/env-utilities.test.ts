@@ -163,18 +163,18 @@ describe('EnvUtilities', () => {
             '};'
         ]);
 
-        const devBaseUrl: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.baseUrl('test'), 'dev.docker-compose.yaml');
-        const devDomain: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.domain('test'), 'dev.docker-compose.yaml');
+        const devBaseUrl: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.baseUrl('test'), 'dev.docker-compose.yaml', getPath('.'));
+        const devDomain: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.domain('test'), 'dev.docker-compose.yaml', getPath('.'));
         expect(devBaseUrl).toEqual('http://localhost:4201');
         expect(devDomain).toEqual('localhost:4201');
 
-        const localBaseUrl: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.baseUrl('test'), 'local.docker-compose.yaml');
-        const localDomain: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.domain('test'), 'local.docker-compose.yaml');
+        const localBaseUrl: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.baseUrl('test'), 'local.docker-compose.yaml', getPath('.'));
+        const localDomain: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.domain('test'), 'local.docker-compose.yaml', getPath('.'));
         expect(localBaseUrl).toEqual('http://admin.localhost');
         expect(localDomain).toEqual('admin.localhost');
 
-        const prodBaseUrl: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.baseUrl('test'), 'docker-compose.yaml');
-        const prodDomain: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.domain('test'), 'docker-compose.yaml');
+        const prodBaseUrl: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.baseUrl('test'), 'docker-compose.yaml', getPath('.'));
+        const prodDomain: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.domain('test'), 'docker-compose.yaml', getPath('.'));
         expect(prodBaseUrl).toEqual('https://admin.test.com');
         expect(prodDomain).toEqual('admin.test.com');
     });
@@ -182,21 +182,21 @@ describe('EnvUtilities', () => {
     test('validate', async () => {
         const variable: EnvVariable = fakeEnvVariable({ required: true, type: 'number', value: 42 });
         await EnvUtilities.addStaticVariable(variable);
-        const errorMessages: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate();
+        const errorMessages: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(getPath('.'));
         expect(errorMessages.length).toEqual(0);
 
         await FsUtilities.replaceInFile(mockConstants.ENV, '42', 'test');
-        const errorMessages2: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate();
+        const errorMessages2: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(getPath('.'));
         expect(errorMessages2.length).toEqual(1);
         expect(errorMessages2[0].value).toEqual(EnvValidationErrorMessage.NUMBER);
 
         await FsUtilities.updateFile(mockConstants.ENV, '', 'replace');
-        const errorMessages3: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate();
+        const errorMessages3: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(getPath('.'));
         expect(errorMessages3.length).toEqual(3);
         expect(errorMessages3[0].value).toEqual(EnvValidationErrorMessage.REQUIRED);
 
         await FsUtilities.rm(mockConstants.ENV);
-        const errorMessages4: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate();
+        const errorMessages4: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(getPath('.'));
         expect(errorMessages4.length).toEqual(1);
         expect(errorMessages4[0].value).toEqual(EnvValidationErrorMessage.FILE_DOES_NOT_EXIST);
     });

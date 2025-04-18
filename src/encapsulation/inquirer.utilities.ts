@@ -1,7 +1,7 @@
 import inquirer from 'inquirer';
 import { BuiltInQuestion, Answers } from 'inquirer/dist/cjs/types/types';
 
-import { exitWithInterrupt, isErrorWithSignal, isExitPromptError } from '../commands';
+import { exitWithInterrupt, isErrorWithSignal, isExitPromptError } from '../utilities';
 
 /**
  * Inquirer Questions to get the generic object result.

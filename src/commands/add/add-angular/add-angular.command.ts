@@ -11,8 +11,7 @@ import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
 import { getPath, toPascalCase } from '../../../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
-import { AddCommand } from '../models/add-command.class';
-import { AddConfiguration } from '../models/add-configuration.model';
+import { BaseAddCommand, AddConfiguration } from '../models';
 
 /**
  * Configuration for adding a new angular app.
@@ -42,7 +41,7 @@ type AddAngularConfiguration = AddConfiguration & {
 /**
  * Command that handles adding an angular application to the monorepo.
  */
-export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
+export class AddAngularCommand extends BaseAddCommand<AddAngularConfiguration> {
     protected override readonly configQuestions: QuestionsFor<OmitStrict<AddAngularConfiguration, keyof AddConfiguration>> = {
         port: {
             type: 'number',
@@ -100,7 +99,11 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
             AngularUtilities.setupMaterial(root)
         ]);
 
-        const prodRootDomain: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.PROD_ROOT_DOMAIN, 'dev.docker-compose.yaml');
+        const prodRootDomain: string = await EnvUtilities.getEnvVariable(
+            DefaultEnvKeys.PROD_ROOT_DOMAIN,
+            'dev.docker-compose.yaml',
+            getPath('.')
+        );
         const fullDomain: string = config.subDomain ? `${config.subDomain}.${prodRootDomain}` : prodRootDomain;
 
         await AngularUtilities.setupNavigation(root, config.name);
@@ -119,8 +122,8 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
 
         await NpmUtilities.updatePackageJson(config.name, { scripts: { start: `ng serve --port ${config.port}` } });
 
-        const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name);
-        await EnvUtilities.buildEnvironmentFileForApp(app, false, 'dev.docker-compose.yaml');
+        const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
+        await EnvUtilities.buildEnvironmentFileForApp(app, false, 'dev.docker-compose.yaml', getPath('.'));
     }
 
     private async setupTailwind(root: string): Promise<void> {
@@ -189,7 +192,7 @@ export class AddAngularCommand extends AddCommand<AddAngularConfiguration> {
             `new ${config.name}`,
             { '--skip-git': true, '--style': 'css', '--inline-style': true, '--ssr': true }
         );
-        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name);
+        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
         await FsUtilities.updateFile(getPath(newProject.path, 'src', 'app', 'app.component.html'), '', 'replace');
         await AngularUtilities.addProvider(newProject.path, 'provideHttpClient(withInterceptorsFromDi(), withFetch())', [
             // eslint-disable-next-line sonar/no-duplicate-string

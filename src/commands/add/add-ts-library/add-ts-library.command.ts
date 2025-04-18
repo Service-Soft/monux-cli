@@ -7,8 +7,7 @@ import { TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
 import { getPath } from '../../../utilities';
 import { WorkspaceConfig, WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
-import { AddCommand } from '../models/add-command.class';
-import { AddConfiguration } from '../models/add-configuration.model';
+import { AddConfiguration, BaseAddCommand } from '../models';
 
 /**
  * Configuration for creating a new ts library.
@@ -23,7 +22,7 @@ type TsLibraryConfiguration = AddConfiguration & {
 /**
  * The command for adding a typescript library to the monorepo.
  */
-export class AddTsLibraryCommand extends AddCommand<TsLibraryConfiguration> {
+export class AddTsLibraryCommand extends BaseAddCommand<TsLibraryConfiguration> {
     protected override configQuestions: QuestionsFor<OmitStrict<TsLibraryConfiguration, keyof AddConfiguration>> = {
         scope: {
             type: 'input',
@@ -59,7 +58,7 @@ export class AddTsLibraryCommand extends AddCommand<TsLibraryConfiguration> {
     }
 
     private async installInProjects(config: TsLibraryConfiguration): Promise<void> {
-        const projects: WorkspaceProject[] = await WorkspaceUtilities.getProjects('apps');
+        const projects: WorkspaceProject[] = await WorkspaceUtilities.getProjects('apps', getPath('.'));
         const npmPackage: string = `${config.scope}/${config.name}`;
         await Promise.all(projects.map((p) => NpmUtilities.install(p.name, [npmPackage as NpmPackage])));
     }
