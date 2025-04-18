@@ -167,12 +167,12 @@ describe('DbUtilities', () => {
             }
         );
 
-        await DbUtilities.createInitFiles('dev.docker-compose.yaml');
+        await DbUtilities.createInitFiles('dev.docker-compose.yaml', getPath('.'));
 
         const initShContent: string[] = await FsUtilities.readFileLines(getPath(mockConstants.PROJECT_DIR, DATABASES_DIRECTORY_NAME, 'postgres-db', 'init', '0.sh'));
-        const postgresPassword: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.dbPassword(POSTGRES_SERVICE_NAME, POSTGRES_DATABASE_NAME), 'dev.docker-compose.yaml');
+        const postgresPassword: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.dbPassword(POSTGRES_SERVICE_NAME, POSTGRES_DATABASE_NAME), 'dev.docker-compose.yaml', getPath('.'));
         const initSqlContent: string[] = await FsUtilities.readFileLines(getPath(mockConstants.PROJECT_DIR, DATABASES_DIRECTORY_NAME, 'maria-db', 'init', '0.sql'));
-        const mariadbPassword: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.dbPassword(MARIADB_SERVICE_NAME, MARIADB_DATABASE_NAME), 'dev.docker-compose.yaml');
+        const mariadbPassword: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.dbPassword(MARIADB_SERVICE_NAME, MARIADB_DATABASE_NAME), 'dev.docker-compose.yaml', getPath('.'));
 
         expect(initShContent).toEqual([
             '#!/bin/bash',

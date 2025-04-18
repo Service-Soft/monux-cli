@@ -177,13 +177,15 @@ export abstract class AngularUtilities {
             name,
             getPath(projectRoot, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
             DefaultEnvKeys.baseUrl(apiName),
-            false
+            false,
+            getPath('.')
         );
         await EnvUtilities.addProjectVariableKey(
             name,
             getPath(projectRoot, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
             DefaultEnvKeys.domain(apiName),
-            false
+            false,
+            getPath('.')
         );
         const authServicePath: string = getPath(projectRoot, 'src', 'app', 'services', 'auth.service.ts');
         await FsUtilities.createFile(authServicePath, authServiceContent);
@@ -619,8 +621,8 @@ export abstract class AngularUtilities {
      * @param domain - The domain of the project. Is needed to create the robots.txt file when the baseUrl environment variable has not been set yet.
      */
     static async addSitemapAndRobots(root: string, projectName: string, domain: string): Promise<void> {
-        const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName);
-        await RobotsUtilities.createRobotsTxtForApp(app, 'dev.docker-compose.yaml', domain);
+        const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName, getPath('.'));
+        await RobotsUtilities.createRobotsTxtForApp(app, 'dev.docker-compose.yaml', domain, getPath('.'));
         await FsUtilities.createFile(getPath(root, 'src', SITEMAP_FILE_NAME), [
             '<?xml version="1.0" encoding="UTF-8"?>',
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">',

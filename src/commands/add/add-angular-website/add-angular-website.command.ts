@@ -10,7 +10,7 @@ import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
 import { getPath, toPascalCase } from '../../../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
-import { AddCommand } from '../models';
+import { BaseAddCommand } from '../models';
 import { AddConfiguration } from '../models/add-configuration.model';
 
 /**
@@ -41,7 +41,7 @@ type AddAngularWebsiteConfiguration = AddConfiguration & {
 /**
  * Command that handles adding an angular website to the monorepo.
  */
-export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfiguration> {
+export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteConfiguration> {
 
     protected override configQuestions: QuestionsFor<OmitStrict<AddAngularWebsiteConfiguration, keyof AddConfiguration>> = {
         port: {
@@ -75,7 +75,8 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
 
         const prodRootDomain: string = await EnvUtilities.getEnvVariable(
             DefaultEnvKeys.PROD_ROOT_DOMAIN,
-            'dev.docker-compose.yaml'
+            'dev.docker-compose.yaml',
+            getPath('.')
         );
         const domain: string = config.subDomain ? `${config.subDomain}.${prodRootDomain}` : prodRootDomain;
 
@@ -111,8 +112,8 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
             await AngularUtilities.setupTracking(config.name);
         }
         await NpmUtilities.updatePackageJson(config.name, { scripts: { start: `ng serve --port ${config.port}` } });
-        const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name);
-        await EnvUtilities.buildEnvironmentFileForApp(app, true, 'dev.docker-compose.yaml');
+        const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
+        await EnvUtilities.buildEnvironmentFileForApp(app, true, 'dev.docker-compose.yaml', getPath('.'));
     }
 
     private async createDefaultPages(root: string, titleSuffix: string, domain: string): Promise<void> {
@@ -236,7 +237,7 @@ export class AddAngularWebsiteCommand extends AddCommand<AddAngularWebsiteConfig
             `new ${config.name}`,
             { '--skip-git': true, '--style': 'css', '--inline-style': true, '--ssr': true }
         );
-        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name);
+        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
         await FsUtilities.updateFile(getPath(newProject.path, 'src', 'app', 'app.component.html'), '', 'replace');
         await AngularUtilities.addProvider(newProject.path, 'provideHttpClient(withInterceptorsFromDi(), withFetch())', [
             // eslint-disable-next-line sonar/no-duplicate-string

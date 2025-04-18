@@ -5,7 +5,7 @@ import { OmitStrict } from '../../../types';
 /**
  * Base Add Command class.
  */
-export abstract class AddCommand<ConfigurationType extends AddConfiguration = AddConfiguration> {
+export abstract class BaseAddCommand<ConfigurationType extends AddConfiguration = AddConfiguration> {
 
     protected abstract readonly configQuestions: QuestionsFor<OmitStrict<ConfigurationType, keyof AddConfiguration>>;
 

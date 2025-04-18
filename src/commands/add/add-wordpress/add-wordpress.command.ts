@@ -4,8 +4,8 @@ import { ComposeService, DockerUtilities } from '../../../docker';
 import { QuestionsFor } from '../../../encapsulation';
 import { DefaultEnvKeys } from '../../../env';
 import { OmitStrict } from '../../../types';
-import { toKebabCase } from '../../../utilities';
-import { AddCommand, AddConfiguration } from '../models';
+import { getPath, toKebabCase } from '../../../utilities';
+import { BaseAddCommand, AddConfiguration } from '../models';
 
 /**
  * Configuration for adding a wordpress service to the monorepo.
@@ -20,7 +20,7 @@ type AddWordpressConfiguration = AddConfiguration & {
 /**
  * The command for adding a wordpress server to the monorepo.
  */
-export class AddWordpressCommand extends AddCommand<AddWordpressConfiguration> {
+export class AddWordpressCommand extends BaseAddCommand<AddWordpressConfiguration> {
     protected override readonly configQuestions: QuestionsFor<OmitStrict<AddWordpressConfiguration, keyof AddConfiguration>> = {
         subDomain: {
             type: 'input',
@@ -31,7 +31,7 @@ export class AddWordpressCommand extends AddCommand<AddWordpressConfiguration> {
 
     override async run(): Promise<void> {
         const config: AddWordpressConfiguration = await this.getConfig();
-        const { dbServiceName, databaseName } = await DbUtilities.configureDb(config.name, DbType.MARIADB);
+        const { dbServiceName, databaseName } = await DbUtilities.configureDb(config.name, DbType.MARIADB, getPath('.'));
         await this.createProject(config, dbServiceName, databaseName);
     }
 

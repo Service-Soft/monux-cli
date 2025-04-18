@@ -1,56 +1,40 @@
 /* eslint-disable jsdoc/require-jsdoc */
+import { PrepareConfig, prepareConfigQuestions } from './prepare-config.model';
 import { DockerComposeFileName } from '../../constants';
 import { DbUtilities } from '../../db';
-import { InquirerUtilities, QuestionsFor } from '../../encapsulation';
+import { InquirerUtilities } from '../../encapsulation';
 import { EnvUtilities, EnvValidationErrorMessage } from '../../env';
 import { RobotsUtilities } from '../../robots';
 import { KeyValue } from '../../types';
-import { exitWithError } from '../exit-with-error.function';
+import { exitWithError, getPath } from '../../utilities';
+import { BaseCommand } from '../base-command.model';
 
-export type PrepareConfig = {
-    fileName: DockerComposeFileName
-};
+export class PrepareCommand extends BaseCommand<PrepareConfig> {
+    protected override readonly insideWorkspace: boolean = true;
 
-const choices: { name: string, value: DockerComposeFileName }[] = [
-    { name: 'dev', value: 'dev.docker-compose.yaml' },
-    { name: 'local', value: 'local.docker-compose.yaml' },
-    { name: 'prod', value: 'docker-compose.yaml' }
-];
-const prepareConfigQuestions: QuestionsFor<PrepareConfig> = {
-    fileName: {
-        message: 'env',
-        type: 'select',
-        choices: choices
+    protected override async run(input: PrepareConfig): Promise<void> {
+        await this.buildEnv(input.fileName, input.rootDir);
+        await RobotsUtilities.createRobotsTxtFiles(input.fileName, input.rootDir);
+        await DbUtilities.createInitFiles(input.fileName, input.rootDir);
     }
-};
 
-/**
- * Prepares everything that is needed to be done for deploying the monorepo.
- * @param fileName - The docker compose file get the variables for.
- */
-export async function runPrepare(fileName: DockerComposeFileName | undefined): Promise<void> {
-    fileName ??= (await InquirerUtilities.prompt(prepareConfigQuestions)).fileName;
-    await buildEnv(fileName);
-    await buildRobotsTxtFiles(fileName);
-    await buildDbInitFiles(fileName);
-}
+    protected override async resolveInput(): Promise<PrepareConfig> {
+        const fileName: DockerComposeFileName = (await InquirerUtilities.prompt(prepareConfigQuestions)).fileName;
 
-async function buildDbInitFiles(fileName: DockerComposeFileName): Promise<void> {
-    await DbUtilities.createInitFiles(fileName);
-}
-
-async function buildEnv(fileName: DockerComposeFileName): Promise<void> {
-    const validationErrors: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate();
-    if (validationErrors.length) {
-        exitWithError(
-            'Error when validating the .env file:\n'
-            + validationErrors.map(e => `\t${e.key}: ${e.value}`).join('\n')
-        );
-        return;
+        return {
+            fileName,
+            rootDir: getPath('.')
+        };
     }
-    await EnvUtilities.buildEnvironmentFiles(fileName);
-}
 
-async function buildRobotsTxtFiles(fileName: DockerComposeFileName): Promise<void> {
-    await RobotsUtilities.createRobotsTxtFiles(fileName);
+    private async buildEnv(fileName: DockerComposeFileName, rootDir: string): Promise<void> {
+        const validationErrors: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(rootDir);
+        if (validationErrors.length) {
+            exitWithError(
+                'Error when validating the .env file:\n'
+                + validationErrors.map(e => `\t${e.key}: ${e.value}`).join('\n')
+            );
+        }
+        await EnvUtilities.buildEnvironmentFiles(fileName, rootDir);
+    }
 }

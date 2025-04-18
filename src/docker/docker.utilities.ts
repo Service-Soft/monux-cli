@@ -318,10 +318,11 @@ export abstract class DockerUtilities {
 
     /**
      * Gets all services from the docker compose file.
+     * @param rootDir - The directory of the Monux monorepo.
      * @returns The parsed services.
      */
-    static async getComposeServices(): Promise<ComposeService[]> {
-        const composePath: string = getPath(PROD_DOCKER_COMPOSE_FILE_NAME);
+    static async getComposeServices(rootDir: string): Promise<ComposeService[]> {
+        const composePath: string = getPath(rootDir, PROD_DOCKER_COMPOSE_FILE_NAME);
         const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
         return definition.services;
     }

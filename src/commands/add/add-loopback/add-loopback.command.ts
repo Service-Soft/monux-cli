@@ -11,7 +11,7 @@ import { TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
 import { getPath, toKebabCase, toPascalCase } from '../../../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
-import { AddCommand } from '../models';
+import { BaseAddCommand } from '../models';
 import { AddConfiguration } from '../models/add-configuration.model';
 
 /**
@@ -46,7 +46,7 @@ export type AddLoopbackConfiguration = AddConfiguration & {
 /**
  * Command that handles adding a loopback api to the monorepo.
  */
-export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
+export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration> {
     protected override configQuestions: QuestionsFor<OmitStrict<AddLoopbackConfiguration, keyof AddConfiguration>> = {
         port: {
             type: 'number',
@@ -80,7 +80,7 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
 
     override async run(): Promise<void> {
         const config: AddLoopbackConfiguration = await this.getConfig();
-        const { dbServiceName, databaseName } = await DbUtilities.configureDb(config.name);
+        const { dbServiceName, databaseName } = await DbUtilities.configureDb(config.name, undefined, getPath('.'));
         const root: string = await this.createProject(config);
         await EnvUtilities.setupProjectEnvironment(root, false);
         await this.createLoopbackDatasource(dbServiceName, databaseName, root, config.name);
@@ -119,8 +119,8 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
         await LoopbackUtilities.setupChangeSets(root, config.name);
         await LoopbackUtilities.setupMigrations(root, config.name);
 
-        const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name);
-        await EnvUtilities.buildEnvironmentFileForApp(app, false, 'dev.docker-compose.yaml');
+        const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
+        await EnvUtilities.buildEnvironmentFileForApp(app, false, 'dev.docker-compose.yaml', getPath('.'));
     }
 
     private async updateDockerFile(root: string): Promise<void> {
@@ -221,11 +221,22 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
             projectName,
             environmentModel,
             DefaultEnvKeys.dbPassword(dbServiceName, databaseName),
-            true
+            true,
+            getPath('.')
         );
-        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, DefaultEnvKeys.dbUser(dbServiceName, databaseName), true);
-        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, DefaultEnvKeys.dbName(dbServiceName, databaseName), true);
-        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, DefaultEnvKeys.dbHost(dbServiceName), true);
+        await EnvUtilities.addProjectVariableKey(
+            projectName,
+            environmentModel,
+            DefaultEnvKeys.dbUser(dbServiceName, databaseName),
+            true,
+            getPath('.')
+        );
+        await EnvUtilities.addProjectVariableKey(projectName,
+            environmentModel,
+            DefaultEnvKeys.dbName(dbServiceName, databaseName),
+            true,
+            getPath('.'));
+        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, DefaultEnvKeys.dbHost(dbServiceName), true, getPath('.'));
     }
 
     private async createProject(config: AddLoopbackConfiguration): Promise<string> {
@@ -240,7 +251,7 @@ export class AddLoopbackCommand extends AddCommand<AddLoopbackConfiguration> {
                 vscode: false
             }
         });
-        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name);
+        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
         await Promise.all([
             FsUtilities.rm(getPath(newProject.path, 'src', '__tests__')),
             FsUtilities.rm(getPath(newProject.path, GIT_IGNORE_FILE_NAME)),

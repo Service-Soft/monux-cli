@@ -9,7 +9,7 @@ import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
 import { getPath, mergeDeep } from '../../../utilities';
 import { WorkspaceConfig, WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
-import { AddCommand } from '../models';
+import { BaseAddCommand } from '../models';
 import { AddConfiguration } from '../models/add-configuration.model';
 
 /**
@@ -33,7 +33,7 @@ type CreateResult = {
 /**
  * Command that handles adding an angular library to the monorepo.
  */
-export class AddAngularLibraryCommand extends AddCommand<AddAngularLibraryConfiguration> {
+export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryConfiguration> {
 
     protected override configQuestions: QuestionsFor<OmitStrict<AddAngularLibraryConfiguration, keyof AddConfiguration>> = {
         scope: {
@@ -118,7 +118,7 @@ export class AddAngularLibraryCommand extends AddCommand<AddAngularLibraryConfig
             [PACKAGE_JSON_FILE_NAME]
         );
 
-        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name);
+        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
         return { root: newProject.path, oldPackageJson };
     }
 
