@@ -3,8 +3,8 @@ import { MockConstants, FileMockConstants, DirMockConstants } from './constants'
 import { AngularJson } from '../../angular';
 import { CPUtilities, FsUtilities, JsonUtilities } from '../../encapsulation';
 import { EnvUtilities } from '../../env';
-import { WorkspaceUtilities } from '../../workspace';
 import { getPath } from '../../utilities';
+import { WorkspaceUtilities } from '../../workspace';
 
 export abstract class FileMockUtilities {
 

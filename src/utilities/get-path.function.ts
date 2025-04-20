@@ -3,13 +3,12 @@ import path from 'path';
 import { CPUtilities } from '../encapsulation';
 
 /**
- *
+ * The type for a file path.
  */
 export type Path = string & {
-    /**
-     *
-     */
-    __brand: 'Path' };
+    // eslint-disable-next-line jsdoc/require-jsdoc
+    __brand: 'Path'
+};
 
 /**
  * Gets a os agnostic path by joining the given parts.
