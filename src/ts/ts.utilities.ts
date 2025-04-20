@@ -1,4 +1,5 @@
 import { FileLine, FsUtilities, JsonUtilities } from '../encapsulation';
+import { Path } from '../utilities';
 import { TsImportDefinition } from './ts-import-definition.model';
 
 /**
@@ -53,7 +54,7 @@ export abstract class TsUtilities {
      * @param path - The path of the ts file with a class in it.
      * @param content - The content to add.
      */
-    static async addToStartOfClass(path: string, content: string[]): Promise<void> {
+    static async addToStartOfClass(path: Path, content: string[]): Promise<void> {
         const lines: string[] = await FsUtilities.readFileLines(path);
         const classStart: FileLine = await FsUtilities.findLineWithContent(lines, 'class ');
         const classEnd: string | undefined = lines.find(l => l === '}' && lines.indexOf(l) >= classStart.index);
@@ -73,7 +74,7 @@ export abstract class TsUtilities {
      * @param path - The path of the ts file with a class in it.
      * @param content - The content to add.
      */
-    static async addToEndOfClass(path: string, content: string[]): Promise<void> {
+    static async addToEndOfClass(path: Path, content: string[]): Promise<void> {
         const lines: string[] = await FsUtilities.readFileLines(path);
         const classStart: FileLine = await FsUtilities.findLineWithContent(lines, 'class ');
         const classEnd: string | undefined = lines.find(l => l === '}' && lines.indexOf(l) >= classStart.index);
@@ -88,7 +89,7 @@ export abstract class TsUtilities {
      * @param path - The path of the file where the content should be added.
      * @param content - The content that should be added. Must include indentation already.
      */
-    static async addToConstructorBody(path: string, content: string): Promise<void> {
+    static async addToConstructorBody(path: Path, content: string): Promise<void> {
         const lines: string[] = await FsUtilities.readFileLines(path);
         const superLine: string | undefined = lines.find(l => l.includes(' super('));
         const constructorLine: FileLine = await FsUtilities.findLineWithContent(lines, constructorLineIdentifier);
@@ -133,7 +134,7 @@ export abstract class TsUtilities {
      * @param path - The path of the file where the content should be added.
      * @param content - The content that should be added. Must include indentation already.
      */
-    static async addToConstructorHeader(path: string, content: string): Promise<void> {
+    static async addToConstructorHeader(path: Path, content: string): Promise<void> {
         const lines: string[] = await FsUtilities.readFileLines(path);
         const constructorLine: FileLine = await FsUtilities.findLineWithContent(lines, constructorLineIdentifier);
         if (constructorLine.content.includes('constructor()')) {
@@ -152,7 +153,7 @@ export abstract class TsUtilities {
      * @param path - The path of the ts file to add the content to.
      * @param content - The content to add. Each entry is a line.
      */
-    static async addBelowImports(path: string, content: string[]): Promise<void> {
+    static async addBelowImports(path: Path, content: string[]): Promise<void> {
         const lines: string[] = await FsUtilities.readFileLines(path);
         let replaceContent: string = '';
         for (let i: number = lines.length - 1; i >= 0; i--) {
@@ -169,7 +170,7 @@ export abstract class TsUtilities {
      * @param startIdentifier - The identifier for the start of the array.
      * @returns The parsed array as well as the string in the file.
      */
-    static async getArrayStartingWith<T>(filePath: string, startIdentifier: ArrayStartIdentifier): Promise<ParseArrayResult<T>> {
+    static async getArrayStartingWith<T>(filePath: Path, startIdentifier: ArrayStartIdentifier): Promise<ParseArrayResult<T>> {
         const lines: string[] = await FsUtilities.readFileLines(filePath);
         const firstLine: FileLine = await FsUtilities.findLineWithContent(lines, startIdentifier);
 
@@ -215,7 +216,7 @@ export abstract class TsUtilities {
      * @param startIdentifier - The identifier for the start of the object.
      * @returns The parsed object as well as the string in the file.
      */
-    static async getObjectStartingWith<T>(filePath: string, startIdentifier: ObjectStartIdentifier): Promise<ParseObjectResult<T>> {
+    static async getObjectStartingWith<T>(filePath: Path, startIdentifier: ObjectStartIdentifier): Promise<ParseObjectResult<T>> {
         const lines: string[] = await FsUtilities.readFileLines(filePath);
         const firstLine: FileLine = await FsUtilities.findLineWithContent(lines, startIdentifier);
 
@@ -256,7 +257,7 @@ export abstract class TsUtilities {
      * @param path - The path of the ts file to add the imports to.
      * @param imports - The imports to add.
      */
-    static async addImportStatements(path: string, imports: TsImportDefinition[]): Promise<void> {
+    static async addImportStatements(path: Path, imports: TsImportDefinition[]): Promise<void> {
         for (const imp of imports) {
             let lines: string[] = await FsUtilities.readFileLines(path);
             lines = this.addImportStatement(lines, imp);

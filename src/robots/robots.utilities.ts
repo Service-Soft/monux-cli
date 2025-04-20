@@ -1,7 +1,7 @@
 import { DockerComposeFileName, ENV_FILE_NAME, ROBOTS_FILE_NAME, SITEMAP_FILE_NAME } from '../constants';
 import { FsUtilities } from '../encapsulation';
 import { DefaultEnvKeys, EnvUtilities } from '../env';
-import { filterAsync, getPath } from '../utilities';
+import { filterAsync, getPath, Path } from '../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../workspace';
 
 /**
@@ -15,14 +15,14 @@ export abstract class RobotsUtilities {
      * @param rootDir - The directory of the Monux monorepo where the files should be created.
      */
     static async createRobotsTxtFiles(fileName: DockerComposeFileName, rootDir: string): Promise<void> {
-        const environmentFilePath: string = getPath(rootDir, ENV_FILE_NAME);
+        const environmentFilePath: Path = getPath(rootDir, ENV_FILE_NAME);
         if (!(await FsUtilities.readFile(environmentFilePath)).includes(`${DefaultEnvKeys.IS_PUBLIC}=`)) {
             return;
         }
 
         // Only projects that have a sitemap file get a robots.txt file.
         const apps: WorkspaceProject[] = await filterAsync(await WorkspaceUtilities.getProjects('apps', rootDir), async a => {
-            const sitemapPath: string = getPath(a.path, 'src', SITEMAP_FILE_NAME);
+            const sitemapPath: Path = getPath(a.path, 'src', SITEMAP_FILE_NAME);
             return await FsUtilities.exists(sitemapPath);
         });
         await Promise.all(apps.map(async a => {
@@ -43,7 +43,7 @@ export abstract class RobotsUtilities {
         domain: string | undefined,
         rootDir: string
     ): Promise<void> {
-        const robotsTxtPath: string = getPath(app.path, 'src', ROBOTS_FILE_NAME);
+        const robotsTxtPath: Path = getPath(app.path, 'src', ROBOTS_FILE_NAME);
         await FsUtilities.rm(robotsTxtPath);
 
         const isPublic: boolean = await EnvUtilities.getEnvVariable(DefaultEnvKeys.IS_PUBLIC, fileName, rootDir);

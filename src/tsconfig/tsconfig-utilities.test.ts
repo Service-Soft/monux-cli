@@ -6,7 +6,7 @@ import { TsConfigUtilities } from './tsconfig.utilities';
 import { TS_CONFIG_FILE_NAME } from '../constants';
 import { FsUtilities } from '../encapsulation';
 import { TsConfig } from './tsconfig.model';
-import { getPath } from '../utilities';
+import { getPath, Path } from '../utilities';
 
 const mockConstants: MockConstants = getMockConstants('tsconfig-utilities');
 
@@ -32,7 +32,7 @@ describe('TsConfigUtilities', () => {
 
     test('update', async () => {
         TsConfigUtilities.init(mockConstants.TS_LIBRARY_DIR);
-        const tsconfigPath: string = getPath(mockConstants.TS_LIBRARY_DIR, TS_CONFIG_FILE_NAME);
+        const tsconfigPath: Path = getPath(mockConstants.TS_LIBRARY_DIR, TS_CONFIG_FILE_NAME);
         await TsConfigUtilities['update'](tsconfigPath, {
             extends: '../../tsconfig.base.json',
             compilerOptions: {

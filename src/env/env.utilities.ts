@@ -3,7 +3,7 @@ import { DockerComposeFileName, ENV_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, E
 import { FileLine, FsUtilities, JsonUtilities } from '../encapsulation';
 import { ParseObjectResult, TsUtilities } from '../ts';
 import { KeyValue, OmitStrict } from '../types';
-import { getPath } from '../utilities';
+import { getPath, Path } from '../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../workspace';
 import { DefaultEnvKeys } from './default-environment-keys';
 import { EnvironmentVariableKey } from './environment-variable-key.model';
@@ -117,7 +117,7 @@ export abstract class EnvUtilities {
      */
     static async addProjectVariableKey(
         name: string,
-        environmentModelPath: string,
+        environmentModelPath: Path,
         variable: EnvironmentVariableKey,
         failOnMissingVariable: boolean,
         rootDir: string
@@ -135,7 +135,7 @@ export abstract class EnvUtilities {
         await this.buildEnvironmentFileForApp(app, failOnMissingVariable, 'dev.docker-compose.yaml', rootDir);
     }
 
-    private static async getProjectVariableKeys(environmentModelPath: string): Promise<EnvironmentVariableKey[]> {
+    private static async getProjectVariableKeys(environmentModelPath: Path): Promise<EnvironmentVariableKey[]> {
         const lines: string[] = await FsUtilities.readFileLines(environmentModelPath);
         const firstLine: FileLine = await FsUtilities.findLineWithContent(lines, 'defineVariables(');
         const lastLine: FileLine = await FsUtilities.findLineWithContent(lines, ']', firstLine.index);
@@ -474,7 +474,7 @@ export abstract class EnvUtilities {
     }
 
     private static async getVariableDefinitions(
-        globalEnvModelPath: string,
+        globalEnvModelPath: Path,
         firstLineIdentifier: 'StaticGlobalEnvironment = {' | 'CalculatedGlobalEnvironment = {'
     ): Promise<OmitStrict<EnvVariable, 'value'>[]> {
         const lines: string[] = await FsUtilities.readFileLines(globalEnvModelPath);
@@ -512,13 +512,13 @@ export abstract class EnvUtilities {
      * @param variable - The variable to add.
      */
     static async addStaticVariable(variable: EnvVariable): Promise<void> {
-        const environmentFilePath: string = getPath(ENV_FILE_NAME);
+        const environmentFilePath: Path = getPath(ENV_FILE_NAME);
         if ((await FsUtilities.readFile(environmentFilePath)).includes(`${variable.key}=`)) {
             throw new Error(`The variable ${variable.key} has already been set.`);
         }
         await FsUtilities.updateFile(environmentFilePath, `${variable.key}=${variable.value ?? ''}`, 'append');
 
-        const environmentModelFilePath: string = getPath(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
+        const environmentModelFilePath: Path = getPath(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
 
         const lines: string[] = await FsUtilities.readFileLines(environmentModelFilePath);
         const firstLine: FileLine = await FsUtilities.findLineWithContent(lines, 'StaticGlobalEnvironment = {');
@@ -551,7 +551,7 @@ export abstract class EnvUtilities {
      * @param variable - The variable to add.
      */
     static async addCalculatedVariable(variable: CalculatedEnvVariable): Promise<void> {
-        const environmentModelFilePath: string = getPath(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
+        const environmentModelFilePath: Path = getPath(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
         if ((await FsUtilities.readFile(environmentModelFilePath)).includes(`${variable.key}: `)) {
             throw new Error(`The variable ${variable.key} has already been set.`);
         }

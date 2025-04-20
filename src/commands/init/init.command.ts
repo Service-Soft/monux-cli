@@ -6,7 +6,7 @@ import { EnvUtilities } from '../../env';
 import { GithubUtilities } from '../../github';
 import { NpmPackage, NpmUtilities } from '../../npm';
 import { TsConfigUtilities } from '../../tsconfig';
-import { exitWithError } from '../../utilities';
+import { exitWithError, getPath } from '../../utilities';
 import { WorkspaceConfig, WorkspaceUtilities } from '../../workspace';
 import { BaseCommand } from '../base-command.model';
 
@@ -33,8 +33,8 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
             this.createEslintConfig(),
             this.createCspellWords(),
             DockerUtilities.createComposeFiles(config.email),
-            FsUtilities.mkdir(APPS_DIRECTORY_NAME),
-            FsUtilities.mkdir(LIBS_DIRECTORY_NAME),
+            FsUtilities.mkdir(getPath(APPS_DIRECTORY_NAME)),
+            FsUtilities.mkdir(getPath(LIBS_DIRECTORY_NAME)),
             this.createGitIgnore(),
             this.createTailwindConfig(),
             this.addNpmWorkspaces()
@@ -78,7 +78,7 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
     }
 
     private async createGitIgnore(): Promise<void> {
-        await FsUtilities.createFile(GIT_IGNORE_FILE_NAME, [
+        await FsUtilities.createFile(getPath(GIT_IGNORE_FILE_NAME), [
             '# See http://help.github.com/ignore-files/ for more about ignoring files.',
             ENV_FILE_NAME,
             ENVIRONMENT_TS_FILE_NAME,
@@ -98,11 +98,11 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
     }
 
     private async createCspellWords(): Promise<void> {
-        await FsUtilities.createFile('cspell.words.txt', '');
+        await FsUtilities.createFile(getPath('cspell.words.txt'), '');
     }
 
     private async createEslintConfig(): Promise<void> {
-        await FsUtilities.createFile(ESLINT_CONFIG_FILE_NAME, [
+        await FsUtilities.createFile(getPath(ESLINT_CONFIG_FILE_NAME), [
             `import { configs } from '${NpmPackage.ESLINT_CONFIG_SERVICE_SOFT}';`,
             '',
             '// eslint-disable-next-line jsdoc/require-description',
@@ -113,7 +113,7 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
 
     private async createTailwindConfig(): Promise<void> {
         await FsUtilities.createFile(
-            TAILWIND_CONFIG_FILE_NAME,
+            getPath(TAILWIND_CONFIG_FILE_NAME),
             [
                 '// eslint-disable-next-line jsdoc/require-description',
                 '/** @type {import(\'tailwindcss\').Config} */',

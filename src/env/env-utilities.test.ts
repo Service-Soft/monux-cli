@@ -7,7 +7,7 @@ import { FsUtilities } from '../encapsulation';
 import { KeyValue } from '../types';
 import { DefaultEnvKeys } from './default-environment-keys';
 import { GLOBAL_ENVIRONMENT_MODEL_FILE_NAME } from '../constants';
-import { getPath } from '../utilities';
+import { getPath, Path } from '../utilities';
 
 const mockConstants: MockConstants = getMockConstants('env-utilities');
 
@@ -93,7 +93,7 @@ describe('EnvUtilities', () => {
             }
         );
 
-        const environmentModelFilePath: string = getPath(mockConstants.PROJECT_DIR, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
+        const environmentModelFilePath: Path = getPath(mockConstants.PROJECT_DIR, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
         await FsUtilities.replaceAllInFile(environmentModelFilePath, '\'PORT_PLACEHOLDER\'', `env.${DefaultEnvKeys.port(name)}`);
         await FsUtilities.replaceAllInFile(environmentModelFilePath, '\'SUB_DOMAIN_PLACEHOLDER\'', `env.${DefaultEnvKeys.subDomain(name)}`);
         await FsUtilities.replaceAllInFile(environmentModelFilePath, '\'PROD_ROOT_DOMAIN_PLACEHOLDER\'', `env.${DefaultEnvKeys.PROD_ROOT_DOMAIN}`);

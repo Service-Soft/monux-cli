@@ -9,7 +9,7 @@ import { NpmPackage, NpmUtilities } from '../../../npm';
 import { TsUtilities } from '../../../ts';
 import { TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
-import { getPath, toKebabCase, toPascalCase } from '../../../utilities';
+import { getPath, Path, toKebabCase, toPascalCase } from '../../../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
 import { BaseAddCommand } from '../models';
 import { AddConfiguration } from '../models/add-configuration.model';
@@ -63,7 +63,9 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
             type: 'input',
             message: 'Email of the default user',
             required: true,
-            default: async () => (await FsUtilities.readFile(PROD_DOCKER_COMPOSE_FILE_NAME)).split('.acme.email=')[1].split('\n')[0]
+            default: async () => (await FsUtilities.readFile(getPath(PROD_DOCKER_COMPOSE_FILE_NAME)))
+                .split('.acme.email=')[1]
+                .split('\n')[0]
         },
         defaultUserPassword: {
             type: 'input',
@@ -129,7 +131,7 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
     }
 
     private async updateIndexTs(root: string, port: number): Promise<void> {
-        const indexPath: string = getPath(root, 'src', 'index.ts');
+        const indexPath: Path = getPath(root, 'src', 'index.ts');
         await FsUtilities.replaceInFile(indexPath, '  console.log(`Try ${url}/ping`);\n', '');
         await FsUtilities.replaceInFile(
             indexPath,
@@ -142,14 +144,14 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
     }
 
     private async updateOpenApiSpec(root: string, port: number): Promise<void> {
-        const openApiPath: string = getPath(root, 'src', 'openapi-spec.ts');
+        const openApiPath: Path = getPath(root, 'src', 'openapi-spec.ts');
         await FsUtilities.replaceInFile(openApiPath, 'env.PORT', 'env[\'PORT\']');
         await FsUtilities.replaceInFile(openApiPath, 'env.HOST', 'env[\'HOST\']');
         await FsUtilities.replaceInFile(openApiPath, '?? 3000', `?? ${port}`);
     }
 
     private async updateApplicationTs(root: string): Promise<void> {
-        const applicationPath: string = getPath(root, 'src', 'application.ts');
+        const applicationPath: Path = getPath(root, 'src', 'application.ts');
         await FsUtilities.replaceInFile(
             applicationPath,
             'BootMixin(RestApplication)',
@@ -179,7 +181,7 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
         await NpmUtilities.install(projectName, [NpmPackage.LOOPBACK_CONNECTOR_POSTGRES]);
         await LoopbackUtilities.runCommand(root, `datasource ${databaseName}`, { '--config': lbDatabaseConfig, '--yes': true });
 
-        const dataSourcePath: string = getPath(root, 'src', 'datasources', `${toKebabCase(databaseName)}.datasource.ts`);
+        const dataSourcePath: Path = getPath(root, 'src', 'datasources', `${toKebabCase(databaseName)}.datasource.ts`);
         await TsUtilities.addImportStatements(
             dataSourcePath,
             [{ defaultImport: false, element: 'environment', path: '../environment/environment' }]
@@ -215,7 +217,7 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
             `  constructor(\n    @inject('datasources.config.${databaseName}', {optional: true})\n    dsConfig: object = config,\n  ) {\n    super(dsConfig);\n  }`,
             '    constructor() {\n        super(config);\n    }'
         );
-        const environmentModel: string = getPath(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
+        const environmentModel: Path = getPath(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
 
         await EnvUtilities.addProjectVariableKey(
             projectName,
@@ -259,7 +261,7 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
             FsUtilities.rm(getPath(newProject.path, 'src', 'controllers', 'ping.controller.ts')),
             FsUtilities.updateFile(getPath(newProject.path, 'src', 'controllers', 'index.ts'), '', 'replace')
         ]);
-        const indexTs: string = getPath(newProject.path, 'src', 'index.ts');
+        const indexTs: Path = getPath(newProject.path, 'src', 'index.ts');
         await FsUtilities.replaceInFile(
             indexTs,
             'async function main(options: ApplicationConfig = {})',

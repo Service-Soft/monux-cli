@@ -3,7 +3,7 @@ import { WorkspaceProject, WorkspaceUtilities } from '../workspace';
 import { PackageJson } from './package-json.model';
 import { PACKAGE_JSON_FILE_NAME } from '../constants';
 import { NpmPackage } from './npm-package.enum';
-import { getPath, mergeDeep } from '../utilities';
+import { getPath, mergeDeep, Path } from '../utilities';
 
 /**
  * Options for running the npm init command.
@@ -42,16 +42,17 @@ export abstract class NpmUtilities {
      */
     static async init(config: 'root' | NpmInitConfig, output?: boolean): Promise<void> {
         if (config === 'root') {
+            const rootPackageJson: Path = getPath(PACKAGE_JSON_FILE_NAME);
             CPUtilities.execSync('npm init -y', output);
-            const oldPackageJson: PackageJson = await FsUtilities.parseFileAs(PACKAGE_JSON_FILE_NAME);
-            await FsUtilities.updateFile(PACKAGE_JSON_FILE_NAME, JsonUtilities.stringify(oldPackageJson), 'replace', false);
+            const oldPackageJson: PackageJson = await FsUtilities.parseFileAs(rootPackageJson);
+            await FsUtilities.updateFile(rootPackageJson, JsonUtilities.stringify(oldPackageJson), 'replace', false);
             return;
         }
         CPUtilities.execSync(
             `npm init -y --scope=${config.scope} -w ${config.path}`,
             output
         );
-        const packageJsonPath: string = getPath(config.path, PACKAGE_JSON_FILE_NAME);
+        const packageJsonPath: Path = getPath(config.path, PACKAGE_JSON_FILE_NAME);
         const oldPackageJson: PackageJson = await FsUtilities.parseFileAs(packageJsonPath);
         await FsUtilities.updateFile(packageJsonPath, JsonUtilities.stringify(oldPackageJson), 'replace', false);
     }
@@ -104,7 +105,7 @@ export abstract class NpmUtilities {
      */
     static async updatePackageJson(projectName: string, data: Partial<PackageJson>): Promise<void> {
         const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName, getPath('.'));
-        const packageJsonPath: string = getPath(project.path, PACKAGE_JSON_FILE_NAME);
+        const packageJsonPath: Path = getPath(project.path, PACKAGE_JSON_FILE_NAME);
         await this.updatePackageJsonFile(packageJsonPath, data);
     }
 
@@ -113,7 +114,7 @@ export abstract class NpmUtilities {
      * @param data - The data to update the package.json with.
      */
     static async updateRootPackageJson(data: Partial<PackageJson>): Promise<void> {
-        await this.updatePackageJsonFile(PACKAGE_JSON_FILE_NAME, data);
+        await this.updatePackageJsonFile(getPath(PACKAGE_JSON_FILE_NAME), data);
     }
 
     /**
@@ -121,7 +122,7 @@ export abstract class NpmUtilities {
      * @param path - The path of the package.json to update.
      * @param data - The data to update the package.json with.
      */
-    static async updatePackageJsonFile(path: string, data: Partial<PackageJson>): Promise<void> {
+    static async updatePackageJsonFile(path: Path, data: Partial<PackageJson>): Promise<void> {
         const oldPackageJson: PackageJson = await FsUtilities.parseFileAs(path);
         const packageJson: PackageJson = mergeDeep(oldPackageJson, data);
         await FsUtilities.updateFile(path, JsonUtilities.stringify(packageJson), 'replace', false);
