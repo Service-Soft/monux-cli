@@ -3,7 +3,7 @@ import { access, writeFile, mkdir, readFile, readdir, rm, rename, cp } from 'fs/
 import { dirname } from 'path';
 
 import { JsonUtilities } from './json.utilities';
-import { getPath } from '../utilities';
+import { getPath, Path } from '../utilities';
 
 /**
  * Definition for a line in a file.
@@ -51,7 +51,7 @@ export abstract class FsUtilities {
      * @throws When no line could be found.
      */
     static async findLineWithContent(
-        linesOrPath: string | string[],
+        linesOrPath: Path | string[],
         content: string,
         fromIndex: number = 0,
         untilIndex?: number
@@ -76,7 +76,7 @@ export abstract class FsUtilities {
      * @param path - The path to check.
      * @returns True when a file could be accessed and false otherwise.
      */
-    static async exists(path: string): Promise<boolean> {
+    static async exists(path: Path): Promise<boolean> {
         try {
             await access(path);
             return true;
@@ -104,7 +104,7 @@ export abstract class FsUtilities {
      * @param untilIndex - The ending line index (inclusive). Defaults to the end of the file.
      */
     static async replaceAllInFile(
-        path: string,
+        path: Path,
         oldContent: string | RegExp,
         newContent: string,
         fromIndex?: number,
@@ -122,7 +122,7 @@ export abstract class FsUtilities {
      * @param untilIndex - The ending line index (inclusive). Defaults to the end of the file.
      */
     static async replaceInFile(
-        path: string,
+        path: Path,
         oldContent: string | RegExp,
         newContent: string,
         fromIndex?: number,
@@ -132,7 +132,7 @@ export abstract class FsUtilities {
     }
 
     private static async replaceContentInFile(
-        path: string,
+        path: Path,
         oldContent: string | RegExp,
         newContent: string,
         all: boolean,
@@ -162,12 +162,12 @@ export abstract class FsUtilities {
      * @param recursive - Whether or not to recursively create the file.
      * @param log - Whether or not the success of the creation should be logged to the console.
      */
-    static async createFile(path: string, data: string | string[], recursive: boolean = true, log: boolean = true): Promise<void> {
+    static async createFile(path: Path, data: string | string[], recursive: boolean = true, log: boolean = true): Promise<void> {
         if (await this.exists(path)) {
             throw new Error(`File at ${path} already exists. Did you mean to call "updateFile"?`);
         }
         data = this.normalizeData(data);
-        const parentDir: string = dirname(path);
+        const parentDir: Path = dirname(path) as Path;
         if (recursive && !await this.exists(parentDir)) {
             await this.mkdir(parentDir, true, false);
         }
@@ -195,7 +195,7 @@ export abstract class FsUtilities {
      * @param log - Whether or not the success of the update should be logged to the console.
      */
     static async updateFile(
-        path: string,
+        path: Path,
         data: string | string[],
         action: 'replace' | 'prepend' | 'append',
         log: boolean = true
@@ -235,7 +235,7 @@ export abstract class FsUtilities {
      * @param path - The path of the file to read.
      * @returns The content as a single string.
      */
-    static async readFile(path: string): Promise<string> {
+    static async readFile(path: Path): Promise<string> {
         return readFile(path, { encoding: 'utf8' });
     }
 
@@ -244,7 +244,7 @@ export abstract class FsUtilities {
      * @param path - The path of the file to read the lines from.
      * @returns The content as an array of line strings.
      */
-    static async readFileLines(path: string): Promise<string[]> {
+    static async readFileLines(path: Path): Promise<string[]> {
         const content: string = await this.readFile(path);
         return content.split('\n');
     }
@@ -254,7 +254,7 @@ export abstract class FsUtilities {
      * @param filePath - The path of the file to parse.
      * @returns An object of the provided generic.
      */
-    static async parseFileAs<T>(filePath: string): Promise<T> {
+    static async parseFileAs<T>(filePath: Path): Promise<T> {
         const fileContent: string = await this.readFile(filePath);
         return JsonUtilities.parse(fileContent);
     }
@@ -264,7 +264,7 @@ export abstract class FsUtilities {
      * @param path - The path to remove.
      * @param recursive - Whether or not subdirectories should be deleted as well. Defaults to true.
      */
-    static async rm(path: string, recursive: boolean = true): Promise<void> {
+    static async rm(path: Path, recursive: boolean = true): Promise<void> {
         if (!await this.exists(path)) {
             return;
         }
@@ -277,7 +277,7 @@ export abstract class FsUtilities {
      * @param recursive - Whether or not missing directories in the path should be created as well.
      * @param log - Whether or not the success of the creation should be logged to the console.
      */
-    static async mkdir(path: string, recursive: boolean = true, log: boolean = true): Promise<void> {
+    static async mkdir(path: Path, recursive: boolean = true, log: boolean = true): Promise<void> {
         await mkdir(path, { recursive: recursive });
         if (log) {
             // eslint-disable-next-line no-console
@@ -290,26 +290,26 @@ export abstract class FsUtilities {
      * @param path - The path of the directory to get the contents of.
      * @returns An array of the directory contents.
      */
-    static async readdir(path: string): Promise<Dirent[]> {
+    static async readdir(path: Path): Promise<Dirent[]> {
         return readdir(path, { withFileTypes: true });
     }
 
     /**
      * Moves the contents of the given source inside the given destination.
      * Overrides any contents that might already exist inside the destination.
-     * @param source - The source to move the content of.
-     * @param destination - The destination folder where the content should be moved inside.
+     * @param sourcePath - The source folder to move the content of.
+     * @param destinationPath - The destination folder where the content should be moved inside.
      * @param excludeElements - Optional array of elements which should not be moved.
      */
-    static async moveDirectoryContent(source: string, destination: string, excludeElements: string[] = []): Promise<void> {
-        const entries: Dirent[] = (await this.readdir(source)).filter(e => !excludeElements.includes(e.name));
-        await Promise.all(entries.map(e => this.copyEntry(e, destination)));
-        await this.rm(source);
+    static async moveDirectoryContent(sourcePath: Path, destinationPath: Path, excludeElements: string[] = []): Promise<void> {
+        const entries: Dirent[] = (await this.readdir(sourcePath)).filter(e => !excludeElements.includes(e.name));
+        await Promise.all(entries.map(e => this.copyEntry(e, destinationPath)));
+        await this.rm(sourcePath);
     }
 
     private static async copyEntry(entry: Dirent, destination: string): Promise<void> {
-        const source: string = getPath(entry.parentPath, entry.name);
-        const dest: string = getPath(destination, entry.name);
+        const source: Path = getPath(entry.parentPath, entry.name);
+        const dest: Path = getPath(destination, entry.name);
         await cp(source, dest, { recursive: true, errorOnExist: true });
     }
 }

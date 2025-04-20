@@ -4,7 +4,7 @@ import { CPUtilities, FsUtilities, JsonUtilities } from '../encapsulation';
 import { WorkspaceProject, WorkspaceUtilities } from '../workspace';
 import { TsConfig } from './tsconfig.model';
 import { TS_CONFIG_FILE_NAME } from '../constants';
-import { getPath, mergeDeep } from '../utilities';
+import { getPath, mergeDeep, Path } from '../utilities';
 
 /**
  * Utilities for tsconfig.
@@ -50,7 +50,7 @@ export abstract class TsConfigUtilities {
             },
             exclude: ['node_modules', 'tmp', 'dist']
         };
-        await FsUtilities.createFile('tsconfig.base.json', JsonUtilities.stringify(tsconfig));
+        await FsUtilities.createFile(getPath('tsconfig.base.json'), JsonUtilities.stringify(tsconfig));
     }
 
     /**
@@ -60,7 +60,7 @@ export abstract class TsConfigUtilities {
      */
     static async updateTsConfig(projectName: string, data: Partial<TsConfig>): Promise<void> {
         const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName, getPath('.'));
-        const tsConfigPath: string = getPath(project.path, TS_CONFIG_FILE_NAME);
+        const tsConfigPath: Path = getPath(project.path, TS_CONFIG_FILE_NAME);
         await this.update(tsConfigPath, data);
     }
 
@@ -69,10 +69,10 @@ export abstract class TsConfigUtilities {
      * @param data - The data to update the tsconfig with.
      */
     static async updateBaseTsConfig(data: Partial<TsConfig>): Promise<void> {
-        await this.update('tsconfig.base.json', data);
+        await this.update(getPath('tsconfig.base.json'), data);
     }
 
-    private static async update(path: string, data: Partial<TsConfig>): Promise<void> {
+    private static async update(path: Path, data: Partial<TsConfig>): Promise<void> {
         const oldConfig: TsConfig = await FsUtilities.parseFileAs(path);
         const tsconfig: TsConfig = mergeDeep<TsConfig>(oldConfig, data);
         await FsUtilities.updateFile(path, JsonUtilities.stringify(tsconfig), 'replace', false);

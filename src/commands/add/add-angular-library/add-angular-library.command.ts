@@ -7,7 +7,7 @@ import { StorybookUtilities } from '../../../storybook';
 import { TailwindUtilities } from '../../../tailwind';
 import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
-import { getPath, mergeDeep } from '../../../utilities';
+import { getPath, mergeDeep, Path } from '../../../utilities';
 import { WorkspaceConfig, WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
 import { BaseAddCommand } from '../models';
 import { AddConfiguration } from '../models/add-configuration.model';
@@ -117,6 +117,27 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
             getPath(LIBS_DIRECTORY_NAME, config.name),
             [PACKAGE_JSON_FILE_NAME]
         );
+        await FsUtilities.replaceAllInFile(
+            getPath(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME),
+            `projects/${config.name}/`,
+            ''
+        );
+        await FsUtilities.replaceAllInFile(
+            getPath(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME),
+            '"-d",',
+            ''
+        );
+        await FsUtilities.replaceAllInFile(
+            getPath(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME),
+            `"projects/${config.name}"`,
+            ''
+        );
+        await FsUtilities.replaceAllInFile(
+            getPath(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME),
+            '"json",',
+            '"json"'
+        );
+        await FsUtilities.replaceInFile(getPath(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME), '"root": ,', '"root": "./",');
 
         const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
         return { root: newProject.path, oldPackageJson };
@@ -135,7 +156,7 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
     }
 
     private async updateTsConfigLib(root: string): Promise<void> {
-        const tsconfigPath: string = getPath(root, 'tsconfig.lib.json');
+        const tsconfigPath: Path = getPath(root, 'tsconfig.lib.json');
         const oldConfig: TsConfig = await FsUtilities.parseFileAs(tsconfigPath);
         const config: TsConfig = mergeDeep(oldConfig, {
             extends: './tsconfig.json',
@@ -147,7 +168,7 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
     }
 
     private async updateTsConfigSpec(root: string): Promise<void> {
-        const tsconfigPath: string = getPath(root, 'tsconfig.spec.json');
+        const tsconfigPath: Path = getPath(root, 'tsconfig.spec.json');
         const oldConfig: TsConfig = await FsUtilities.parseFileAs(tsconfigPath);
         const config: TsConfig = mergeDeep(oldConfig, {
             extends: 'tsconfig.json',
