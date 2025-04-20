@@ -3,6 +3,7 @@ import { MockConstants, FileMockConstants, DirMockConstants } from './constants'
 import { AngularJson } from '../../angular';
 import { CPUtilities, FsUtilities, JsonUtilities } from '../../encapsulation';
 import { EnvUtilities } from '../../env';
+import { getPath } from '../../utilities';
 import { WorkspaceUtilities } from '../../workspace';
 
 export abstract class FileMockUtilities {
@@ -35,7 +36,7 @@ export abstract class FileMockUtilities {
         filesToMock: (keyof FileMockConstants)[] = [],
         contentOverrides: Partial<Record<keyof FileMockConstants, string | string[]>> = {}
     ): Promise<void> {
-        await FsUtilities.rm(mockConstants.PROJECT_DIR);
+        await FsUtilities.rm(getPath(mockConstants.PROJECT_DIR));
         CPUtilities['cwd'] = mockConstants.PROJECT_DIR;
         await this.mockFolders(mockConstants);
         await this.mockFiles(filesToMock, contentOverrides, mockConstants);
@@ -52,7 +53,7 @@ export abstract class FileMockUtilities {
             GITHUB_WORKFLOW_DIR: mockConstants.GITHUB_WORKFLOW_DIR
         };
         for (const entry of Object.values(dirMockConstants)) {
-            await FsUtilities.mkdir(entry, true, false);
+            await FsUtilities.mkdir(getPath(entry), true, false);
         }
     }
 
@@ -77,14 +78,14 @@ export abstract class FileMockUtilities {
         content: string | string[] | undefined
     ): Promise<void> {
         if (hasContentOverride) {
-            await FsUtilities.createFile(mockConstants[entry], content ?? '', true, false);
+            await FsUtilities.createFile(getPath(mockConstants[entry]), content ?? '', true, false);
             return;
         }
         await this.mockMethodForFile[entry](mockConstants, entry);
     }
 
     private static async createEmptyFile(mockConstants: MockConstants, entry: keyof MockConstants): Promise<void> {
-        await FsUtilities.createFile(mockConstants[entry], '', true, false);
+        await FsUtilities.createFile(getPath(mockConstants[entry]), '', true, false);
     }
 
     private static async createAngularJson(mockConstants: MockConstants): Promise<void> {

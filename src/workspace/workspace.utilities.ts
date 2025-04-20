@@ -3,7 +3,7 @@ import { Dirent } from 'fs';
 import { APPS_DIRECTORY_NAME, LIBS_DIRECTORY_NAME, WORKSPACE_FILE_NAME } from '../constants';
 import { CPUtilities, FsUtilities, JsonUtilities } from '../encapsulation';
 import { WorkspaceConfig } from './workspace-config.model';
-import { getPath } from '../utilities';
+import { getPath, Path } from '../utilities';
 
 /**
  * Definition for a single project inside the apps or libs dir.
@@ -20,7 +20,7 @@ export type WorkspaceProject = {
     /**
      * The path to the project folder.
      */
-    path: string
+    path: Path
 };
 
 /**
@@ -43,7 +43,7 @@ export abstract class WorkspaceUtilities {
      * @param workspaceFilePath - The path of the mx workspace file. Can be used when not running in the context of a workspace.
      * @returns The found config or undefined.
      */
-    static async getConfig(workspaceFilePath: string = getPath(WORKSPACE_FILE_NAME)): Promise<WorkspaceConfig | undefined> {
+    static async getConfig(workspaceFilePath: Path = getPath(WORKSPACE_FILE_NAME)): Promise<WorkspaceConfig | undefined> {
         if (!await FsUtilities.exists(workspaceFilePath)) {
             return;
         }

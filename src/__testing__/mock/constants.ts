@@ -1,61 +1,61 @@
 import { ANGULAR_JSON_FILE_NAME, ANGULAR_ROUTES_FILE_NAME, APP_CONFIG_FILE_NAME, APPS_DIRECTORY_NAME, DEV_DOCKER_COMPOSE_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, ENV_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, ESLINT_CONFIG_FILE_NAME, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME, LIBS_DIRECTORY_NAME, PACKAGE_JSON_FILE_NAME, LOCAL_DOCKER_COMPOSE_FILE_NAME } from '../../constants';
 import { OmitStrict } from '../../types';
-import { getPath } from '../../utilities';
+import { getPath, Path } from '../../utilities';
 
 // eslint-disable-next-line jsdoc/require-jsdoc
 export type MockConstants = {
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly PROJECT_DIR: string,
+    readonly PROJECT_DIR: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly APPS_DIR: string,
+    readonly APPS_DIR: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly LIBS_DIR: string,
+    readonly LIBS_DIR: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly DOCKER_COMPOSE_YAML: string,
+    readonly DOCKER_COMPOSE_YAML: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly DEV_DOCKER_COMPOSE_YAML: string,
+    readonly DEV_DOCKER_COMPOSE_YAML: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly LOCAL_DOCKER_COMPOSE_YAML: string,
+    readonly LOCAL_DOCKER_COMPOSE_YAML: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly ANGULAR_ESLINT_CONFIG_MJS: string,
+    readonly ANGULAR_ESLINT_CONFIG_MJS: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly ANGULAR_PACKAGE_JSON: string,
+    readonly ANGULAR_PACKAGE_JSON: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
     readonly ANGULAR_APP_NAME: string,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly ANGULAR_APP_DIR: string,
+    readonly ANGULAR_APP_DIR: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly ANGULAR_APP_COMPONENT_TS: string,
+    readonly ANGULAR_APP_COMPONENT_TS: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly ANGULAR_APP_COMPONENT_HTML: string,
+    readonly ANGULAR_APP_COMPONENT_HTML: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly ANGULAR_APP_ROUTES_TS: string,
+    readonly ANGULAR_APP_ROUTES_TS: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly ANGULAR_ROUTES_TS: string,
+    readonly ANGULAR_ROUTES_TS: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly ANGULAR_APP_CONFIG_TS: string,
+    readonly ANGULAR_APP_CONFIG_TS: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly ANGULAR_JSON: string,
+    readonly ANGULAR_JSON: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly ANGULAR_ENVIRONMENT_MODEL: string,
+    readonly ANGULAR_ENVIRONMENT_MODEL: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly ANGULAR_ENVIRONMENT: string,
+    readonly ANGULAR_ENVIRONMENT: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly TS_LIBRARY_DIR: string,
+    readonly TS_LIBRARY_DIR: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
     readonly TS_LIBRARY_SCOPE: string,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly TS_LIBRARY_PACKAGE_JSON: string,
+    readonly TS_LIBRARY_PACKAGE_JSON: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly ROOT_PACKAGE_JSON: string,
+    readonly ROOT_PACKAGE_JSON: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
     readonly TS_LIBRARY_NAME: string,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly ENV: string,
+    readonly ENV: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly GLOBAL_ENV_MODEL: string,
+    readonly GLOBAL_ENV_MODEL: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    readonly GITHUB_WORKFLOW_DIR: string
+    readonly GITHUB_WORKFLOW_DIR: Path
 };
 
 // eslint-disable-next-line jsdoc/require-jsdoc
@@ -79,14 +79,14 @@ export type DirMockConstants = OmitStrict<
  * @returns Constant values.
  */
 export function getMockConstants(projectName: string): MockConstants {
-    const TMP_DIR: string = getPath(__dirname, '..', 'tmp');
-    const PROJECT_DIR: string = getPath(TMP_DIR, projectName);
-    const APPS_DIR: string = getPath(PROJECT_DIR, APPS_DIRECTORY_NAME);
-    const LIBS_DIR: string = getPath(PROJECT_DIR, LIBS_DIRECTORY_NAME);
+    const TMP_DIR: Path = getPath(__dirname, '..', 'tmp');
+    const PROJECT_DIR: Path = getPath(TMP_DIR, projectName);
+    const APPS_DIR: Path = getPath(PROJECT_DIR, APPS_DIRECTORY_NAME);
+    const LIBS_DIR: Path = getPath(PROJECT_DIR, LIBS_DIRECTORY_NAME);
     const ANGULAR_APP_NAME: string = 'angular';
-    const ANGULAR_APP_DIR: string = getPath(APPS_DIR, ANGULAR_APP_NAME);
+    const ANGULAR_APP_DIR: Path = getPath(APPS_DIR, ANGULAR_APP_NAME);
     const TS_LIBRARY_NAME: string = 'library';
-    const TS_LIBRARY_DIR: string = getPath(LIBS_DIR, TS_LIBRARY_NAME);
+    const TS_LIBRARY_DIR: Path = getPath(LIBS_DIR, TS_LIBRARY_NAME);
 
     const mockConstants: MockConstants = {
         PROJECT_DIR: PROJECT_DIR,

@@ -300,7 +300,6 @@ They will give you a nice overview of all monorepos on your machine and their re
 ## Angular app
 ## Angular website
 ## Angular library
-WIP
 ## LoopBack
 ## Typescript library
 ## Wordpress
