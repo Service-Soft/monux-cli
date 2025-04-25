@@ -9,7 +9,7 @@ export type PostgresDbConfig = {
     /**
      * The type of the database.
      */
-    type: DbType.POSTGRES,
+    dbType: DbType.POSTGRES,
     /**
      * The name of the database.
      */
@@ -23,7 +23,7 @@ export type PostgresDbConfig = {
 /**
  * Questions for getting a postgres db config.
  */
-export const postgresDbConfigQuestions: QuestionsFor<OmitStrict<PostgresDbConfig, 'type' | 'databaseName'>> = {
+export const postgresDbConfigQuestions: QuestionsFor<OmitStrict<PostgresDbConfig, 'dbType' | 'databaseName'>> = {
     dbServiceName: {
         type: 'input',
         message: 'Compose service name',

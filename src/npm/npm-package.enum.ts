@@ -29,5 +29,20 @@ export enum NpmPackage {
     TSC_WATCH = 'tsc-watch',
     NG_PACKAGR = 'ng-packagr',
     TSLIB = 'tslib',
-    LOOPBACK_4_MIGRATION = 'loopback4-migration'
+    LOOPBACK_4_MIGRATION = 'loopback4-migration',
+    CLASS_VALIDATOR = 'class-validator',
+    CLASS_TRANSFORMER = 'class-transformer',
+    NEST_JS_SWAGGER = '@nestjs/swagger',
+    NEST_JS_TYPEORM = '@nestjs/typeorm',
+    TYPEORM = 'typeorm',
+    PG = 'pg',
+    MYSQL_2 = 'mysql2',
+    WEBPACK = 'webpack',
+    WEBPACK_CLI = 'webpack-cli',
+    TS_LOADER = 'ts-loader',
+    WEBPACK_NODE_EXTERNALS = 'webpack-node-externals',
+    TSCONFIG_PATH_WEBPACK_PLUGIN = 'tsconfig-paths-webpack-plugin',
+    FORK_TS_CHECKER_WEBPACK_PLUGIN = 'fork-ts-checker-webpack-plugin',
+    CLDRJS = 'cldrjs',
+    CLDR_DATA = 'cldr-data'
 }

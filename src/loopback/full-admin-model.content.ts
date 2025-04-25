@@ -2,7 +2,7 @@
 export const fullAdminModelContent: string
 = `import { model, property } from '@loopback/repository';
 
-import { Admin } from '../../models';
+import { Admin, Roles } from '../../models';
 
 @model()
 export class FullAdmin extends Admin {

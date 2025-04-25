@@ -1,6 +1,9 @@
+import { toPascalCase } from '../utilities';
+
 // eslint-disable-next-line jsdoc/require-jsdoc
-export const adminControllerContent: string
-= `import { authenticate } from '@loopback/authentication';
+export function adminControllerContent(dbName: string): string {
+    const datasource: string = `${toPascalCase(dbName)}DataSource`;
+    return `import { authenticate } from '@loopback/authentication';
 import { authorize } from '@loopback/authorization';
 import { inject } from '@loopback/core';
 import { IsolationLevel, juggler, repository } from '@loopback/repository';
@@ -10,9 +13,9 @@ import { BaseUser, BaseUserProfile, BaseUserRepository, BaseUserWithRelations, B
 
 import { FullAdmin } from './full-admin.model';
 import { NewAdmin } from './new-admin.model';
-import { DbDataSource } from '../../datasources';
-import { Admin, AdminWithRelations } from '../../models/admin.model';
-import { AdminRepository } from '../../repositories/admin.repository';
+import { ${datasource} } from '../../datasources';
+import { Admin, AdminWithRelations, Roles } from '../../models';
+import { AdminRepository } from '../../repositories';
 
 @authenticate('jwt')
 @authorize({ voters: [roleAuthorization], allowedRoles: [Roles.ADMIN] })
@@ -22,8 +25,8 @@ export class AdminController {
         private readonly baseUserRepository: BaseUserRepository<Roles>,
         @repository(AdminRepository)
         private readonly adminRepository: AdminRepository,
-        @inject(DbDataSource.INJECTION_KEY)
-        private readonly dataSource: DbDataSource
+        @inject(${datasource}.INJECTION_KEY)
+        private readonly dataSource: ${datasource}
     ) { }
 
     @post('/admins')
@@ -230,3 +233,4 @@ export class AdminController {
         }
     }
 }`;
+}

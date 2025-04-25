@@ -8,7 +8,7 @@ import { NpmUtilities } from '../../../npm';
 import { TailwindUtilities } from '../../../tailwind';
 import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
-import { getPath, toPascalCase } from '../../../utilities';
+import { getPath, Path, toPascalCase } from '../../../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
 import { BaseAddCommand } from '../models';
 import { AddConfiguration } from '../models/add-configuration.model';
@@ -71,7 +71,7 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
 
     override async run(): Promise<void> {
         const config: AddAngularWebsiteConfiguration = await this.getConfig();
-        const root: string = await this.createProject(config);
+        const root: Path = await this.createProject(config);
 
         const prodRootDomain: string = await EnvUtilities.getEnvVariable(
             DefaultEnvKeys.PROD_ROOT_DOMAIN,
@@ -95,9 +95,10 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
                     dockerfile: `./${root}/${DOCKER_FILE_NAME}`,
                     context: '.'
                 },
-                volumes: [{ path: `/${config.name}` }]
+                volumes: [`/${config.name}`]
             },
             4000,
+            config.port,
             true,
             config.subDomain
         );
@@ -116,7 +117,7 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
         await EnvUtilities.buildEnvironmentFileForApp(app, true, 'dev.docker-compose.yaml', getPath('.'));
     }
 
-    private async createDefaultPages(root: string, titleSuffix: string, domain: string): Promise<void> {
+    private async createDefaultPages(root: Path, titleSuffix: string, domain: string): Promise<void> {
         await AngularUtilities.generatePage(root, 'Home', {
             addTo: 'navbar',
             rowIndex: 0,
@@ -229,11 +230,11 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
         await FsUtilities.rm(getPath(root, 'src', 'app', 'app.component.spec.ts'));
     }
 
-    private async createProject(config: AddAngularWebsiteConfiguration): Promise<string> {
+    private async createProject(config: AddAngularWebsiteConfiguration): Promise<Path> {
         // eslint-disable-next-line no-console
         console.log('Creates the base website');
         AngularUtilities.runCommand(
-            APPS_DIRECTORY_NAME,
+            getPath(APPS_DIRECTORY_NAME),
             `new ${config.name}`,
             { '--skip-git': true, '--style': 'css', '--inline-style': true, '--ssr': true }
         );

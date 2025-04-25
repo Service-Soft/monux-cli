@@ -167,7 +167,7 @@ export abstract class LoopbackUtilities {
      * @param command - The command to run.
      * @param options - Options for running the command.
      */
-    static async runCommand(directory: string, command: LoopbackCliCommands, options: LoopbackCliOptions<typeof command>): Promise<void> {
+    static async runCommand(directory: Path, command: LoopbackCliCommands, options: LoopbackCliOptions<typeof command>): Promise<void> {
         if (command.startsWith('new ')) {
             // for the new command, extract the name
             command = command.split(' ')[1] as LoopbackCliCommands;
@@ -187,14 +187,14 @@ export abstract class LoopbackUtilities {
      * @param config - The configuration options.
      * @param dbName - The name of the database used by the api.
      */
-    static async setupAuth(root: string, config: AddLoopbackConfiguration, dbName: string): Promise<void> {
+    static async setupAuth(root: Path, config: AddLoopbackConfiguration, dbName: string): Promise<void> {
         await NpmUtilities.install(config.name, [
             NpmPackage.LBX_JWT,
             NpmPackage.LOOPBACK_AUTHENTICATION,
             NpmPackage.LOOPBACK_AUTHORIZATION
         ]);
         await NpmUtilities.install(config.name, [NpmPackage.NODEMAILER_TYPES], true);
-        await this.applyAuthToApplicationTs(root);
+        await this.applyAuthToApplicationTs(root, dbName);
         await this.createMailService(root, config);
         await this.createBiometricCredentialsService(root, config);
         await this.createAdminFiles(root, dbName);
@@ -202,7 +202,7 @@ export abstract class LoopbackUtilities {
         await this.setupAuthVariables(root, config);
     }
 
-    private static async createBiometricCredentialsService(root: string, config: AddLoopbackConfiguration): Promise<void> {
+    private static async createBiometricCredentialsService(root: Path, config: AddLoopbackConfiguration): Promise<void> {
         await this.runCommand(root, 'service BiometricCredentials', { '--skip-install': true, '--type': 'class', '--yes': true });
         const servicePath: Path = getPath(root, 'src', 'services', 'biometric-credentials.service.ts');
         await TsUtilities.addImportStatements(
@@ -224,9 +224,24 @@ export abstract class LoopbackUtilities {
         await FsUtilities.replaceInFile(servicePath, 'constructor() {}', '');
     }
 
-    private static async createAdminFiles(root: string, dbName: string): Promise<void> {
+    private static async createAdminFiles(root: Path, dbName: string): Promise<void> {
         const adminModelTs: Path = getPath(root, 'src', 'models', 'admin.model.ts');
         await FsUtilities.createFile(adminModelTs, adminModelContent);
+        await FsUtilities.createFile(
+            getPath(root, 'src', 'models', 'roles.enum.ts'),
+            [
+                'export enum Roles {',
+                '\tADMIN = \'ADMIN\'',
+                '}'
+            ]
+        );
+        await FsUtilities.createFile(
+            getPath(root, 'src', 'models', 'index.ts'),
+            [
+                'export * from \'./admin.model\';',
+                'export * from \'./roles.enum\';'
+            ]
+        );
 
         await this.runCommand(
             root,
@@ -244,7 +259,8 @@ export abstract class LoopbackUtilities {
                 element: 'ChangeRepository, ChangeSetRepository, CrudChangeSetRepository',
                 path: NpmPackage.LBX_CHANGE_SETS
             },
-            { defaultImport: false, element: 'BaseUser, BaseUserProfile, BaseUserRepository', path: NpmPackage.LBX_JWT }
+            { defaultImport: false, element: 'BaseUser, BaseUserProfile, BaseUserRepository', path: NpmPackage.LBX_JWT },
+            { defaultImport: false, element: 'Roles', path: '../models' }
         ]);
         await FsUtilities.replaceInFile(adminRepositoryTs, 'extends DefaultCrudRepository', 'extends CrudChangeSetRepository');
         await FsUtilities.replaceAllInFile(adminRepositoryTs, 'DefaultCrudRepository', '');
@@ -286,14 +302,14 @@ export abstract class LoopbackUtilities {
         ].join('\n'));
 
         const controllerPath: string = getPath(root, 'src', 'controllers');
-        await FsUtilities.createFile(getPath(controllerPath, 'admin', 'admin.controller.ts'), adminControllerContent);
+        await FsUtilities.createFile(getPath(controllerPath, 'admin', 'admin.controller.ts'), adminControllerContent(dbName));
         await FsUtilities.updateFile(getPath(controllerPath, 'index.ts'), 'export * from \'./admin/admin.controller\';', 'append');
 
         await FsUtilities.createFile(getPath(controllerPath, 'admin', 'new-admin.model.ts'), newAdminModelContent);
         await FsUtilities.createFile(getPath(controllerPath, 'admin', 'full-admin.model.ts'), fullAdminModelContent);
     }
 
-    private static async createMailService(root: string, config: AddLoopbackConfiguration): Promise<void> {
+    private static async createMailService(root: Path, config: AddLoopbackConfiguration): Promise<void> {
         await this.runCommand(root, 'service mail', { '--skip-install': true, '--type': 'class', '--yes': true });
         const servicePath: Path = getPath(root, 'src', 'services', 'mail.service.ts');
         await TsUtilities.addImportStatements(
@@ -302,7 +318,8 @@ export abstract class LoopbackUtilities {
                 { defaultImport: false, element: 'BaseMailService', path: NpmPackage.LBX_JWT },
                 { defaultImport: false, element: 'environment', path: '../environment/environment' },
                 { defaultImport: false, element: 'Transporter, createTransport', path: 'nodemailer' },
-                { defaultImport: true, element: 'path', path: 'path' }
+                { defaultImport: true, element: 'path', path: 'path' },
+                { defaultImport: false, element: 'Roles', path: '../models' }
             ]
         );
         await FsUtilities.replaceInFile(servicePath, ' class MailService', ' class MailService extends BaseMailService<Roles>');
@@ -441,7 +458,7 @@ export abstract class LoopbackUtilities {
         ], 'append');
     }
 
-    private static async applyAuthToApplicationTs(root: string): Promise<void> {
+    private static async applyAuthToApplicationTs(root: string, dbName: string): Promise<void> {
         // eslint-disable-next-line sonar/no-duplicate-string
         const applicationTs: Path = getPath(root, 'src', 'application.ts');
         await TsUtilities.addImportStatements(
@@ -461,13 +478,15 @@ export abstract class LoopbackUtilities {
                     element: 'AuthorizationBindings, AuthorizationComponent, AuthorizationDecision, AuthorizationOptions',
                     path: '@loopback/authorization'
                 },
-                { defaultImport: false, element: 'BiometricCredentialsService', path: './services/biometric-credentials.service' }
+                { defaultImport: false, element: 'BiometricCredentialsService', path: './services/biometric-credentials.service' },
+                { defaultImport: false, element: `${toPascalCase(dbName)}DataSource`, path: './datasources' }
             ]
         );
 
         await TsUtilities.addToEndOfClass(applicationTs, [
             '',
             '    private setupAuthentication(): void {',
+            `        this.bind(LbxJwtBindings.DATASOURCE_KEY).toClass(${toPascalCase(dbName)}DataSource);`,
             '        this.component(AuthenticationComponent);',
             '        this.component(LbxJwtComponent);',
             '',
@@ -505,8 +524,9 @@ export abstract class LoopbackUtilities {
      * Sets up logging.
      * @param root - The root folder of the loopback app.
      * @param name - The name of the loopback app.
+     * @param dbName - The name of the database used by the api.
      */
-    static async setupLogging(root: string, name: string): Promise<void> {
+    static async setupLogging(root: string, name: string, dbName: string): Promise<void> {
         await NpmUtilities.install(name, [NpmPackage.LBX_PERSISTENCE_LOGGER, NpmPackage.LOOPBACK_CRON]);
 
         const applicationTs: Path = getPath(root, 'src', 'application.ts');
@@ -528,6 +548,7 @@ export abstract class LoopbackUtilities {
         await TsUtilities.addToEndOfClass(applicationTs, [
             '',
             '    private setupLogging(): void {',
+            `        this.bind(LbxPersistenceLoggerComponentBindings.DATASOURCE_KEY).toClass(${toPascalCase(dbName)}DataSource);`,
             '        this.component(LbxPersistenceLoggerComponent);',
             '        this.repository(LogRepository);',
             '        this.bind(LbxPersistenceLoggerComponentBindings.LOGGER_NOTIFICATION_SERVICE).toClass(MailService);',
@@ -573,10 +594,11 @@ export abstract class LoopbackUtilities {
 
     /**
      * Sets up change sets.
-     * @param root - THe root of the loopback app.
+     * @param root - The root of the loopback app.
      * @param name - The name of the loopback app.
+     * @param dbName - The name of the database used by the api.
      */
-    static async setupChangeSets(root: string, name: string): Promise<void> {
+    static async setupChangeSets(root: string, name: string, dbName: string): Promise<void> {
         await NpmUtilities.install(name, [NpmPackage.LBX_CHANGE_SETS]);
         const applicationTs: Path = getPath(root, 'src', 'application.ts');
         await TsUtilities.addImportStatements(
@@ -584,7 +606,7 @@ export abstract class LoopbackUtilities {
             [
                 {
                     defaultImport: false,
-                    element: 'ChangeRepository, ChangeSetRepository, LbxChangeSetsComponent',
+                    element: 'ChangeRepository, ChangeSetRepository, LbxChangeSetsComponent, LbxChangeSetsBindings',
                     path: NpmPackage.LBX_CHANGE_SETS
                 }
             ]
@@ -592,6 +614,7 @@ export abstract class LoopbackUtilities {
         await TsUtilities.addToEndOfClass(applicationTs, [
             '',
             '    private setupChangeSets(): void {',
+            `        this.bind(LbxChangeSetsBindings.DATASOURCE_KEY).toClass(${toPascalCase(dbName)}DataSource);`,
             '        this.component(LbxChangeSetsComponent);',
             '        this.repository(ChangeRepository);',
             '        this.repository(ChangeSetRepository);',

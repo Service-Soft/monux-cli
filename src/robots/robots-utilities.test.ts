@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test } from '@jest/globals';
 
 import { FileMockUtilities, getMockConstants, MockConstants } from '../__testing__';
 import { RobotsUtilities } from './robots.utilities';
-import { ROBOTS_FILE_NAME } from '../constants';
+import { APPS_DIRECTORY_NAME, ROBOTS_FILE_NAME } from '../constants';
 import { FsUtilities } from '../encapsulation';
 import { DefaultEnvKeys, EnvUtilities } from '../env';
 import { getPath } from '../utilities';
@@ -26,7 +26,7 @@ describe('RobotsUtilities', () => {
             {
                 path: mockConstants.ANGULAR_APP_DIR,
                 name: mockConstants.ANGULAR_APP_NAME,
-                npmWorkspaceString: `apps/${mockConstants.ANGULAR_APP_NAME}`
+                npmWorkspaceString: `${APPS_DIRECTORY_NAME}/${mockConstants.ANGULAR_APP_NAME}`
             },
             'dev.docker-compose.yaml',
             undefined,

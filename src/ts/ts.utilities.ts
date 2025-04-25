@@ -159,6 +159,7 @@ export abstract class TsUtilities {
         for (let i: number = lines.length - 1; i >= 0; i--) {
             if (lines[i].startsWith('import ')) {
                 replaceContent = lines[i];
+                break;
             }
         }
         await FsUtilities.replaceInFile(path, replaceContent, `${replaceContent}\n\n${content.join('\n')}`);

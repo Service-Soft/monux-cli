@@ -1,8 +1,8 @@
 import yaml from 'js-yaml';
 
-import { DEV_DOCKER_COMPOSE_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, LOCAL_DOCKER_COMPOSE_FILE_NAME, DockerComposeFileName, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME } from '../constants';
+import { DEV_DOCKER_COMPOSE_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, LOCAL_DOCKER_COMPOSE_FILE_NAME, DockerComposeFileName, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME, dockerComposeFileNames } from '../constants';
 import { FsUtilities } from '../encapsulation';
-import { ComposeBuild, ComposeDefinition, ComposePort, ComposeService, ComposeServiceEnvironment, ComposeServiceVolume } from './compose-file.model';
+import { ComposeBuild, ComposeDefinition, ComposePort, ComposeService, ComposeServiceEnvironment } from './compose-file.model';
 import { DefaultEnvKeys, EnvUtilities } from '../env';
 import { OmitStrict } from '../types';
 import { getPath, Path } from '../utilities';
@@ -55,11 +55,23 @@ export abstract class DockerUtilities {
      * Defaults to "" (which creates the file in the current directory).
      */
     static async createComposeFiles(email: string): Promise<void> {
-        await Promise.all([
-            this.createProdDockerCompose(email),
-            this.createDevDockerCompose(),
-            this.createLocalDockerCompose()
-        ]);
+        await Promise.all(
+            dockerComposeFileNames.map(async d => {
+                switch (d) {
+                    case PROD_DOCKER_COMPOSE_FILE_NAME: {
+                        await this.createProdDockerCompose(email);
+                        return;
+                    }
+                    case DEV_DOCKER_COMPOSE_FILE_NAME: {
+                        await this.createDevDockerCompose();
+                        return;
+                    }
+                    case LOCAL_DOCKER_COMPOSE_FILE_NAME: {
+                        await this.createLocalDockerCompose();
+                    }
+                }
+            })
+        );
     }
 
     private static async createDevDockerCompose(): Promise<void> {
@@ -105,12 +117,7 @@ export abstract class DockerUtilities {
                             external: 443
                         }
                     ],
-                    volumes: [
-                        {
-                            path: '/var/run/docker.sock',
-                            mount: '/var/run/docker.sock:ro'
-                        }
-                    ],
+                    volumes: ['/var/run/docker.sock:/var/run/docker.sock:ro'],
                     labels: []
                 }
             ],
@@ -151,14 +158,8 @@ export abstract class DockerUtilities {
                         }
                     ],
                     volumes: [
-                        {
-                            path: './letsencrypt',
-                            mount: '/letsencrypt'
-                        },
-                        {
-                            path: '/var/run/docker.sock',
-                            mount: '/var/run/docker.sock:ro'
-                        }
+                        './letsencrypt:/letsencrypt',
+                        '/var/run/docker.sock:/var/run/docker.sock:ro'
                     ],
                     labels: []
                 }
@@ -173,7 +174,8 @@ export abstract class DockerUtilities {
     /**
      * Adds the given compose service to the docker-compose.yaml.
      * @param service - The definition of the service to add.
-     * @param port - The port used in development.
+     * @param port - The port used in local and prod.
+     * @param devPort - The port used in development.
      * @param addTraefik - Whether or not the service should be exposed via traefik.
      * @param subDomain - The domain of the service. Optional.
      * Defaults to "" (which creates the file in the current directory).
@@ -183,6 +185,7 @@ export abstract class DockerUtilities {
     static async addServiceToCompose(
         service: ComposeService,
         port: number,
+        devPort: number,
         addTraefik: boolean,
         subDomain?: string,
         composeFileName: DockerComposeFileName = PROD_DOCKER_COMPOSE_FILE_NAME
@@ -200,13 +203,13 @@ export abstract class DockerUtilities {
         await FsUtilities.updateFile(composePath, this.composeDefinitionToYaml(definition), 'replace');
 
         if (composeFileName === PROD_DOCKER_COMPOSE_FILE_NAME) {
-            await this.addServiceToCompose(service, port, addTraefik, subDomain, LOCAL_DOCKER_COMPOSE_FILE_NAME);
+            await this.addServiceToCompose(service, port, devPort, addTraefik, subDomain, LOCAL_DOCKER_COMPOSE_FILE_NAME);
             if (!addTraefik) {
                 return;
             }
 
             await EnvUtilities.addStaticVariable(
-                { key: DefaultEnvKeys.port(service.name), value: port, required: true, type: 'number' }
+                { key: DefaultEnvKeys.port(service.name), value: devPort, required: true, type: 'number' }
             );
 
             if (subDomain) {
@@ -328,13 +331,16 @@ export abstract class DockerUtilities {
     }
 
     /**
-     * Adds a volume to the docker compose file.
+     * Adds a volume to the docker compose files.
      * @param volume - The volume to add.
-     * @param composeFileName - The name of the compose file.
      */
-    static async addVolumeToCompose(
+    static async addVolumeToComposeFiles(volume: string): Promise<void> {
+        await Promise.all(dockerComposeFileNames.map(d => this.addVolumeToCompose(volume, d)));
+    }
+
+    private static async addVolumeToCompose(
         volume: string,
-        composeFileName: string = PROD_DOCKER_COMPOSE_FILE_NAME
+        composeFileName: DockerComposeFileName
     ): Promise<void> {
         const composePath: Path = getPath(composeFileName);
         const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
@@ -459,17 +465,14 @@ export abstract class DockerUtilities {
         return ['\t\tnetworks:', ...networks.map(n => `\t\t\t${n}:`)];
     }
 
-    private static getServiceVolumesSection(volumes: ComposeServiceVolume[] | undefined): string[] {
+    private static getServiceVolumesSection(volumes: string[] | undefined): string[] {
         if (!volumes?.length) {
             return [];
         }
 
         return [
             '\t\tvolumes:',
-            ...volumes.map(v => {
-                const mount: string = v.mount ? `:${v.mount}` : '';
-                return `\t\t\t- ${v.path}${mount}`;
-            })
+            ...volumes.map(v => `\t\t\t- ${v}`)
         ];
     }
 
@@ -483,7 +486,7 @@ export abstract class DockerUtilities {
             .map(([serviceName, serviceData]: [string, ParsedDockerComposeService]) => {
                 const res: ComposeService = {
                     name: serviceName,
-                    volumes: this.parseServiceVolumes(serviceData.volumes),
+                    volumes: serviceData.volumes,
                     command: serviceData.command,
                     image: serviceData.image,
                     build: this.parseBuild(serviceData.build),
@@ -519,18 +522,6 @@ export abstract class DockerUtilities {
             return;
         }
         return Array.isArray(networks) ? networks : Object.keys(networks);
-    }
-
-    private static parseServiceVolumes(volumes: string[] | undefined): ComposeServiceVolume[] | undefined {
-        if (volumes == undefined) {
-            return;
-        }
-        return volumes?.map((v: string) => this.parseServiceVolume(v));
-    }
-
-    private static parseServiceVolume(volumeStr: string): ComposeServiceVolume {
-        const [path, ...mount] = volumeStr.split(':');
-        return { path, mount: mount.join('') };
     }
 
     private static parseBuild(build: ComposeBuild | undefined): ComposeBuild | undefined {

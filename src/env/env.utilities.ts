@@ -102,7 +102,6 @@ export abstract class EnvUtilities {
             getPath(environmentFolder, ENVIRONMENT_MODEL_TS_FILE_NAME)
         );
 
-        // TODO: The first time getPath fails here because
         await FsUtilities.rm(getPath(environmentFolder, ENVIRONMENT_TS_FILE_NAME));
         await this.createProjectEnvironmentFile(app.path, variableKeys, failOnMissingVariable, fileName, rootDir);
     }
