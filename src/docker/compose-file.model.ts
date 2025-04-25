@@ -37,7 +37,7 @@ export type ComposeService = {
     /**
      * The volumes that are used by the service.
      */
-    volumes?: ComposeServiceVolume[],
+    volumes?: string[],
     /**
      * The image that the service is build upon.
      * See "build" if you don't depend on an image.
@@ -94,21 +94,4 @@ export type ComposeBuild = string | {
      * The context to provide when building from the dockerfile.
      */
     context: string
-};
-
-/**
- * Definition for a volume that is used by a service.
- * Consists of the path and an optional mount.
- */
-export type ComposeServiceVolume = {
-    /**
-     * The volumes path.
-     * Supports relative paths, docker default volumes as well as volumes defined in the volumes section of the docker compose file.
-     */
-    path: string,
-    /**
-     * Where the data of the volume should be mounted.
-     * Can be empty.
-     */
-    mount?: string
 };

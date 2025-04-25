@@ -47,9 +47,9 @@ describe('DockerUtilities', () => {
 
     test('createDockerCompose with prod service', async () => {
         const def: ComposeService = fakeComposeService();
-        await DockerUtilities.addServiceToCompose(def, 4200, true, def.name);
-        const fileContent: ComposeDefinition = await DockerUtilities['yamlToComposeDefinition'](mockConstants.DOCKER_COMPOSE_YAML);
-        const service: ComposeService = fileContent.services[1];
+        await DockerUtilities.addServiceToCompose(def, 4000, 4200, true, def.name);
+        const prodFileContent: ComposeDefinition = await DockerUtilities['yamlToComposeDefinition'](mockConstants.DOCKER_COMPOSE_YAML);
+        const prodService: ComposeService = prodFileContent.services[1];
         expect({
             ...def,
             labels: [
@@ -58,11 +58,11 @@ describe('DockerUtilities', () => {
                 `traefik.http.routers.${def.name}.rule=Host(\`\${${def.name}_sub_domain}.\${prod_root_domain}\`)`,
                 `traefik.http.routers.${def.name}.entrypoints=web_secure`,
                 `traefik.http.routers.${def.name}.tls.certresolver=ssl_resolver`,
-                `traefik.http.services.${def.name}.loadbalancer.server.port=4200`,
+                `traefik.http.services.${def.name}.loadbalancer.server.port=4000`,
                 'traefik.http.middlewares.compression.compress=true',
                 `traefik.http.routers.${def.name}.middlewares=compression`
             ]
-        }).toEqual(service);
+        }).toEqual(prodService);
 
         const localFileContent: ComposeDefinition = await DockerUtilities['yamlToComposeDefinition'](mockConstants.LOCAL_DOCKER_COMPOSE_YAML);
         const localService: ComposeService = localFileContent.services[1];
@@ -73,14 +73,16 @@ describe('DockerUtilities', () => {
                 'traefik.enable=true',
                 `traefik.http.routers.${def.name}.rule=Host(\`\${${def.name}_sub_domain}.localhost\`)`,
                 `traefik.http.routers.${def.name}.entrypoints=web`,
-                `traefik.http.services.${def.name}.loadbalancer.server.port=4200`,
+                `traefik.http.services.${def.name}.loadbalancer.server.port=4000`,
                 'traefik.http.middlewares.compression.compress=true',
                 `traefik.http.routers.${def.name}.middlewares=compression`
             ]
         }).toEqual(localService);
+
+        // Dev service does not need to be checked, as the service is not added there automatically
     });
 
     test('createDockerCompose with dev service', async () => {
-        //TODO
+        //TODO: Add test
     });
 });

@@ -9,6 +9,7 @@ import { Router } from '@angular/router';
 import { BaseAuthData, BaseRole, BaseToken, JwtAuthService } from 'ngx-material-auth';
 
 import { environment } from '../../environment/environment';
+import { Roles } from '../models/roles.enum';
 
 /**
  * Provides information about a user role.

@@ -4,10 +4,11 @@ import { DefaultEnvKeys } from '../../env';
 export function getAdminModelContent(apiName: string): string {
     return `import { ChangeSet } from 'ngx-material-change-sets';
 import { array, custom, DecoratorTypes, string } from 'ngx-material-entity';
-import { environment } from '../../environment/environment';
 
 import { BaseEntity } from './base-entity.model';
+import { Roles } from './roles.enum';
 import { ChangeSetsInputComponent, ChangeSetsInputMetadata } from '../components/change-sets-input/change-sets-input.component';
+import { environment } from '../../environment/environment';
 
 export class Admin extends BaseEntity {
 

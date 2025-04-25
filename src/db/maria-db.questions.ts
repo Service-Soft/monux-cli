@@ -9,7 +9,7 @@ export type MariaDbConfig = {
     /**
      * The type of the databases.
      */
-    type: DbType.MARIADB,
+    dbType: DbType.MARIADB,
     /**
      * The name of the mariadb service.
      */
@@ -23,7 +23,7 @@ export type MariaDbConfig = {
 /**
  * Questions for getting a maria db config.
  */
-export const mariaDbConfigQuestions: QuestionsFor<OmitStrict<MariaDbConfig, 'type' | 'databaseName'>> = {
+export const mariaDbConfigQuestions: QuestionsFor<OmitStrict<MariaDbConfig, 'dbType' | 'databaseName'>> = {
     dbServiceName: {
         type: 'input',
         message: 'Compose service name',

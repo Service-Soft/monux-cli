@@ -127,6 +127,16 @@ export const APP_CONFIG_FILE_NAME: string = 'app.config.ts';
 export const NG_PACKAGE_FILE_NAME: string = 'ng-package.json';
 
 /**
+ * The name of the nest cli file.
+ */
+export const NEST_CLI_FILE_NAME: string = 'nest-cli.json';
+
+/**
+ * The name of the webpack config file.
+ */
+export const WEBPACK_CONFIG: string = 'webpack.config.js';
+
+/**
  * The message to notify the user of the help command.
  */
 export const MORE_INFORMATION_MESSAGE: string = `run ${ChalkUtilities.secondary(
@@ -138,3 +148,14 @@ export const MORE_INFORMATION_MESSAGE: string = `run ${ChalkUtilities.secondary(
  */
 // eslint-disable-next-line stylistic/max-len
 export type DockerComposeFileName = typeof PROD_DOCKER_COMPOSE_FILE_NAME | typeof DEV_DOCKER_COMPOSE_FILE_NAME | typeof LOCAL_DOCKER_COMPOSE_FILE_NAME;
+
+const dockerComposeFileNameRecord: Record<DockerComposeFileName, DockerComposeFileName> = {
+    'dev.docker-compose.yaml': 'dev.docker-compose.yaml',
+    'docker-compose.yaml': 'docker-compose.yaml',
+    'local.docker-compose.yaml': 'local.docker-compose.yaml'
+};
+
+/**
+ * All possible docker compose file names as an array.
+ */
+export const dockerComposeFileNames: DockerComposeFileName[] = Object.values(dockerComposeFileNameRecord);

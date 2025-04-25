@@ -25,7 +25,7 @@ type AddAngularLibraryConfiguration = AddConfiguration & {
 // eslint-disable-next-line jsdoc/require-jsdoc
 type CreateResult = {
     // eslint-disable-next-line jsdoc/require-jsdoc
-    root: string,
+    root: Path,
     // eslint-disable-next-line jsdoc/require-jsdoc
     oldPackageJson: PackageJson
 };
@@ -59,7 +59,7 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
             this.updatePublicApi(result.root),
             this.updateNgPackageJson(result.root),
             this.updateAngularJson(result.root, config.name),
-            this.setupTsConfig(result.root, config.name),
+            this.setupTsConfig(result.root, config),
             this.updatePackageJson(result, config.name),
             this.setupTailwind(result.root),
             EslintUtilities.setupProjectEslint(result.root, false)
@@ -92,7 +92,7 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
         // eslint-disable-next-line no-console
         console.log('Creates a temporary angular workspace');
         AngularUtilities.runCommand(
-            LIBS_DIRECTORY_NAME,
+            getPath(LIBS_DIRECTORY_NAME),
             `new ${config.name}`,
             { '--no-create-application': true }
         );
@@ -140,28 +140,40 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
         await FsUtilities.replaceInFile(getPath(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME), '"root": ,', '"root": "./",');
 
         const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
+        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', '.eslintrc.json'));
         return { root: newProject.path, oldPackageJson };
     }
 
-    private async setupTsConfig(root: string, projectName: string): Promise<void> {
+    private async setupTsConfig(root: Path, config: AddAngularLibraryConfiguration): Promise<void> {
         // eslint-disable-next-line no-console
         console.log('sets up tsconfig');
 
         await Promise.all([
-            TsConfigUtilities.updateTsConfig(projectName, { extends: '../../tsconfig.base.json' }),
+            TsConfigUtilities.updateTsConfig(config.name, { extends: '../../tsconfig.base.json' }),
             this.createTsConfigEslint(root),
             this.updateTsConfigLib(root),
-            this.updateTsConfigSpec(root)
+            this.updateTsConfigSpec(root),
+            this.updateBaseTsConfig(config, root)
         ]);
     }
 
-    private async updateTsConfigLib(root: string): Promise<void> {
+    private async updateBaseTsConfig(config: AddAngularLibraryConfiguration, root: Path): Promise<void> {
+        await TsConfigUtilities.updateBaseTsConfig({
+            compilerOptions: {
+                paths: {
+                    [`${config.scope}/${config.name}`]: [`${root}/src/public-api.ts`]
+                }
+            }
+        });
+    }
+
+    private async updateTsConfigLib(root: Path): Promise<void> {
         const tsconfigPath: Path = getPath(root, 'tsconfig.lib.json');
         const oldConfig: TsConfig = await FsUtilities.parseFileAs(tsconfigPath);
         const config: TsConfig = mergeDeep(oldConfig, {
             extends: './tsconfig.json',
             compilerOptions: {
-                outDir: 'out-tsc/spec'
+                outDir: 'out-tsc/lib'
             }
         });
         await FsUtilities.updateFile(tsconfigPath, JsonUtilities.stringify(config), 'replace');
@@ -171,9 +183,9 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
         const tsconfigPath: Path = getPath(root, 'tsconfig.spec.json');
         const oldConfig: TsConfig = await FsUtilities.parseFileAs(tsconfigPath);
         const config: TsConfig = mergeDeep(oldConfig, {
-            extends: 'tsconfig.json',
+            extends: './tsconfig.json',
             compilerOptions: {
-                outDir: 'out-tsc/lib'
+                outDir: 'out-tsc/spec'
             }
         });
         await FsUtilities.updateFile(tsconfigPath, JsonUtilities.stringify(config), 'replace');

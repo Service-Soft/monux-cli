@@ -2,15 +2,7 @@
 import { faker } from '@faker-js/faker';
 
 import { fakeStringKeyValue, fakeUniqueString, fakeArray } from './helpers';
-import { ComposePort, ComposeService, ComposeServiceVolume } from '../../docker';
-
-function fakeComposeVolume(): ComposeServiceVolume {
-    const res: ComposeServiceVolume = {
-        path: faker.system.directoryPath(),
-        mount: faker.helpers.maybe(() => faker.system.directoryPath()) ?? ''
-    };
-    return res;
-}
+import { ComposePort, ComposeService } from '../../docker';
 
 function fakeComposePort(): ComposePort {
     return {
@@ -26,7 +18,7 @@ export function fakeComposeService(): ComposeService {
         build: faker.helpers.maybe(() => faker.system.directoryPath()),
         image: faker.helpers.maybe(() => faker.word.noun()),
         networks: faker.helpers.maybe(() => fakeArray(() => fakeUniqueString(), faker.number.int({ min: 1, max: 5 }))),
-        volumes: faker.helpers.maybe(() => fakeArray(() => fakeComposeVolume(), faker.number.int({ min: 1, max: 5 }))),
+        volumes: faker.helpers.maybe(() => fakeArray(() => faker.system.directoryPath(), faker.number.int({ min: 1, max: 5 }))),
         command: faker.helpers.maybe(() => fakeArray(() => faker.word.noun(), faker.number.int({ min: 1, max: 5 }))),
         ports: faker.helpers.maybe(() => fakeArray(() => fakeComposePort(), faker.number.int({ min: 1, max: 5 }))),
         labels: faker.helpers.maybe(() => fakeArray(() => faker.word.noun(), faker.number.int({ min: 1, max: 5 })))

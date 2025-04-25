@@ -44,12 +44,7 @@ export class AddWordpressCommand extends BaseAddCommand<AddWordpressConfiguratio
         const serviceDefinition: ComposeService = {
             name: config.name,
             image: `wordpress:${version}`,
-            volumes: [
-                {
-                    path: `${toKebabCase(config.name)}-data`,
-                    mount: '/var/www/html'
-                }
-            ],
+            volumes: [`${toKebabCase(config.name)}-data:/var/www/html`],
             environment: [
                 {
                     key: 'WORDPRESS_DB_HOST',
@@ -72,20 +67,21 @@ export class AddWordpressCommand extends BaseAddCommand<AddWordpressConfiguratio
         await DockerUtilities.addServiceToCompose(
             serviceDefinition,
             80,
+            80,
             true,
             config.subDomain
         );
-        await DockerUtilities.addVolumeToCompose(`${toKebabCase(config.name)}-data`);
+        await DockerUtilities.addVolumeToComposeFiles(`${toKebabCase(config.name)}-data`);
         await DockerUtilities.addServiceToCompose(
             {
                 ...serviceDefinition,
                 ports: [{ external: 80, internal: 80 }]
             },
             80,
+            80,
             false,
             undefined,
             DEV_DOCKER_COMPOSE_FILE_NAME
         );
-        await DockerUtilities.addVolumeToCompose(`${toKebabCase(config.name)}-data`, DEV_DOCKER_COMPOSE_FILE_NAME);
     }
 }

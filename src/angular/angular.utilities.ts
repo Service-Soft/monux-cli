@@ -166,7 +166,7 @@ export abstract class AngularUtilities {
      * @param titleSuffix - The suffix after the title.
      */
     static async setupAuth(
-        projectRoot: string,
+        projectRoot: Path,
         name: string,
         apiName: string,
         domain: string,
@@ -422,6 +422,14 @@ export abstract class AngularUtilities {
             getAdminModelContent(apiName)
         );
         await FsUtilities.createFile(
+            getPath(root, 'src', 'app', 'models', 'roles.enum.ts'),
+            [
+                'export enum Roles {',
+                '\tADMIN = \'ADMIN\'',
+                '}'
+            ]
+        );
+        await FsUtilities.createFile(
             getPath(root, 'src', 'app', 'models', 'base-entity.model.ts'),
             baseEntityModelContent
         );
@@ -505,7 +513,7 @@ export abstract class AngularUtilities {
      * @param command - The command to run.
      * @param options - Options for running the command.
      */
-    static runCommand(directory: string, command: AngularCliCommands, options: AngularCliOptions<typeof command>): void {
+    static runCommand(directory: Path, command: AngularCliCommands, options: AngularCliOptions<typeof command>): void {
         CPUtilities.execSync(`cd ${directory} && npx @angular/cli@${this.CLI_VERSION} ${command} ${optionsToCliString(options)}`);
     }
 
@@ -517,7 +525,7 @@ export abstract class AngularUtilities {
      * @param domain - The domain of the project.
      */
     static async generatePage(
-        root: string,
+        root: Path,
         pageName: string,
         navElement: AddNavElementConfig | undefined,
         domain: string | undefined
@@ -780,9 +788,24 @@ export abstract class AngularUtilities {
      * @param root - The directory of the angular project to setup the pwa support for.
      * @param name - The name of the angular project to setup the pwa support for.
      */
-    static async setupPwa(root: string, name: string): Promise<void> {
+    static async setupPwa(root: Path, name: string): Promise<void> {
         // eslint-disable-next-line no-console
         console.log('Adds pwa support');
+        await this.addProvider(
+            root,
+            { provide: 'NGX_PWA_OFFLINE_SERVICE', useExisting: 'OfflineService' as unknown },
+            [
+                { defaultImport: false, element: 'NGX_PWA_OFFLINE_SERVICE', path: NpmPackage.NGX_PWA },
+                { defaultImport: false, element: 'OfflineService', path: './services/offline.service' }
+            ]
+        );
+        // TODO: enable OfflineRequestInterceptor. Need to fix parsing of provideServiceWorker first.
+        await this.addProvider(
+            root,
+            // eslint-disable-next-line typescript/no-unsafe-assignment, typescript/no-explicit-any
+            { provide: 'HTTP_INTERCEPTORS', useClass: 'OfflineRequestInterceptor' as any, multi: true },
+            [{ defaultImport: false, element: 'OfflineRequestInterceptor', path: NpmPackage.NGX_PWA }]
+        );
         this.runCommand(root, `add @angular/pwa@${this.CLI_VERSION}`, { '--skip-confirmation': true });
         await NpmUtilities.install(name, [NpmPackage.NGX_PWA]);
         await FsUtilities.updateFile(
@@ -804,20 +827,6 @@ export abstract class AngularUtilities {
             getPath(root, 'src', 'app', 'services', 'offline.service.ts'),
             offlineServiceContent
         );
-        await this.addProvider(
-            root,
-            { provide: 'NGX_PWA_OFFLINE_SERVICE', useExisting: 'OfflineService' as unknown },
-            [
-                { defaultImport: false, element: 'NGX_PWA_OFFLINE_SERVICE', path: NpmPackage.NGX_PWA },
-                { defaultImport: false, element: 'OfflineService', path: './services/offline.service' }
-            ]
-        );
-        // TODO: enable OfflineRequestInterceptor. Need to fix parsing of provideServiceWorker first.
-        // await this.addProvider(
-        //     root,
-        //     { provide: 'HTTP_INTERCEPTORS', useClass: 'OfflineRequestInterceptor' as any, multi: true },
-        //     [{ defaultImport: false, element: 'OfflineRequestInterceptor', path: NpmPackage.NGX_PWA }]
-        // );
     }
 
     /**
