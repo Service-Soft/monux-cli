@@ -14,7 +14,7 @@ export abstract class TsConfigUtilities {
      * Initializes typescript inside the given path.
      * @param path - Where to initialize typescript.
      */
-    static init(path: string): void {
+    static init(path: Path): void {
         CPUtilities.execSync(`cd ${path} && npx tsc --init`);
     }
 

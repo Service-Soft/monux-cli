@@ -34,3 +34,7 @@ traefik
 mariadb
 MARIADB
 dts
+nestjs
+cloudflare
+cldr
+cldrjs

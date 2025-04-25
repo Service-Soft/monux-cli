@@ -25,7 +25,7 @@ describe('AddLoopbackCommand', () => {
     test('should run and create new database', () => {
         // const baseConfig: AddConfiguration = { name: 'api', type: AddType.LOOPBACK };
         // const command: AddLoopbackCommand = new AddLoopbackCommand(baseConfig);
-        // await command.run(); // TODO: enable
+        // await command.run(); // TODO: enable test
         expect(true).toBe(true);
     }, 50000);
 

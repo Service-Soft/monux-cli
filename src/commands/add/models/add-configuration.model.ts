@@ -1,18 +1,7 @@
+import { AddType } from './add-type.enum';
 import { QuestionsFor } from '../../../encapsulation';
 import { getPath } from '../../../utilities';
 import { WorkspaceUtilities } from '../../../workspace';
-
-/**
- * The type of project to add.
- */
-export enum AddType {
-    ANGULAR = 'angular',
-    ANGULAR_WEBSITE = 'angular-website',
-    ANGULAR_LIBRARY = 'angular-library',
-    LOOPBACK = 'loopback',
-    TS_LIBRARY = 'ts-library',
-    WORDPRESS = 'wordpress'
-}
 
 /**
  * BaseConfiguration for the add cli command.

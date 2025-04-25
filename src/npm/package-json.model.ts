@@ -30,6 +30,10 @@ export type PackageJson = {
      */
     version?: string,
     /**
+     * The license of the npm package.
+     */
+    license?: string,
+    /**
      * Files that should be included in the package.
      */
     files?: string[],
@@ -44,7 +48,7 @@ export type PackageJson = {
     /**
      * The scripts inside the file.
      */
-    scripts: Record<string, string>,
+    scripts: Record<string, string | undefined>,
     /**
      * The workspaces section inside the file.
      */
@@ -60,11 +64,11 @@ export type PackageJson = {
     /**
      * Dependencies of the package.
      */
-    dependencies: Record<string, string>,
+    dependencies: Record<string, string | undefined>,
     /**
      * DevDependencies of the package.
      */
-    devDependencies: Record<string, string>,
+    devDependencies: Record<string, string | undefined>,
     /**
      * PeerDependencies of the package.
      */

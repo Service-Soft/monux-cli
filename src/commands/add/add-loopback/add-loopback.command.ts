@@ -1,5 +1,6 @@
-import { APPS_DIRECTORY_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, GIT_IGNORE_FILE_NAME, TS_CONFIG_FILE_NAME } from '../../../constants';
-import { DbUtilities } from '../../../db';
+import { loopbackWebpackContent } from './loopback-webpack.content';
+import { APPS_DIRECTORY_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, GIT_IGNORE_FILE_NAME, TS_CONFIG_FILE_NAME, WEBPACK_CONFIG } from '../../../constants';
+import { DbType, DbUtilities } from '../../../db';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, QuestionsFor } from '../../../encapsulation';
 import { DefaultEnvKeys, EnvUtilities } from '../../../env';
@@ -82,8 +83,11 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
 
     override async run(): Promise<void> {
         const config: AddLoopbackConfiguration = await this.getConfig();
-        const { dbServiceName, databaseName } = await DbUtilities.configureDb(config.name, undefined, getPath('.'));
-        const root: string = await this.createProject(config);
+        const { dbServiceName, databaseName, dbType } = await DbUtilities.configureDb(config.name, DbType.POSTGRES, getPath('.'));
+        if (dbType !== DbType.POSTGRES) {
+            throw new Error('Error adding the app: Currently loopback only supports postgres as its database.');
+        }
+        const root: Path = await this.createProject(config);
         await EnvUtilities.setupProjectEnvironment(root, false);
         await this.createLoopbackDatasource(dbServiceName, databaseName, root, config.name);
 
@@ -100,34 +104,75 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
                         dockerfile: `./${root}/${DOCKER_FILE_NAME}`,
                         context: '.'
                     },
-                    volumes: [{ path: `/${config.name}` }]
+                    volumes: [`/${config.name}`]
                 },
                 3000,
+                config.port,
                 true,
                 config.subDomain
             ),
-            this.updateDockerFile(root)
+            this.updateDockerFile(root, config)
+            // this.setupWebpack(root, config.name) TODO: enable
         ]);
 
         await NpmUtilities.updatePackageJson(config.name, {
             scripts: {
                 start: 'npm run start:watch',
                 'start:watch': 'tsc-watch --target es2017 --outDir ./dist --onSuccess \"node .\"'
+                // 'build:webpack': 'webpack' TODO: enable
             }
         });
         await NpmUtilities.install(config.name, [NpmPackage.TSC_WATCH], true);
-        await LoopbackUtilities.setupAuth(root, config, dbServiceName);
-        await LoopbackUtilities.setupLogging(root, config.name);
-        await LoopbackUtilities.setupChangeSets(root, config.name);
+        await LoopbackUtilities.setupAuth(root, config, databaseName);
+        await LoopbackUtilities.setupLogging(root, config.name, databaseName);
+        await LoopbackUtilities.setupChangeSets(root, config.name, databaseName);
         await LoopbackUtilities.setupMigrations(root, config.name);
 
         const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
         await EnvUtilities.buildEnvironmentFileForApp(app, false, 'dev.docker-compose.yaml', getPath('.'));
     }
 
-    private async updateDockerFile(root: string): Promise<void> {
-        // TODO: Update loopback 4 Dockerfile
-        await FsUtilities.updateFile(getPath(root, DOCKER_FILE_NAME), '', 'append');
+    private async setupWebpack(root: Path, projectName: string): Promise<void> {
+        await FsUtilities.createFile(getPath(root, WEBPACK_CONFIG), loopbackWebpackContent);
+        await NpmUtilities.install(
+            projectName,
+            [
+                NpmPackage.WEBPACK,
+                NpmPackage.WEBPACK_CLI,
+                NpmPackage.TS_LOADER,
+                NpmPackage.WEBPACK_NODE_EXTERNALS,
+                NpmPackage.TSCONFIG_PATH_WEBPACK_PLUGIN,
+                NpmPackage.FORK_TS_CHECKER_WEBPACK_PLUGIN
+            ],
+            true
+        );
+        await NpmUtilities.install(projectName, [
+            NpmPackage.CLDRJS,
+            NpmPackage.CLDR_DATA
+        ]);
+    }
+
+    private async updateDockerFile(root: string, config: AddLoopbackConfiguration): Promise<void> {
+        await FsUtilities.updateFile(
+            getPath(root, DOCKER_FILE_NAME),
+            [
+                'FROM node:20 AS build',
+                '# Set to a non-root built-in user `node`',
+                'USER node',
+                'RUN mkdir -p /home/node/root',
+                'COPY --chown=node . /home/node/root',
+                'WORKDIR /home/node/root',
+                'RUN npm install',
+                `RUN npm run build --workspace=${APPS_DIRECTORY_NAME}/${config.name} --omit=dev`,
+                '',
+                'FROM node:20',
+                'WORKDIR /usr/app',
+                `COPY --from=build /home/node/root/${APPS_DIRECTORY_NAME}/${config.name}/dist/${APPS_DIRECTORY_NAME}/${config.name} ./`,
+                'COPY --from=build /home/node/root/node_modules ./node_modules', // TODO: get rid off
+                'CMD node src'
+            ],
+            'replace'
+        );
     }
 
     private async updateIndexTs(root: string, port: number): Promise<void> {
@@ -141,6 +186,7 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
         await FsUtilities.replaceInFile(indexPath, 'env.PORT', 'env[\'PORT\']');
         await FsUtilities.replaceInFile(indexPath, 'env.HOST', 'env[\'HOST\']');
         await FsUtilities.replaceInFile(indexPath, '?? 3000', `?? ${port}`);
+        await TsUtilities.addImportStatements(indexPath, [{ defaultImport: false, element: 'Roles', path: './models' }]);
     }
 
     private async updateOpenApiSpec(root: string, port: number): Promise<void> {
@@ -173,7 +219,12 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
      * @param root - The root of the loopback project.
      * @param projectName - The name of the loopback app.
      */
-    private async createLoopbackDatasource(dbServiceName: string, databaseName: string, root: string, projectName: string): Promise<void> {
+    private async createLoopbackDatasource(
+        dbServiceName: string,
+        databaseName: string,
+        root: Path,
+        projectName: string
+    ): Promise<void> {
         const lbDatabaseConfig: LbDatabaseConfig = {
             name: databaseName,
             connector: 'postgres' as 'postgresql'
@@ -241,7 +292,7 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
         await EnvUtilities.addProjectVariableKey(projectName, environmentModel, DefaultEnvKeys.dbHost(dbServiceName), true, getPath('.'));
     }
 
-    private async createProject(config: AddLoopbackConfiguration): Promise<string> {
+    private async createProject(config: AddLoopbackConfiguration): Promise<Path> {
         await LoopbackUtilities.runCommand(getPath(APPS_DIRECTORY_NAME), `new ${config.name}`, {
             '--yes': true,
             '--config': {

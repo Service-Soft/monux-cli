@@ -9,7 +9,7 @@ import { NpmPackage, NpmUtilities } from '../../../npm';
 import { TailwindUtilities } from '../../../tailwind';
 import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
-import { getPath, toPascalCase } from '../../../utilities';
+import { getPath, Path, toPascalCase } from '../../../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
 import { BaseAddCommand, AddConfiguration } from '../models';
 
@@ -70,7 +70,7 @@ export class AddAngularCommand extends BaseAddCommand<AddAngularConfiguration> {
 
     override async run(): Promise<void> {
         const config: AddAngularConfiguration = await this.getConfig();
-        const root: string = await this.createProject(config);
+        const root: Path = await this.createProject(config);
         await Promise.all([
             this.cleanUp(root),
             this.setupTsConfig(root, config.name),
@@ -85,16 +85,42 @@ export class AddAngularCommand extends BaseAddCommand<AddAngularConfiguration> {
                         dockerfile: `./${root}/${DOCKER_FILE_NAME}`,
                         context: '.'
                     },
-                    volumes: [{ path: `/${config.name}` }]
-                    // labels: DockerUtilities.getTraefikLabels(config.name, 4000, domain)
+                    volumes: [`/${config.name}`]
                 },
                 4000,
+                config.port,
                 true,
                 config.subDomain
             ),
             AngularUtilities.updateAngularJson(
                 getPath(root, ANGULAR_JSON_FILE_NAME),
-                { $schema: '../../node_modules/@angular/cli/lib/config/schema.json' }
+                {
+                    $schema: '../../node_modules/@angular/cli/lib/config/schema.json',
+                    projects: {
+                        [config.name]: {
+                            architect: {
+                                build: {
+                                    configurations: {
+                                        production: {
+                                            budgets: [
+                                                {
+                                                    maximumError: '3MB',
+                                                    maximumWarning: '500kB',
+                                                    type: 'initial'
+                                                },
+                                                {
+                                                    maximumError: '4kB',
+                                                    maximumWarning: '2kB',
+                                                    type: 'anyComponentStyle'
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             ),
             AngularUtilities.setupMaterial(root)
         ]);
@@ -135,7 +161,7 @@ export class AddAngularCommand extends BaseAddCommand<AddAngularConfiguration> {
         ], 'append');
     }
 
-    private async createDefaultPages(root: string, config: AddAngularConfiguration): Promise<void> {
+    private async createDefaultPages(root: Path, config: AddAngularConfiguration): Promise<void> {
         await AngularUtilities.generatePage(
             root,
             'Home',
@@ -185,10 +211,10 @@ export class AddAngularCommand extends BaseAddCommand<AddAngularConfiguration> {
         );
     }
 
-    private async createProject(config: AddAngularConfiguration): Promise<string> {
+    private async createProject(config: AddAngularConfiguration): Promise<Path> {
         console.log('Creates the base app');
         AngularUtilities.runCommand(
-            APPS_DIRECTORY_NAME,
+            getPath(APPS_DIRECTORY_NAME),
             `new ${config.name}`,
             { '--skip-git': true, '--style': 'css', '--inline-style': true, '--ssr': true }
         );

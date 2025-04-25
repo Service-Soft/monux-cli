@@ -13,11 +13,8 @@ export abstract class BaseAddCommand<ConfigurationType extends AddConfiguration 
 
     /**
      * Generates the project.
-     * @param baseConfig - The base configuration from the cli.
-     * @param args - Any additional args.
      */
-    // eslint-disable-next-line typescript/no-explicit-any
-    abstract run(...args: any[]): Promise<void>;
+    abstract run(): Promise<void>;
 
     /**
      * Gets the complete configuration.
