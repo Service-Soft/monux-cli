@@ -31,5 +31,5 @@ describe('LoopbackUtilities', () => {
 
         const dirExists: boolean = await FsUtilities.exists(getPath(mockConstants.APPS_DIR, 'api'));
         expect(dirExists).toBe(true);
-    }, 80000);
+    }, 50000);
 });

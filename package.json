@@ -1,6 +1,6 @@
 {
     "name": "monux-cli",
-    "version": "2.2.2",
+    "version": "2.2.3",
     "license": "MIT",
     "main": "index.js",
     "engines": {
@@ -33,10 +33,10 @@
         "start": "npm run build && cd sandbox && node ../dist/index.js",
         "build": "tsc",
         "clear": "rm -rf sandbox && mkdir sandbox && npm run start i",
-        "test": "node --max_old_space_size=4096 ./node_modules/jest/bin/jest.js",
+        "test": "jest --runInBand",
         "lint": "eslint . --max-warnings=0",
         "lint:fix": "eslint . --max-warnings=0 --fix",
-        "prepublishOnly": "npm i && npm run lint && npm run build"
+        "prepublishOnly": "npm i && npm run build"
     },
     "dependencies": {
         "chalk": "^4.1.2",

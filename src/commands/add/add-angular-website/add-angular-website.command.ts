@@ -1,5 +1,5 @@
 import { AngularUtilities, NavElementTypes } from '../../../angular';
-import { ANGULAR_JSON_FILE_NAME, APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, GIT_IGNORE_FILE_NAME } from '../../../constants';
+import { ANGULAR_JSON_FILE_NAME, APPS_DIRECTORY_NAME, BASE_TS_CONFIG_FILE_NAME, DOCKER_FILE_NAME, GIT_IGNORE_FILE_NAME } from '../../../constants';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
 import { DefaultEnvKeys, EnvUtilities } from '../../../env';
@@ -200,14 +200,14 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
     private async setupTsConfig(root: string, projectName: string): Promise<void> {
         // eslint-disable-next-line no-console
         console.log('sets up tsconfig');
-        await TsConfigUtilities.updateTsConfig(projectName, { extends: '../../tsconfig.base.json' });
+        await TsConfigUtilities.updateTsConfig(projectName, { extends: `../../${BASE_TS_CONFIG_FILE_NAME}` });
 
         const eslintTsconfig: TsConfig = {
             compilerOptions: {
                 outDir: './out-tsc/eslint',
                 types: ['jasmine', 'node']
             },
-            extends: '../../tsconfig.base.json',
+            extends: `../../${BASE_TS_CONFIG_FILE_NAME}`,
             files: [
                 'src/main.ts',
                 'src/main.server.ts',

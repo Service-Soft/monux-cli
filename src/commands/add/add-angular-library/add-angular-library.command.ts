@@ -1,5 +1,5 @@
 import { AngularUtilities } from '../../../angular';
-import { ANGULAR_JSON_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, PACKAGE_JSON_FILE_NAME } from '../../../constants';
+import { ANGULAR_JSON_FILE_NAME, BASE_TS_CONFIG_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, PACKAGE_JSON_FILE_NAME } from '../../../constants';
 import { FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
 import { EslintUtilities } from '../../../eslint';
 import { NpmUtilities, PackageJson } from '../../../npm';
@@ -149,7 +149,7 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
         console.log('sets up tsconfig');
 
         await Promise.all([
-            TsConfigUtilities.updateTsConfig(config.name, { extends: '../../tsconfig.base.json' }),
+            TsConfigUtilities.updateTsConfig(config.name, { extends: `../../${BASE_TS_CONFIG_FILE_NAME}` }),
             this.createTsConfigEslint(root),
             this.updateTsConfigLib(root),
             this.updateTsConfigSpec(root),
@@ -197,7 +197,7 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
                 outDir: './out-tsc/eslint',
                 types: ['jasmine']
             },
-            extends: '../../tsconfig.base.json',
+            extends: `../../${BASE_TS_CONFIG_FILE_NAME}`,
             files: ['src/public-api.ts'],
             include: [
                 'src/**/*.spec.ts',

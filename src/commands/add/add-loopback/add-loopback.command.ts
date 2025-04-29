@@ -1,5 +1,5 @@
 import { loopbackWebpackContent } from './loopback-webpack.content';
-import { APPS_DIRECTORY_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, GIT_IGNORE_FILE_NAME, TS_CONFIG_FILE_NAME, WEBPACK_CONFIG } from '../../../constants';
+import { APPS_DIRECTORY_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, GIT_IGNORE_FILE_NAME, TS_CONFIG_FILE_NAME, WEBPACK_CONFIG, BASE_TS_CONFIG_FILE_NAME } from '../../../constants';
 import { DbType, DbUtilities } from '../../../db';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, QuestionsFor } from '../../../encapsulation';
@@ -347,7 +347,7 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
         await TsConfigUtilities.updateTsConfig(
             projectName,
             {
-                extends: ['../../tsconfig.base.json', '@loopback/build/config/tsconfig.common.json'],
+                extends: [`../../${BASE_TS_CONFIG_FILE_NAME}`, '@loopback/build/config/tsconfig.common.json'],
                 compilerOptions: { rootDir: undefined }
             }
         );

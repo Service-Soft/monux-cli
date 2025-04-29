@@ -1,7 +1,7 @@
 
 import { Type } from '@nestjs/common';
 
-import { APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ESLINT_CONFIG_FILE_NAME, NEST_CLI_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, WEBPACK_CONFIG } from '../../../constants';
+import { APPS_DIRECTORY_NAME, BASE_TS_CONFIG_FILE_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ESLINT_CONFIG_FILE_NAME, NEST_CLI_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, WEBPACK_CONFIG } from '../../../constants';
 import { DbType, DbUtilities, defaultPortForDbType } from '../../../db';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, QuestionsFor } from '../../../encapsulation';
@@ -256,7 +256,7 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
         await TsConfigUtilities.updateTsConfig(
             projectName,
             {
-                extends: '../../tsconfig.base.json',
+                extends: `../../${BASE_TS_CONFIG_FILE_NAME}`,
                 compilerOptions: {
                     removeComments: undefined,
                     emitDecoratorMetadata: undefined,

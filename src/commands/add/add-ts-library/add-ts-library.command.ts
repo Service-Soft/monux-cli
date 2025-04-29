@@ -54,8 +54,7 @@ export class AddTsLibraryCommand extends BaseAddCommand<TsLibraryConfiguration> 
         ]);
 
         await FsUtilities.createFile(getPath(root, 'src', 'index.ts'), '');
-        await NpmUtilities.install(config.name, [NpmPackage.VITE_PLUGIN_DTS], true);
-        await NpmUtilities.run(config.name, 'build');
+        await NpmUtilities.run(config.name, 'build', false);
         await this.installInProjects(config);
     }
 
@@ -100,6 +99,7 @@ export class AddTsLibraryCommand extends BaseAddCommand<TsLibraryConfiguration> 
             '\t}',
             '});'
         ]);
+        await NpmUtilities.install(config.name, [NpmPackage.VITE_PLUGIN_DTS], true);
         // const originalPackageJson: PackageJson = await FsUtilities.parseFileAs(getPath(libraryPath, PACKAGE_JSON_FILE_NAME));
         await NpmUtilities.updatePackageJson(
             config.name,

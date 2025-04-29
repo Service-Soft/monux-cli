@@ -14,6 +14,9 @@ jobs:
     test:
         runs-on: ubuntu-latest
         steps:
+            -
+                name: Set up Docker Compose
+                uses: docker/setup-compose-action@v1
             - uses: actions/checkout@v4
             - run: npm ci
             - run: npm run build

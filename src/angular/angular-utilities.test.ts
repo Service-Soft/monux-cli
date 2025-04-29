@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
 import { AngularUtilities } from './angular.utilities';
-import { fakeAddNavElementConfig, fakeTsImportDefinition, FileMockUtilities, getMockConstants, MockConstants } from '../__testing__';
+import { fakeAddNavElementConfig, fakeTsImportDefinition, FileMockUtilities, getMockConstants, MAX_GEN_CODE_TIME, MockConstants } from '../__testing__';
 import { CPUtilities, FsUtilities } from '../encapsulation';
 import { NpmUtilities } from '../npm';
 import { TsImportDefinition } from '../ts';
@@ -255,7 +255,7 @@ describe('AngularUtilities', () => {
             '',
             'export const routes: NavRoute[] = NavUtilities.getAngularRoutes(navbarRows, footerRows, [notFoundRoute]);'
         ]);
-    }, 20000);
+    }, MAX_GEN_CODE_TIME);
 
     test('generatePage for footer', async () => {
         await AngularUtilities.setupNavigation(mockConstants.ANGULAR_APP_DIR, mockConstants.ANGULAR_APP_NAME);
@@ -319,7 +319,7 @@ describe('AngularUtilities', () => {
             '',
             'export const routes: NavRoute[] = NavUtilities.getAngularRoutes(navbarRows, footerRows, [notFoundRoute]);'
         ]);
-    }, 10000);
+    }, MAX_GEN_CODE_TIME);
 
     test('addPwaSupport', async () => {
         await AngularUtilities.setupPwa(mockConstants.ANGULAR_APP_DIR, mockConstants.ANGULAR_APP_NAME);

@@ -87,6 +87,11 @@ export const TAILWIND_CONFIG_FILE_NAME: string = 'tailwind.config.js';
 export const TS_CONFIG_FILE_NAME: string = 'tsconfig.json';
 
 /**
+ * The name of the base ts config file.
+ */
+export const BASE_TS_CONFIG_FILE_NAME: string = 'tsconfig.base.json';
+
+/**
  * The name of the angular json file.
  */
 export const ANGULAR_JSON_FILE_NAME: string = 'angular.json';
