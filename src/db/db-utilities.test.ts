@@ -12,10 +12,7 @@ const mockConstants: MockConstants = getMockConstants('db-utilities');
 
 describe('DbUtilities', () => {
     beforeEach(async () => {
-        await FileMockUtilities.setup(
-            mockConstants,
-            ['DOCKER_COMPOSE_YAML', 'DEV_DOCKER_COMPOSE_YAML', 'LOCAL_DOCKER_COMPOSE_YAML', 'ENV', 'GLOBAL_ENV_MODEL']
-        );
+        await FileMockUtilities.setup(mockConstants);
     });
 
     test('createPostgresDatabase', async () => {

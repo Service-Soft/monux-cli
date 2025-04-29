@@ -1,6 +1,6 @@
 import { Dirent } from 'fs';
 
-import { CPUtilities, FsUtilities } from '../../encapsulation';
+import { FsUtilities } from '../../encapsulation';
 import { NativeNpmCommands, NpmUtilities, PackageJson } from '../../npm';
 import { exitWithError, getPath } from '../../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../../workspace';
@@ -16,12 +16,7 @@ export class RunCommand extends BaseCommand<RunConfiguration> {
     protected override maxLength: undefined = undefined;
 
     protected override async run(config: RunConfiguration): Promise<void> {
-        if (!config.isNativeCommand) {
-            await NpmUtilities.run(config.projectName, config.commands);
-            return;
-        }
-        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.projectName, getPath('.'));
-        CPUtilities.execSync(`npm ${config.commands} --workspace=${project.npmWorkspaceString}`);
+        await NpmUtilities.run(config.projectName, config.commands, config.isNativeCommand);
     }
 
     protected override resolveInput(args: string[]): RunConfiguration {

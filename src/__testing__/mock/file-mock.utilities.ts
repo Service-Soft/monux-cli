@@ -3,8 +3,26 @@ import { MockConstants, FileMockConstants, DirMockConstants } from './constants'
 import { AngularJson } from '../../angular';
 import { CPUtilities, FsUtilities, JsonUtilities } from '../../encapsulation';
 import { EnvUtilities } from '../../env';
+import { TsConfigUtilities } from '../../tsconfig';
 import { getPath } from '../../utilities';
 import { WorkspaceUtilities } from '../../workspace';
+
+export const defaultFilesToMock: (keyof FileMockConstants)[] = [
+    'WORKSPACE_JSON',
+    'BASE_TS_CONFIG_JSON',
+    'ENV',
+    'GLOBAL_ENV_MODEL',
+    'ROOT_PACKAGE_JSON',
+    'DOCKER_COMPOSE_YAML',
+    'DEV_DOCKER_COMPOSE_YAML',
+    'LOCAL_DOCKER_COMPOSE_YAML'
+] as const;
+
+export const defaultFoldersToMock: (keyof DirMockConstants)[] = [
+    'LIBS_DIR',
+    'APPS_DIR',
+    'PROJECT_DIR'
+] as const;
 
 export abstract class FileMockUtilities {
 
@@ -27,33 +45,27 @@ export abstract class FileMockUtilities {
             ANGULAR_ENVIRONMENT: this.createEmptyFile,
             TS_LIBRARY_PACKAGE_JSON: this.createEmptyFile,
             ROOT_PACKAGE_JSON: this.createRootPackageJson,
-            ENV: this.createEmptyFile,
-            GLOBAL_ENV_MODEL: this.createGlobalEnvModel
+            ENV: this.createEnv,
+            GLOBAL_ENV_MODEL: this.createGlobalEnvModel,
+            WORKSPACE_JSON: WorkspaceUtilities.createConfig,
+            BASE_TS_CONFIG_JSON: TsConfigUtilities.createBaseTsConfig
         };
 
     static async setup(
         mockConstants: MockConstants,
-        filesToMock: (keyof FileMockConstants)[] = [],
-        contentOverrides: Partial<Record<keyof FileMockConstants, string | string[]>> = {}
+        filesToMock: (keyof FileMockConstants)[] = defaultFilesToMock,
+        contentOverrides: Partial<Record<keyof FileMockConstants, string | string[]>> = {},
+        foldersToMock: (keyof DirMockConstants)[] = defaultFoldersToMock
     ): Promise<void> {
-        await FsUtilities.rm(getPath(mockConstants.PROJECT_DIR));
+        await FsUtilities.rm(mockConstants.PROJECT_DIR);
         CPUtilities['cwd'] = mockConstants.PROJECT_DIR;
-        await this.mockFolders(mockConstants);
+        await this.mockFolders(foldersToMock, mockConstants);
         await this.mockFiles(filesToMock, contentOverrides, mockConstants);
-        await WorkspaceUtilities.createConfig();
     }
 
-    private static async mockFolders(mockConstants: MockConstants): Promise<void> {
-        const dirMockConstants: DirMockConstants = {
-            ANGULAR_APP_DIR: mockConstants.ANGULAR_APP_DIR,
-            APPS_DIR: mockConstants.APPS_DIR,
-            LIBS_DIR: mockConstants.LIBS_DIR,
-            PROJECT_DIR: mockConstants.PROJECT_DIR,
-            TS_LIBRARY_DIR: mockConstants.TS_LIBRARY_DIR,
-            GITHUB_WORKFLOW_DIR: mockConstants.GITHUB_WORKFLOW_DIR
-        };
-        for (const entry of Object.values(dirMockConstants)) {
-            await FsUtilities.mkdir(getPath(entry), true, false);
+    private static async mockFolders(foldersToMock: (keyof DirMockConstants)[], mockConstants: MockConstants): Promise<void> {
+        for (const entry of foldersToMock) {
+            await FsUtilities.mkdir(mockConstants[entry], true, false);
         }
     }
 
@@ -117,7 +129,7 @@ export abstract class FileMockUtilities {
     private static async createRootPackageJson(mockConstants: MockConstants): Promise<void> {
         await FsUtilities.createFile(mockConstants.ROOT_PACKAGE_JSON, [
             '{',
-            '    "name": "@library/library",',
+            '    "name": "sandbox",',
             '    "version": "1.0.0",',
             '    "main": "index.js",',
             '    "scripts": {',
@@ -126,7 +138,18 @@ export abstract class FileMockUtilities {
             '    "keywords": [],',
             '    "author": "",',
             '    "license": "ISC",',
-            '    "description": ""',
+            '    "description": "",',
+            '    "devDependencies": {',
+            '        "autoprefixer": "^10.4.21",',
+            '        "eslint": "^9.25.1",',
+            '        "eslint-config-service-soft": "^2.0.8",',
+            '        "postcss": "^8.5.3",',
+            '        "tailwindcss": "^4.1.4"',
+            '    },',
+            '    "workspaces": [',
+            '        "apps/*",',
+            '        "libs/*"',
+            '    ]',
             '}'
         ], true, false);
     }
@@ -175,5 +198,9 @@ export abstract class FileMockUtilities {
 
     private static async createGlobalEnvModel(): Promise<void> {
         await EnvUtilities['createGlobalEnvironmentModel']();
+    }
+
+    private static async createEnv(mockConstants: MockConstants): Promise<void> {
+        await FsUtilities.createFile(mockConstants.ENV, ['prod_root_domain=test.com', 'is_public=false']);
     }
 }

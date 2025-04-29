@@ -1,4 +1,3 @@
-
 import { beforeEach, describe, expect, test } from '@jest/globals';
 
 import { fakeEnvVariable, FileMockUtilities, getMockConstants, MockConstants } from '../__testing__';
@@ -13,13 +12,13 @@ const mockConstants: MockConstants = getMockConstants('env-utilities');
 
 describe('EnvUtilities', () => {
     beforeEach(async () => {
-        await FileMockUtilities.setup(mockConstants);
+        await FileMockUtilities.setup(mockConstants, []);
         await EnvUtilities.init('test.com');
     });
 
     test('addStaticVariable', async () => {
         for (let i: number = 0; i < 50; i++) {
-            await FileMockUtilities.setup(mockConstants);
+            await FileMockUtilities.setup(mockConstants, []);
             await EnvUtilities.init('test.com');
 
             const variable: EnvVariable = fakeEnvVariable();

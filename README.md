@@ -62,6 +62,7 @@ The projects that can be added to a Monux monorepo also provide a lot of functio
   - [Angular website](#angular-website)
   - [Angular library](#angular-library)
   - [LoopBack](#loopback)
+  - [Nest](#nest)
   - [Typescript library](#typescript-library)
   - [Wordpress](#wordpress)
   - [Add projects manually](#add-projects-manually)
@@ -301,13 +302,14 @@ They will give you a nice overview of all monorepos on your machine and their re
 ## Angular website
 ## Angular library
 ## LoopBack
+## Nest
 ## Typescript library
 ## Wordpress
 ## Add projects manually
 One of the reasons that Monux was created was the amount of abstraction layers added by tools like Nx.<br>
 The magic was really cool as long as everything worked, but made debugging issues much harder.
 
-For that reason, Monux is simply using npm workspaces under the hood and none of its magic is hidden from the developer, besides maybe validating and creating environment files, which is explained in detail in [Handling environment variables](#handling-environment-variables).
+For that reason, Monux is simply using npm workspaces under the hood and none of its magic is hidden from the developer. Besides maybe validating and creating environment files, which is explained in detail in [Handling environment variables](#handling-environment-variables).
 
 Because of that it should be fairly simple to add any project/framework/library manually by just taking a look at existing projects.
 

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from '@jest/globals';
 
-import { fakeUpdatePackageJsonData, FileMockUtilities, getMockConstants, MockConstants } from '../__testing__';
+import { fakeUpdatePackageJsonData, FileMockUtilities, getMockConstants, MAX_ADD_TIME, MockConstants } from '../__testing__';
 import { NpmUtilities } from './npm.utilities';
 import { FsUtilities } from '../encapsulation';
 import { PackageJson } from './package-json.model';
@@ -9,7 +9,7 @@ const mockConstants: MockConstants = getMockConstants('npm-utilities');
 
 describe('NpmUtilities', () => {
     beforeEach(async () => {
-        await FileMockUtilities.setup(mockConstants, ['ROOT_PACKAGE_JSON']);
+        await FileMockUtilities.setup(mockConstants);
     });
 
     test('init', async () => {
@@ -29,7 +29,7 @@ describe('NpmUtilities', () => {
             '    "description": ""',
             '}'
         ]);
-    });
+    }, MAX_ADD_TIME);
 
     test('updatePackageJsonFile', async () => {
         const updateData: Partial<PackageJson> = fakeUpdatePackageJsonData();

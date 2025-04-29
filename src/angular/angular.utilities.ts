@@ -799,7 +799,6 @@ export abstract class AngularUtilities {
                 { defaultImport: false, element: 'OfflineService', path: './services/offline.service' }
             ]
         );
-        // TODO: enable OfflineRequestInterceptor. Need to fix parsing of provideServiceWorker first.
         await this.addProvider(
             root,
             // eslint-disable-next-line typescript/no-unsafe-assignment, typescript/no-explicit-any

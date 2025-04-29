@@ -58,13 +58,18 @@ export abstract class NpmUtilities {
     }
 
     /**
-     * Runs the given npm script in the project with the provided name.
-     * @param projectName - The project to run the npm script in.
-     * @param commands - The npm script to run.
+     * Runs the given npm command in the project with the provided name.
+     * @param projectName - The project to run the npm command in.
+     * @param commands - The npm command to run.
+     * @param isNativeCommand - Whether or not the npm command is native (like "install") or a custom script defined in the package.json.
      */
-    static async run(projectName: string, commands: string): Promise<void> {
+    static async run(projectName: string, commands: string, isNativeCommand: boolean): Promise<void> {
         const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName, getPath('.'));
-        CPUtilities.execSync(`npm run ${commands} --workspace=${project.npmWorkspaceString}`);
+        if (!isNativeCommand) {
+            CPUtilities.execSync(`npm run ${commands} --workspace=${project.npmWorkspaceString}`);
+            return;
+        }
+        CPUtilities.execSync(`npm ${commands} --workspace=${project.npmWorkspaceString}`);
     }
 
     /**
@@ -82,10 +87,8 @@ export abstract class NpmUtilities {
      * @param development - Whether or not the packages will be installed with -D or not.
      */
     static async install(projectName: string, npmPackages: NpmPackage[], development: boolean = false): Promise<void> {
-        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName, getPath('.'));
-
-        const installCommand: string = development ? 'npm i -D' : 'npm i';
-        CPUtilities.execSync(`cd ${project.path} && ${installCommand} ${npmPackages.join(' ')}`);
+        const installCommand: string = development ? 'i -D' : 'i';
+        await this.run(projectName, `${installCommand} ${npmPackages.join(' ')}`, true);
     }
 
     /**
