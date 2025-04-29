@@ -12,6 +12,7 @@ const config = {
     modulePathIgnorePatterns: ['tmp'],
     // coverage
     collectCoverage: true,
+    coverageProvider: 'v8',
     coverageDirectory: '<rootDir>/__testing__/coverage',
     coveragePathIgnorePatterns: [
         '/node_modules/',

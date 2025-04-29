@@ -8,6 +8,9 @@ import { exitWithInterrupt, isErrorWithSignal, isExitPromptError } from '../util
  */
 export abstract class CPUtilities {
 
+    /**
+     * Used only for testing/mocking.
+     */
     // eslint-disable-next-line typescript/prefer-readonly
     private static cwd?: string;
 
