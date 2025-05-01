@@ -2,6 +2,7 @@ import { execSync, ExecSyncOptions } from 'child_process';
 
 import { ChalkUtilities } from './chalk.utilities';
 import { exitGracefully, exitWithInterrupt, isErrorWithSignal, isExitPromptError } from '../utilities';
+import { JsonUtilities } from './json.utilities';
 
 /**
  * Encapsulates functionality of the child_process package.
@@ -35,6 +36,8 @@ export abstract class CPUtilities {
             }
             // eslint-disable-next-line no-console
             console.error(ChalkUtilities.error(`Command failed: ${command}`));
+            // eslint-disable-next-line no-console
+            console.error(ChalkUtilities.error(JsonUtilities.stringify(error)));
             await exitGracefully(1);
         }
     }
