@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
 import { GeneratePageCommand } from './generate-page.command';
-import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MAX_GEN_CODE_TIME, MockConstants, inquireMock } from '../../__testing__';
+import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MockConstants, inquireMock } from '../../__testing__';
 import { InquirerUtilities } from '../../encapsulation';
 import { AddAngularWebsiteCommand } from '../add/add-angular-website';
 import { AddConfiguration, AddType } from '../add/models';
@@ -31,7 +31,7 @@ describe('GeneratePageCommand', () => {
         const command: GeneratePageCommand = new GeneratePageCommand();
         await command.start(['gp']);
         expect(true).toBe(true);
-    }, MAX_ADD_TIME + MAX_GEN_CODE_TIME);
+    }, MAX_ADD_TIME);
 
     afterEach(() => {
         jest.restoreAllMocks();
