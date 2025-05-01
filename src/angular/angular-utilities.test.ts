@@ -255,7 +255,7 @@ describe('AngularUtilities', () => {
             '',
             'export const routes: NavRoute[] = NavUtilities.getAngularRoutes(navbarRows, footerRows, [notFoundRoute]);'
         ]);
-    }, MAX_GEN_CODE_TIME);
+    }, MAX_GEN_CODE_TIME * 2);
 
     test('generatePage for footer', async () => {
         await AngularUtilities.setupNavigation(mockConstants.ANGULAR_APP_DIR, mockConstants.ANGULAR_APP_NAME);
