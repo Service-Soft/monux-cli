@@ -35,8 +35,6 @@ export abstract class CPUtilities {
             }
             // eslint-disable-next-line no-console
             console.error(ChalkUtilities.error(`Command failed: ${command}`));
-            // eslint-disable-next-line no-console
-            console.error(error);
             await exitGracefully(1);
         }
     }

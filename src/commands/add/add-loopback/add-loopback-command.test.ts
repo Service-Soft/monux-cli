@@ -5,6 +5,7 @@ import { DbType } from '../../../db';
 import { InquirerUtilities } from '../../../encapsulation';
 import { AddConfiguration, AddType } from '../models';
 import { AddLoopbackCommand } from './add-loopback.command';
+import { LoopbackUtilities } from '../../../loopback';
 
 const mockConstants: MockConstants = getMockConstants('add-loopback-command');
 
@@ -22,6 +23,7 @@ describe('AddLoopbackCommand', () => {
             'Database name': 'sandbox',
             'database type': DbType.POSTGRES
         }));
+        LoopbackUtilities['createMailService'] = jest.fn(async () => {});
     });
 
     test('should run and create new database', async () => {
