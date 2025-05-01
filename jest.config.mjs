@@ -8,7 +8,7 @@ const config = {
         '^.+.tsx?$': ['ts-jest', {}]
     },
     setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
-    bail: true,
+    bail: false,
     modulePathIgnorePatterns: ['tmp'],
     // coverage
     collectCoverage: true,
