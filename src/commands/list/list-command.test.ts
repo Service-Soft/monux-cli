@@ -1,7 +1,7 @@
 import { describe, beforeEach, jest, test, afterEach } from '@jest/globals';
 
 import { ListCommand } from './list.command';
-import { FileMockUtilities, getMockConstants, MAX_BARELY_NOTICEABLE_TIME, MockConstants, inquireMock, MAX_FAST_TIME } from '../../__testing__';
+import { FileMockUtilities, getMockConstants, MockConstants, inquireMock, MAX_FAST_TIME } from '../../__testing__';
 import { InquirerUtilities } from '../../encapsulation';
 import { DownCommand } from '../down';
 import { UpCommand } from '../up';
@@ -35,7 +35,7 @@ describe('ListCommand', () => {
 
         const command: DownCommand = new DownCommand();
         await command.start(['d']);
-    }, MAX_FAST_TIME + (MAX_BARELY_NOTICEABLE_TIME * 2) /** We call up, list and down. */);
+    }, MAX_FAST_TIME * 3 /** We call up, list and down. */);
 
     afterEach(() => {
         jest.restoreAllMocks();

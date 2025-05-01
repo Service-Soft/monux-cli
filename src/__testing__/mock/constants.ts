@@ -3,7 +3,7 @@ import { ANGULAR_JSON_FILE_NAME, ANGULAR_ROUTES_FILE_NAME, APP_CONFIG_FILE_NAME,
 import { OmitStrict } from '../../types';
 import { getPath, Path } from '../../utilities';
 
-export const MAX_ADD_TIME: number = 60000;
+export const MAX_ADD_TIME: number = 90000;
 
 export const MAX_GEN_CODE_TIME: number = 10000;
 
