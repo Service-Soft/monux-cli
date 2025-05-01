@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MockConstants, mockInquire } from '../../../__testing__';
+import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MockConstants, inquireMock } from '../../../__testing__';
 import { AddConfiguration, AddType } from '../models';
 import { AddTsLibraryCommand } from './add-ts-library.command';
 import { InquirerUtilities } from '../../../encapsulation';
@@ -10,7 +10,7 @@ const mockConstants: MockConstants = getMockConstants('add-ts-library-command');
 describe('AddTsLibraryCommand', () => {
     beforeEach(async () => {
         await FileMockUtilities.setup(mockConstants);
-        InquirerUtilities['inquire'] = jest.fn(mockInquire({
+        InquirerUtilities['inquire'] = jest.fn(inquireMock({
             scope: '@sandbox'
         }));
     });

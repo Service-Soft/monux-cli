@@ -213,7 +213,7 @@ export class AddAngularCommand extends BaseAddCommand<AddAngularConfiguration> {
 
     private async createProject(config: AddAngularConfiguration): Promise<Path> {
         console.log('Creates the base app');
-        AngularUtilities.runCommand(
+        await AngularUtilities.runCommand(
             getPath(APPS_DIRECTORY_NAME),
             `new ${config.name}`,
             { '--skip-git': true, '--style': 'css', '--inline-style': true, '--ssr': true }

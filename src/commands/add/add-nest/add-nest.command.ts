@@ -220,7 +220,7 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
     private async createProject(config: AddNestConfiguration): Promise<Path> {
         // eslint-disable-next-line no-console
         console.log('Creates the base app');
-        NestUtilities.runCommand(
+        await NestUtilities.runCommand(
             getPath(APPS_DIRECTORY_NAME),
             `new ${config.name}`,
             {

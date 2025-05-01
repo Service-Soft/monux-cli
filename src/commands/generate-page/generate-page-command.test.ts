@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
 import { GeneratePageCommand } from './generate-page.command';
-import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MAX_GEN_CODE_TIME, MockConstants, mockInquire } from '../../__testing__';
+import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MAX_GEN_CODE_TIME, MockConstants, inquireMock } from '../../__testing__';
 import { InquirerUtilities } from '../../encapsulation';
 import { AddAngularWebsiteCommand } from '../add/add-angular-website';
 import { AddConfiguration, AddType } from '../add/models';
@@ -11,7 +11,7 @@ const mockConstants: MockConstants = getMockConstants('generate-page-command');
 describe('GeneratePageCommand', () => {
     beforeEach(async () => {
         await FileMockUtilities.setup(mockConstants);
-        InquirerUtilities['inquire'] = jest.fn(mockInquire({
+        InquirerUtilities['inquire'] = jest.fn(inquireMock({
             Project: 'website',
             'Page name': 'dashboard',
             Route: 'dashboard',

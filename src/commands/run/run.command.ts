@@ -34,7 +34,7 @@ export class RunCommand extends BaseCommand<RunConfiguration> {
 
         const packageJson: Dirent | undefined = (await FsUtilities.readdir(foundProject.path)).find(f => f.name === PACKAGE_JSON_FILE_NAME);
         if (!packageJson) {
-            exitWithError(`The provided project "${project}" does not contain a ${PACKAGE_JSON_FILE_NAME} file`);
+            return await exitWithError(`The provided project "${project}" does not contain a ${PACKAGE_JSON_FILE_NAME} file`);
         }
 
         if (Object.values(NativeNpmCommands).includes(args[1] as NativeNpmCommands)) {
@@ -45,7 +45,7 @@ export class RunCommand extends BaseCommand<RunConfiguration> {
         const file: PackageJson = await FsUtilities.parseFileAs<PackageJson>(getPath(packageJson.parentPath, packageJson.name));
 
         if (!Object.keys(file.scripts).includes(npmScript)) {
-            exitWithError(`The project "${project}" does not contain the provided script "${npmScript}"`);
+            await exitWithError(`The project "${project}" does not contain the provided script "${npmScript}"`);
         }
     }
 }

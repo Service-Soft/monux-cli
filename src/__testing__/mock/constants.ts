@@ -7,7 +7,9 @@ export const MAX_ADD_TIME: number = 60000;
 
 export const MAX_GEN_CODE_TIME: number = 10000;
 
-export const MAX_FAST_TIME: number = 300;
+export const MAX_FAST_TIME: number = 1000;
+
+export const MAX_BARELY_NOTICEABLE_TIME: number = 500;
 
 export const MAX_INSTANT_TIME: number = 100;
 

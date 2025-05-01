@@ -172,7 +172,7 @@ export abstract class LoopbackUtilities {
             // for the new command, extract the name
             command = command.split(' ')[1] as LoopbackCliCommands;
         }
-        CPUtilities.execSync(`cd ${directory} && npx @loopback/cli@${this.CLI_VERSION} ${command} ${optionsToCliString(options, ' ')}`);
+        await CPUtilities.exec(`cd ${directory} && npx @loopback/cli@${this.CLI_VERSION} ${command} ${optionsToCliString(options, ' ')}`);
         if (command.startsWith('service')) {
             const servicePath: Path = getPath(directory, 'src', 'services', `${toKebabCase(command.split(' ')[1])}.service.ts`);
             await FsUtilities.replaceInFile(servicePath, '/* inject, */', '');

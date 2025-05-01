@@ -13,7 +13,7 @@ describe('NestUtilities', () => {
     });
 
     test('run new command', async () => {
-        NestUtilities.runCommand(mockConstants.APPS_DIR, 'new api', {
+        await NestUtilities.runCommand(mockConstants.APPS_DIR, 'new api', {
             '--language': 'TS',
             '--package-manager': 'npm',
             '--skip-git': true,

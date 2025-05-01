@@ -20,7 +20,7 @@ describe('TsConfigUtilities', () => {
     });
 
     test('init', async () => {
-        TsConfigUtilities.init(mockConstants.TS_LIBRARY_DIR);
+        await TsConfigUtilities.init(mockConstants.TS_LIBRARY_DIR);
         const content: TsConfig = await FsUtilities.parseFileAs(getPath(mockConstants.TS_LIBRARY_DIR, TS_CONFIG_FILE_NAME));
         expect(content).toEqual({
             compilerOptions: {
@@ -35,7 +35,7 @@ describe('TsConfigUtilities', () => {
     });
 
     test('update', async () => {
-        TsConfigUtilities.init(mockConstants.TS_LIBRARY_DIR);
+        await TsConfigUtilities.init(mockConstants.TS_LIBRARY_DIR);
         const tsconfigPath: Path = getPath(mockConstants.TS_LIBRARY_DIR, TS_CONFIG_FILE_NAME);
         await TsConfigUtilities['update'](tsconfigPath, {
             extends: `../../${BASE_TS_CONFIG_FILE_NAME}`,

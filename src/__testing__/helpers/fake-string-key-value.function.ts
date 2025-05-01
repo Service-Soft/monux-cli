@@ -2,7 +2,7 @@
 import { faker } from '@faker-js/faker';
 
 import { fakeUniqueString } from './fake-unique-string.function';
-import { KeyValue } from '../../../types';
+import { KeyValue } from '../../types';
 
 export function fakeStringKeyValue(): KeyValue<string> {
     return {

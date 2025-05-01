@@ -17,8 +17,8 @@ type RunAllConfiguration = {
  */
 export class RunAllCommand extends BaseCommand<RunAllConfiguration> {
 
-    protected override run(config: RunAllConfiguration): void {
-        NpmUtilities.runAll(config.npmScript);
+    protected override async run(config: RunAllConfiguration): Promise<void> {
+        await NpmUtilities.runAll(config.npmScript);
     }
 
     protected override resolveInput(args: string[]): RunAllConfiguration {
@@ -27,7 +27,7 @@ export class RunAllCommand extends BaseCommand<RunAllConfiguration> {
 
     protected override async validate(args: string[]): Promise<void> {
         if (args.length === 1) {
-            exitWithError('Error: No npm script specified to run in all projects.');
+            await exitWithError('Error: No npm script specified to run in all projects.');
         }
         await this.validateInsideWorkspace();
     }

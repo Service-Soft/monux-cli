@@ -19,11 +19,11 @@ export class UpCommand extends BaseCommand<UpConfiguration> {
 
     protected override async run(input: UpConfiguration): Promise<void> {
         await new PrepareCommand()['run'](input);
-        CPUtilities.execSync(`docker compose -f ${input.dockerFilePath ?? input.fileName} -p ${input.projectName} up --build -d`);
+        await CPUtilities.exec(`docker compose -f ${input.dockerFilePath ?? input.fileName} -p ${input.projectName} up --build -d`);
     }
 
     protected override async validate(args: string[]): Promise<void> {
-        this.validateMaxLength(args);
+        await this.validateMaxLength(args);
         if (args.length === 1) {
             await this.validateInsideWorkspace();
         }
@@ -39,7 +39,7 @@ export class UpCommand extends BaseCommand<UpConfiguration> {
             rootDir = getPath('.');
         }
         if (rootDir === undefined) {
-            exitWithError(`Error: Could not find root of "${projectName}"`);
+            return await exitWithError(`Error: Could not find root of "${projectName}"`);
         }
 
         const fileName: DockerComposeFileName = (await InquirerUtilities.prompt(prepareConfigQuestions)).fileName;
