@@ -58,8 +58,8 @@ export abstract class NestUtilities {
      * @param command - The command to run.
      * @param options - Options for running the command.
      */
-    static runCommand(directory: Path, command: NestCliCommands, options: NestCliOptions<typeof command>): void {
-        CPUtilities.execSync(`cd ${directory} && npx @nestjs/cli@${this.CLI_VERSION} ${command} ${optionsToCliString(options)}`);
+    static async runCommand(directory: Path, command: NestCliCommands, options: NestCliOptions<typeof command>): Promise<void> {
+        await CPUtilities.exec(`cd ${directory} && npx @nestjs/cli@${this.CLI_VERSION} ${command} ${optionsToCliString(options)}`);
     }
 
     /**

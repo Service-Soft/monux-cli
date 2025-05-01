@@ -11,7 +11,7 @@ import { getPath } from '../utilities';
 const mockConstants: MockConstants = getMockConstants('angular-utilities');
 
 let npmInstallMock: jest.SpiedFunction<typeof NpmUtilities.install>;
-let cpExecSyncMock: jest.SpiedFunction<typeof CPUtilities.execSync>;
+let cpExecSyncMock: jest.SpiedFunction<typeof CPUtilities.exec>;
 
 describe('AngularUtilities', () => {
     beforeEach(async () => {
@@ -26,7 +26,7 @@ describe('AngularUtilities', () => {
             ]
         );
         npmInstallMock = jest.spyOn(NpmUtilities, 'install').mockImplementation(async () => {});
-        cpExecSyncMock = jest.spyOn(CPUtilities, 'execSync').mockImplementation(() => {});
+        cpExecSyncMock = jest.spyOn(CPUtilities, 'exec').mockImplementation(async () => {});
     });
 
     test('addComponentImports', async () => {

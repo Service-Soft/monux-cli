@@ -47,7 +47,7 @@ export abstract class BaseCommand<Input extends object = {}> {
      * @param args - The cli args.
      */
     protected async validate(args: string[]): Promise<void> {
-        this.validateMaxLength(args);
+        await this.validateMaxLength(args);
         await this.validateInsideWorkspace();
     }
 
@@ -61,7 +61,7 @@ export abstract class BaseCommand<Input extends object = {}> {
         const config: WorkspaceConfig | undefined = await WorkspaceUtilities.getConfig();
         // eslint-disable-next-line typescript/strict-boolean-expressions
         if (!config?.isWorkspace) {
-            exitWithError('This command can only be run inside a workspace');
+            await exitWithError('This command can only be run inside a workspace');
         }
     }
 
@@ -69,12 +69,12 @@ export abstract class BaseCommand<Input extends object = {}> {
      * Validates that the provided args are not bigger than the maxLength.
      * @param args - The cli args.
      */
-    protected validateMaxLength(args: string[]): void {
+    protected async validateMaxLength(args: string[]): Promise<void> {
         if (this.maxLength == undefined) {
             return;
         }
         if (args.length > this.maxLength) {
-            exitWithError(TOO_MANY_ARGUMENTS_ERROR_MESSAGE);
+            await exitWithError(TOO_MANY_ARGUMENTS_ERROR_MESSAGE);
         }
     }
 }

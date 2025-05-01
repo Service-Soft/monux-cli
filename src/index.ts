@@ -11,7 +11,7 @@ async function main(): Promise<void> {
 
     FigletUtilities.displayLogo();
 
-    const command: Command | 'run' = resolveCommand(args);
+    const command: Command | 'run' = await resolveCommand(args);
 
     switch (command) {
         case Command.H:

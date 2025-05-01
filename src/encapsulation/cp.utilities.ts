@@ -1,7 +1,7 @@
 import { execSync, ExecSyncOptions } from 'child_process';
 
 import { ChalkUtilities } from './chalk.utilities';
-import { exitWithInterrupt, isErrorWithSignal, isExitPromptError } from '../utilities';
+import { exitGracefully, exitWithInterrupt, isErrorWithSignal, isExitPromptError } from '../utilities';
 
 /**
  * Encapsulates functionality of the child_process package.
@@ -20,7 +20,7 @@ export abstract class CPUtilities {
      * @param output - Whether or not the output of the command should be passed to the console.
      * @throws When there was an error during execution.
      */
-    static execSync(command: string, output: boolean = true): void {
+    static async exec(command: string, output: boolean = true): Promise<void> {
         const options: ExecSyncOptions = {
             stdio: output ? 'inherit' : undefined,
             killSignal: 'SIGINT',
@@ -31,11 +31,11 @@ export abstract class CPUtilities {
         }
         catch (error) {
             if (isExitPromptError(error) || (isErrorWithSignal(error) && error.signal === 'SIGINT')) {
-                exitWithInterrupt();
+                await exitWithInterrupt();
             }
             // eslint-disable-next-line no-console
             console.error(ChalkUtilities.error(`Command failed: ${command}`));
-            process.exit(1);
+            await exitGracefully(1);
         }
     }
 }
