@@ -37,6 +37,7 @@ export enum NpmPackage {
     TYPEORM = 'typeorm',
     PG = 'pg',
     MYSQL_2 = 'mysql2',
+    // TODO: clean up after loopback4 bundling
     WEBPACK = 'webpack',
     WEBPACK_CLI = 'webpack-cli',
     TS_LOADER = 'ts-loader',
@@ -44,5 +45,7 @@ export enum NpmPackage {
     TSCONFIG_PATH_WEBPACK_PLUGIN = 'tsconfig-paths-webpack-plugin',
     FORK_TS_CHECKER_WEBPACK_PLUGIN = 'fork-ts-checker-webpack-plugin',
     CLDRJS = 'cldrjs',
-    CLDR_DATA = 'cldr-data'
+    CLDR_DATA = 'cldr-data',
+    VITE = 'vite',
+    VITE_TS_CONFIG_PATHS = 'vite-tsconfig-paths'
 }

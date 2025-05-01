@@ -70,18 +70,15 @@ export abstract class DbUtilities {
         for (const db of dbs) {
             const configs: DbInitConfig[] = await this.getInitConfigsForDb(db.name, rootDir);
             for (let i: number = 0; i < configs.length; i++) {
-                const initFileSh: Path = getPath(rootDir, DATABASES_DIRECTORY_NAME, toKebabCase(db.name), 'init', `${i}.sh`);
                 const initFileSql: Path = getPath(rootDir, DATABASES_DIRECTORY_NAME, toKebabCase(db.name), 'init', `${i}.sql`);
-                await FsUtilities.rm(initFileSh);
                 await FsUtilities.rm(initFileSql);
-                await this.createInitFile(configs[i], initFileSh, initFileSql, fileName, rootDir);
+                await this.createInitFile(configs[i], initFileSql, fileName, rootDir);
             }
         }
     }
 
     private static async createInitFile(
         config: DbInitConfig,
-        initFileSh: Path,
         initFileSql: Path,
         fileName: DockerComposeFileName,
         rootDir: string
@@ -93,14 +90,24 @@ export abstract class DbUtilities {
         switch (config.type) {
             case DbType.POSTGRES: {
                 await FsUtilities.createFile(
-                    initFileSh,
+                    initFileSql,
                     [
-                        '#!/bin/bash',
-                        // eslint-disable-next-line stylistic/max-len
-                        `psql -tc "SELECT 1 FROM pg_database WHERE datname = '${dbName}'" | grep -q 1 || psql -c "CREATE DATABASE ${dbName}"`,
-                        // eslint-disable-next-line stylistic/max-len
-                        `psql -tc "SELECT 1 FROM pg_roles WHERE rolname = '${dbUser}'" | grep -q 1 || psql -c "CREATE USER ${dbUser} WITH PASSWORD '${dbPassword}'"`,
-                        `psql -c "GRANT ALL PRIVILEGES ON DATABASE ${dbName} TO ${dbUser}"`
+                        '-- 1) Create DB if missing',
+                        `SELECT format('CREATE DATABASE %I', '${dbName}')`,
+                        `    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '${dbName}')\\gexec`,
+                        '',
+                        '-- 2) Create user if missing',
+                        'SELECT format(',
+                        '    \'CREATE USER %I WITH PASSWORD %L\',',
+                        `    '${dbUser}',`,
+                        `    '${dbPassword}'`,
+                        ')',
+                        `    WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${dbUser}')\\gexec`,
+                        '',
+                        '-- 3) Grant privileges',
+                        `GRANT ALL PRIVILEGES ON DATABASE "${dbName}" TO "${dbUser}";`,
+                        `\\connect ${dbName}`,
+                        `GRANT ALL PRIVILEGES ON SCHEMA public TO ${dbUser};`
                     ]
                 );
                 break;

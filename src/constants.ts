@@ -142,6 +142,11 @@ export const NEST_CLI_FILE_NAME: string = 'nest-cli.json';
 export const WEBPACK_CONFIG: string = 'webpack.config.js';
 
 /**
+ * The name of the vite config file.
+ */
+export const VITE_CONFIG: string = 'vite.config.ts';
+
+/**
  * The message to notify the user of the help command.
  */
 export const MORE_INFORMATION_MESSAGE: string = `run ${ChalkUtilities.secondary(
