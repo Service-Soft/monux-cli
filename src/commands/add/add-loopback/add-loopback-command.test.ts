@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MockConstants, inquireMock, createMailServiceMock } from '../../../__testing__';
+import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MockConstants, inquireMock, createMailServiceMock, createAdminFilesMock } from '../../../__testing__';
 import { DbType } from '../../../db';
 import { InquirerUtilities } from '../../../encapsulation';
 import { AddConfiguration, AddType } from '../models';
@@ -25,6 +25,7 @@ describe('AddLoopbackCommand', () => {
         }));
         LoopbackUtilities['createMailService'] = jest.fn(createMailServiceMock);
         LoopbackUtilities['createBiometricCredentialsService'] = jest.fn(async () => {});
+        LoopbackUtilities['createAdminFiles'] = jest.fn(createAdminFilesMock);
     });
 
     test('should run and create new database', async () => {
