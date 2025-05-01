@@ -11,5 +11,5 @@ export function exitWithError(message: string): never {
     console.error(ChalkUtilities.error(message));
     // eslint-disable-next-line no-console
     console.log(MORE_INFORMATION_MESSAGE);
-    return process.exit(0);
+    return process.exit(1);
 }
