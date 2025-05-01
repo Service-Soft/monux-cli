@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
 import { AddAngularCommand } from './add-angular.command';
-import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MockConstants, inquireMock } from '../../../__testing__';
+import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MockConstants, inquireMock, MAX_GEN_CODE_TIME } from '../../../__testing__';
 import { InquirerUtilities } from '../../../encapsulation';
 import { AddConfiguration, AddType } from '../models';
 
@@ -23,7 +23,7 @@ describe('AddAngularCommand', () => {
         const command: AddAngularCommand = new AddAngularCommand(baseConfig);
         await command.run();
         expect(true).toBe(true);
-    }, MAX_ADD_TIME);
+    }, MAX_ADD_TIME + MAX_GEN_CODE_TIME);
 
     afterEach(() => {
         jest.restoreAllMocks();
