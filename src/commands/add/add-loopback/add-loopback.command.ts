@@ -1,5 +1,6 @@
+import { loopbackViteContent } from './loopback-vite.content';
 import { loopbackWebpackContent } from './loopback-webpack.content';
-import { APPS_DIRECTORY_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, GIT_IGNORE_FILE_NAME, TS_CONFIG_FILE_NAME, WEBPACK_CONFIG, BASE_TS_CONFIG_FILE_NAME } from '../../../constants';
+import { APPS_DIRECTORY_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, GIT_IGNORE_FILE_NAME, TS_CONFIG_FILE_NAME, WEBPACK_CONFIG, BASE_TS_CONFIG_FILE_NAME, VITE_CONFIG } from '../../../constants';
 import { DbType, DbUtilities } from '../../../db';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, QuestionsFor } from '../../../encapsulation';
@@ -93,7 +94,7 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
 
         await Promise.all([
             this.setupTsConfig(config.name),
-            this.updateApplicationTs(root),
+            this.updateApplicationTs(root, databaseName),
             this.updateIndexTs(root, config.port),
             this.updateOpenApiSpec(root, config.port),
             EslintUtilities.setupProjectEslint(root, true, TS_CONFIG_FILE_NAME),
@@ -112,6 +113,7 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
                 config.subDomain
             ),
             this.updateDockerFile(root, config)
+            // this.setupVite(root, config.name)
             // this.setupWebpack(root, config.name) TODO: enable
         ]);
 
@@ -119,7 +121,6 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
             scripts: {
                 start: 'npm run start:watch',
                 'start:watch': 'tsc-watch --target es2017 --outDir ./dist --onSuccess \"node .\"'
-                // 'build:webpack': 'webpack' TODO: enable
             }
         });
         await NpmUtilities.install(config.name, [NpmPackage.TSC_WATCH], true);
@@ -132,24 +133,24 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
         await EnvUtilities.buildEnvironmentFileForApp(app, false, 'dev.docker-compose.yaml', getPath('.'));
     }
 
+    private async setupVite(root: Path, projectName: string): Promise<void> {
+        await FsUtilities.createFile(getPath(root, VITE_CONFIG), loopbackViteContent);
+        await NpmUtilities.install(projectName, [NpmPackage.VITE, NpmPackage.VITE_TS_CONFIG_PATHS], true);
+        await NpmUtilities.updatePackageJson(projectName, {
+            scripts: {
+                'build:vite': 'vite build'
+            }
+        });
+    }
+
     private async setupWebpack(root: Path, projectName: string): Promise<void> {
         await FsUtilities.createFile(getPath(root, WEBPACK_CONFIG), loopbackWebpackContent);
-        await NpmUtilities.install(
-            projectName,
-            [
-                NpmPackage.WEBPACK,
-                NpmPackage.WEBPACK_CLI,
-                NpmPackage.TS_LOADER,
-                NpmPackage.WEBPACK_NODE_EXTERNALS,
-                NpmPackage.TSCONFIG_PATH_WEBPACK_PLUGIN,
-                NpmPackage.FORK_TS_CHECKER_WEBPACK_PLUGIN
-            ],
-            true
-        );
-        await NpmUtilities.install(projectName, [
-            NpmPackage.CLDRJS,
-            NpmPackage.CLDR_DATA
-        ]);
+        await NpmUtilities.install(projectName, [NpmPackage.WEBPACK, NpmPackage.WEBPACK_CLI], true);
+        await NpmUtilities.updatePackageJson(projectName, {
+            scripts: {
+                'build:webpack': 'webpack'
+            }
+        });
     }
 
     private async updateDockerFile(root: string, config: AddLoopbackConfiguration): Promise<void> {
@@ -181,7 +182,10 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
         await FsUtilities.replaceInFile(
             indexPath,
             '  await app.boot();',
-            '  await app.boot();\n  await app.migrateSchema({ existingSchema: \'alter\' });'
+            [
+                '  await app.boot();',
+                '  await app.migrateSchema({ existingSchema: \'alter\' });'
+            ].join('\n')
         );
         await FsUtilities.replaceInFile(indexPath, 'env.PORT', 'env[\'PORT\']');
         await FsUtilities.replaceInFile(indexPath, 'env.HOST', 'env[\'HOST\']');
@@ -196,12 +200,17 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
         await FsUtilities.replaceInFile(openApiPath, '?? 3000', `?? ${port}`);
     }
 
-    private async updateApplicationTs(root: string): Promise<void> {
+    private async updateApplicationTs(root: string, dbName: string): Promise<void> {
         const applicationPath: Path = getPath(root, 'src', 'application.ts');
         await FsUtilities.replaceInFile(
             applicationPath,
             'BootMixin(RestApplication)',
             'BootMixin(ServiceMixin(RepositoryMixin(RestApplication)))'
+        );
+        await TsUtilities.addToConstructorBody(
+            applicationPath,
+            // eslint-disable-next-line stylistic/max-len
+            `this.dataSource(${toPascalCase(dbName)}DataSource, 'db'); // "db" is the key under wich the datasource is registered in teh external components`
         );
         await TsUtilities.addImportStatements(
             applicationPath,
