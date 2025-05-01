@@ -1,6 +1,6 @@
 import { describe, beforeEach, jest, test, expect, afterEach } from '@jest/globals';
 
-import { FileMockUtilities, getMockConstants, MAX_FAST_TIME, MockConstants, inquireMock } from '../../__testing__';
+import { FileMockUtilities, getMockConstants, MAX_BARELY_NOTICEABLE_TIME, MockConstants, inquireMock, MAX_FAST_TIME } from '../../__testing__';
 import { FullyParsedDockerService, getDockerServices } from '../../docker';
 import { InquirerUtilities } from '../../encapsulation';
 import { DownCommand } from '../down';
@@ -41,7 +41,7 @@ describe('UpCommand', () => {
         const runningDockerServicesAfterDown: FullyParsedDockerService[] = await getDockerServices(false);
 
         expect(runningDockerServicesAfterDown.length).toEqual(runningDockerServicesBeforeUp.length);
-    }, MAX_FAST_TIME * 2 /** We call up and down. */);
+    }, MAX_FAST_TIME + MAX_BARELY_NOTICEABLE_TIME /** We call up and down. */);
 
     afterEach(() => {
         jest.restoreAllMocks();
