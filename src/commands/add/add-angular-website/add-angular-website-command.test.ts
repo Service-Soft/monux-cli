@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MockConstants, mockInquire } from '../../../__testing__';
+import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MockConstants, inquireMock } from '../../../__testing__';
 import { InquirerUtilities } from '../../../encapsulation';
 import { AddConfiguration, AddType } from '../models';
 import { AddAngularWebsiteCommand } from './add-angular-website.command';
@@ -10,7 +10,7 @@ const mockConstants: MockConstants = getMockConstants('add-angular-website-comma
 describe('AddAngularWebsiteCommand', () => {
     beforeEach(async () => {
         await FileMockUtilities.setup(mockConstants);
-        InquirerUtilities['inquire'] = jest.fn(mockInquire({
+        InquirerUtilities['inquire'] = jest.fn(inquireMock({
             port: 4200,
             'sub domain': undefined,
             'title suffix (eg. "| My Company")': '| Website',

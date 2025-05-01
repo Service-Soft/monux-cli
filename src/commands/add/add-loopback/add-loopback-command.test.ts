@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MockConstants, mockInquire } from '../../../__testing__';
+import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MockConstants, inquireMock, createMailServiceMock } from '../../../__testing__';
 import { DbType } from '../../../db';
 import { InquirerUtilities } from '../../../encapsulation';
 import { AddConfiguration, AddType } from '../models';
@@ -12,7 +12,7 @@ const mockConstants: MockConstants = getMockConstants('add-loopback-command');
 describe('AddLoopbackCommand', () => {
     beforeEach(async () => {
         await FileMockUtilities.setup(mockConstants);
-        InquirerUtilities['inquire'] = jest.fn(mockInquire({
+        InquirerUtilities['inquire'] = jest.fn(inquireMock({
             port: 3000,
             'sub domain': 'api',
             'Email of the default user': 'test@test.com',
@@ -23,7 +23,8 @@ describe('AddLoopbackCommand', () => {
             'Database name': 'sandbox',
             'database type': DbType.POSTGRES
         }));
-        LoopbackUtilities['createMailService'] = jest.fn(async () => {});
+        LoopbackUtilities['createMailService'] = jest.fn(createMailServiceMock);
+        LoopbackUtilities['createBiometricCredentialsService'] = jest.fn(async () => {});
     });
 
     test('should run and create new database', async () => {

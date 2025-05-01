@@ -1,7 +1,7 @@
 import { describe, beforeEach, jest, test, afterEach, expect } from '@jest/globals';
 
 import { RunCommand } from './run.command';
-import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MAX_GEN_CODE_TIME, MockConstants, mockInquire } from '../../__testing__';
+import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MAX_GEN_CODE_TIME, MockConstants, inquireMock } from '../../__testing__';
 import { DbType } from '../../db';
 import { InquirerUtilities } from '../../encapsulation';
 import { AddNestCommand } from '../add/add-nest';
@@ -12,7 +12,7 @@ const mockConstants: MockConstants = getMockConstants('run-command');
 describe('RunCommand', () => {
     beforeEach(async () => {
         await FileMockUtilities.setup(mockConstants);
-        InquirerUtilities['inquire'] = jest.fn(mockInquire({
+        InquirerUtilities['inquire'] = jest.fn(inquireMock({
             'sub domain': 'api',
             port: 3000,
             'Email of the default user': 'test@test.com',

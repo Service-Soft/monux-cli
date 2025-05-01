@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MAX_GEN_CODE_TIME, MockConstants, mockInquire } from '../../../__testing__';
+import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MAX_GEN_CODE_TIME, MockConstants, inquireMock } from '../../../__testing__';
 import { InquirerUtilities } from '../../../encapsulation';
 import { AddConfiguration, AddType } from '../models';
 import { AddNestCommand } from './add-nest.command';
@@ -11,7 +11,7 @@ const mockConstants: MockConstants = getMockConstants('add-nest-command');
 describe('AddNestCommand', () => {
     beforeEach(async () => {
         await FileMockUtilities.setup(mockConstants);
-        InquirerUtilities['inquire'] = jest.fn(mockInquire({
+        InquirerUtilities['inquire'] = jest.fn(inquireMock({
             'sub domain': 'api',
             port: 3000,
             'Email of the default user': 'test@test.com',

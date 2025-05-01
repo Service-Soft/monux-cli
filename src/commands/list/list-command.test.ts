@@ -1,7 +1,7 @@
 import { describe, beforeEach, jest, test, afterEach } from '@jest/globals';
 
 import { ListCommand } from './list.command';
-import { FileMockUtilities, getMockConstants, MAX_FAST_TIME, MockConstants, mockInquire } from '../../__testing__';
+import { FileMockUtilities, getMockConstants, MAX_FAST_TIME, MockConstants, inquireMock } from '../../__testing__';
 import { InquirerUtilities } from '../../encapsulation';
 import { DownCommand } from '../down';
 import { UpCommand } from '../up';
@@ -21,7 +21,7 @@ describe('ListCommand', () => {
                 '            - 8080:8080'
             ]
         });
-        InquirerUtilities['inquire'] = jest.fn(mockInquire({
+        InquirerUtilities['inquire'] = jest.fn(inquireMock({
             env: 'dev.docker-compose.yaml'
         }));
     });

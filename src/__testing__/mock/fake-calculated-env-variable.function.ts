@@ -1,8 +1,8 @@
 /* eslint-disable jsdoc/require-jsdoc */
 import { faker } from '@faker-js/faker';
 
-import { fakeUniqueString } from './helpers';
 import { CalculatedEnvVariable, EnvironmentVariableKey } from '../../env';
+import { fakeUniqueString } from '../helpers';
 
 export function fakeCalculatedEnvVariable(data?: Partial<CalculatedEnvVariable>): CalculatedEnvVariable {
     const type: 'string' | 'number' = faker.helpers.arrayElement(['string', 'number']);
