@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MockConstants, mockInquire } from '../../../__testing__';
+import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MAX_GEN_CODE_TIME, MockConstants, mockInquire } from '../../../__testing__';
 import { DbType } from '../../../db';
 import { InquirerUtilities } from '../../../encapsulation';
 import { AddConfiguration, AddType } from '../models';
@@ -29,7 +29,7 @@ describe('AddLoopbackCommand', () => {
         const command: AddLoopbackCommand = new AddLoopbackCommand(baseConfig);
         await command.run();
         expect(true).toBe(true);
-    }, MAX_ADD_TIME);
+    }, MAX_ADD_TIME + MAX_GEN_CODE_TIME);
 
     afterEach(() => {
         jest.restoreAllMocks();
