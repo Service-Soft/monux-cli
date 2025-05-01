@@ -83,7 +83,6 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
             ENV_FILE_NAME,
             ENVIRONMENT_TS_FILE_NAME,
             ROBOTS_FILE_NAME,
-            '**/init/**.sh',
             '**/init/**.sql',
             'letsencrypt',
             '# compiled output',

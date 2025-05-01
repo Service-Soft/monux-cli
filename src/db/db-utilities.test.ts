@@ -166,18 +166,30 @@ describe('DbUtilities', () => {
 
         await DbUtilities.createInitFiles('dev.docker-compose.yaml', getPath('.'));
 
-        const initShContent: string[] = await FsUtilities.readFileLines(getPath(mockConstants.PROJECT_DIR, DATABASES_DIRECTORY_NAME, 'postgres-db', 'init', '0.sh'));
+        const postgresInitContent: string[] = await FsUtilities.readFileLines(getPath(mockConstants.PROJECT_DIR, DATABASES_DIRECTORY_NAME, 'postgres-db', 'init', '0.sql'));
         const postgresPassword: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.dbPassword(POSTGRES_SERVICE_NAME, POSTGRES_DATABASE_NAME), 'dev.docker-compose.yaml', getPath('.'));
-        const initSqlContent: string[] = await FsUtilities.readFileLines(getPath(mockConstants.PROJECT_DIR, DATABASES_DIRECTORY_NAME, 'maria-db', 'init', '0.sql'));
+        const mariadbInitContent: string[] = await FsUtilities.readFileLines(getPath(mockConstants.PROJECT_DIR, DATABASES_DIRECTORY_NAME, 'maria-db', 'init', '0.sql'));
         const mariadbPassword: string = await EnvUtilities.getEnvVariable(DefaultEnvKeys.dbPassword(MARIADB_SERVICE_NAME, MARIADB_DATABASE_NAME), 'dev.docker-compose.yaml', getPath('.'));
 
-        expect(initShContent).toEqual([
-            '#!/bin/bash',
-            'psql -tc "SELECT 1 FROM pg_database WHERE datname = \'test2\'" | grep -q 1 || psql -c "CREATE DATABASE test2"',
-            `psql -tc "SELECT 1 FROM pg_roles WHERE rolname = 'test2_user'" | grep -q 1 || psql -c "CREATE USER test2_user WITH PASSWORD '${postgresPassword}'"`,
-            'psql -c "GRANT ALL PRIVILEGES ON DATABASE test2 TO test2_user"'
+        expect(postgresInitContent).toEqual([
+            '-- 1) Create DB if missing',
+            'SELECT format(\'CREATE DATABASE %I\', \'test2\')',
+            '    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = \'test2\')\\gexec',
+            '',
+            '-- 2) Create user if missing',
+            'SELECT format(',
+            '    \'CREATE USER %I WITH PASSWORD %L\',',
+            '    \'test2_user\',',
+            `    '${postgresPassword}'`,
+            ')',
+            '    WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = \'test2_user\')\\gexec',
+            '',
+            '-- 3) Grant privileges',
+            'GRANT ALL PRIVILEGES ON DATABASE "test2" TO "test2_user";',
+            '\\connect test2',
+            'GRANT ALL PRIVILEGES ON SCHEMA public TO test2_user;'
         ]);
-        expect(initSqlContent).toEqual([
+        expect(mariadbInitContent).toEqual([
             'CREATE DATABASE IF NOT EXISTS `test`;',
             '',
             `CREATE USER IF NOT EXISTS 'test_user'@'%' IDENTIFIED BY '${mariadbPassword}';`,
