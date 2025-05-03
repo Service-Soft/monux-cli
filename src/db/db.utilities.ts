@@ -1,7 +1,7 @@
 import { Dirent } from 'fs';
 
-import { DATABASES_DIRECTORY_NAME, DEV_DOCKER_COMPOSE_FILE_NAME, DockerComposeFileName, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME } from '../constants';
-import { ComposeService, DockerUtilities } from '../docker';
+import { DATABASES_DIRECTORY_NAME, DEV_DOCKER_COMPOSE_FILE_NAME, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME } from '../constants';
+import { ComposeService, DockerComposeFileName, DockerUtilities } from '../docker';
 import { FsUtilities, InquirerUtilities, JsonUtilities, QuestionsFor } from '../encapsulation';
 import { DefaultEnvKeys, EnvironmentVariableKey, EnvUtilities } from '../env';
 import { generatePlaceholderPassword, getPath, Path, toKebabCase, toSnakeCase } from '../utilities';
@@ -168,19 +168,19 @@ export abstract class DbUtilities {
                 value: password,
                 required: true,
                 type: 'string'
-            });
+            }, false);
             await EnvUtilities.addStaticVariable({
                 key: DefaultEnvKeys.dbUser(baseDbConfig.dbServiceName, baseDbConfig.databaseName),
                 value: user,
                 required: true,
                 type: 'string'
-            });
+            }, false);
             await EnvUtilities.addStaticVariable({
                 key: DefaultEnvKeys.dbName(baseDbConfig.dbServiceName, baseDbConfig.databaseName),
                 value: baseDbConfig.databaseName,
                 required: true,
                 type: 'string'
-            });
+            }, false);
             await this.addDbInitConfig(baseDbConfig.dbServiceName, {
                 type,
                 nameEnvVariable: DefaultEnvKeys.dbName(baseDbConfig.dbServiceName, baseDbConfig.databaseName),
@@ -284,7 +284,7 @@ export abstract class DbUtilities {
                 }
             ]
         };
-        await DockerUtilities.addServiceToCompose(serviceDefinition, 3306, 3306, false, undefined);
+        await DockerUtilities.addServiceToCompose(serviceDefinition, 3306, 3306, false, false, undefined);
         await DockerUtilities.addVolumeToComposeFiles(`${toKebabCase(dbServiceName)}-data`);
         await DockerUtilities.addServiceToCompose(
             {
@@ -294,6 +294,7 @@ export abstract class DbUtilities {
             3306,
             3306,
             false,
+            false,
             undefined,
             DEV_DOCKER_COMPOSE_FILE_NAME
         );
@@ -302,25 +303,25 @@ export abstract class DbUtilities {
             value: password,
             required: true,
             type: 'string'
-        });
+        }, false);
         await EnvUtilities.addStaticVariable({
             key: DefaultEnvKeys.dbUser(dbServiceName, databaseName),
             value: user,
             required: true,
             type: 'string'
-        });
+        }, false);
         await EnvUtilities.addStaticVariable({
             key: DefaultEnvKeys.dbName(dbServiceName, databaseName),
             value: databaseName,
             required: true,
             type: 'string'
-        });
+        }, false);
         await EnvUtilities.addStaticVariable({
             key: DefaultEnvKeys.dbRootPassword(dbServiceName),
             value: rootPassword,
             required: true,
             type: 'string'
-        });
+        }, false);
 
         await EnvUtilities.addCalculatedVariable({
             key: DefaultEnvKeys.dbHost(dbServiceName),
@@ -331,6 +332,7 @@ export abstract class DbUtilities {
                     case 'dev.docker-compose.yaml': {
                         return 'localhost';
                     }
+                    case 'stage.docker-compose.yaml':
                     case 'docker-compose.yaml':
                     case 'local.docker-compose.yaml': {
                         return 'DB_SERVICE_NAME_PLACEHOLDER';
@@ -366,7 +368,7 @@ export abstract class DbUtilities {
                 }
             ]
         };
-        await DockerUtilities.addServiceToCompose(serviceDefinition, 5432, 5432, false);
+        await DockerUtilities.addServiceToCompose(serviceDefinition, 5432, 5432, false, false);
         await DockerUtilities.addVolumeToComposeFiles(`${toKebabCase(dbServiceName)}-data`);
         await DockerUtilities.addServiceToCompose(
             {
@@ -376,6 +378,7 @@ export abstract class DbUtilities {
             5432,
             5432,
             false,
+            false,
             undefined,
             DEV_DOCKER_COMPOSE_FILE_NAME
         );
@@ -384,25 +387,25 @@ export abstract class DbUtilities {
             value: password,
             required: true,
             type: 'string'
-        });
+        }, false);
         await EnvUtilities.addStaticVariable({
             key: DefaultEnvKeys.dbUser(dbServiceName, databaseName),
             value: user,
             required: true,
             type: 'string'
-        });
+        }, false);
         await EnvUtilities.addStaticVariable({
             key: DefaultEnvKeys.dbName(dbServiceName, databaseName),
             value: databaseName,
             required: true,
             type: 'string'
-        });
+        }, false);
         await EnvUtilities.addStaticVariable({
             key: DefaultEnvKeys.dbRootPassword(dbServiceName),
             value: rootPassword,
             required: true,
             type: 'string'
-        });
+        }, false);
 
         await EnvUtilities.addCalculatedVariable({
             key: DefaultEnvKeys.dbHost(dbServiceName),
@@ -413,6 +416,7 @@ export abstract class DbUtilities {
                     case 'dev.docker-compose.yaml': {
                         return 'localhost';
                     }
+                    case 'stage.docker-compose.yaml':
                     case 'docker-compose.yaml':
                     case 'local.docker-compose.yaml': {
                         return 'DB_SERVICE_NAME_PLACEHOLDER';

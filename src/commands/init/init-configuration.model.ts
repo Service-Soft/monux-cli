@@ -9,6 +9,10 @@ export type InitConfiguration = {
      */
     prodRootDomain: string,
     /**
+     * The root domain to use on stage.
+     */
+    stageRootDomain: string,
+    /**
      * The email of the user.
      * Is needed for lets encrypt configuration.
      */
@@ -26,6 +30,11 @@ export const initConfigQuestions: QuestionsFor<InitConfiguration> = {
     prodRootDomain: {
         type: 'input',
         message: 'prod root domain (eg. "test.com")',
+        required: true
+    },
+    stageRootDomain: {
+        type: 'input',
+        message: 'stage root domain (eg. "test-staging.com")',
         required: true
     },
     email: {

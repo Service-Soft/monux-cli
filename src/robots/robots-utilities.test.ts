@@ -5,7 +5,7 @@ import { FileMockUtilities, getMockConstants, MockConstants } from '../__testing
 import { RobotsUtilities } from './robots.utilities';
 import { APPS_DIRECTORY_NAME, ROBOTS_FILE_NAME } from '../constants';
 import { FsUtilities } from '../encapsulation';
-import { DefaultEnvKeys, EnvUtilities } from '../env';
+import { DefaultEnvKeys, EnvUtilities, EnvValue } from '../env';
 import { getPath } from '../utilities';
 
 const mockConstants: MockConstants = getMockConstants('robots-utilities');
@@ -14,13 +14,13 @@ describe('RobotsUtilities', () => {
 
     beforeEach(async () => {
         await FileMockUtilities.setup(mockConstants, ['ANGULAR_APP_COMPONENT_TS']);
-        await EnvUtilities.init('test.com');
-        await EnvUtilities.addStaticVariable({ key: DefaultEnvKeys.baseUrl('angular'), required: true, type: 'string', value: 'www.test.com' });
+        await EnvUtilities.init('test.com', 'test-staging.com', 'user', 'password');
+        await EnvUtilities.addStaticVariable({ key: DefaultEnvKeys.baseUrl('angular'), required: true, type: 'string', value: 'www.test.com' }, false);
     });
 
     test('createRobotsTxtForApp', async () => {
-        const isPublic: boolean = await EnvUtilities.getEnvVariable(DefaultEnvKeys.IS_PUBLIC, 'dev.docker-compose.yaml', getPath('.'));
-        expect(isPublic).toBe(false);
+        const isPublic: EnvValue = await EnvUtilities.getEnvVariable(DefaultEnvKeys.ENV, 'dev.docker-compose.yaml', getPath('.'));
+        expect(isPublic).toEqual(EnvValue.DEV);
 
         await RobotsUtilities.createRobotsTxtForApp(
             {

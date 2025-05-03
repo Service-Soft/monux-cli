@@ -1,5 +1,6 @@
 
-import { DockerComposeFileName, ENV_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME } from '../constants';
+import { DEV_DOCKER_COMPOSE_FILE_NAME, ENV_FILE_NAME, ENV_PUBLIC_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME, LOCAL_DOCKER_COMPOSE_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, STAGE_DOCKER_COMPOSE_FILE_NAME } from '../constants';
+import { DockerComposeFileName } from '../docker';
 import { FileLine, FsUtilities, JsonUtilities } from '../encapsulation';
 import { ParseObjectResult, TsUtilities } from '../ts';
 import { KeyValue, OmitStrict } from '../types';
@@ -319,7 +320,10 @@ export abstract class EnvUtilities {
         failOnMissingVariable: boolean,
         rootDir: string
     ): Promise<EnvVariable[]> {
-        const lines: string[] = await FsUtilities.readFileLines(getPath(rootDir, ENV_FILE_NAME));
+        const lines: string[] = [
+            ...await FsUtilities.readFileLines(getPath(rootDir, ENV_FILE_NAME)),
+            ...await FsUtilities.readFileLines(getPath(rootDir, ENV_PUBLIC_FILE_NAME))
+        ];
         const staticVariableDefinitions: OmitStrict<EnvVariable, 'value'>[] = await this.getVariableDefinitions(
             getPath(rootDir, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
             'StaticGlobalEnvironment = {'
@@ -380,9 +384,12 @@ export abstract class EnvUtilities {
     /**
      * Initializes environment variables inside the monorepo.
      * @param prodRootDomain - The root domain used in prod.
+     * @param stageRootDomain - The root domain used on stage.
+     * @param basicAuthUser - The basic auth username.
+     * @param basicAuthPassword - The basic auth password.
      */
-    static async init(prodRootDomain: string): Promise<void> {
-        await this.createEnvFile(prodRootDomain);
+    static async init(prodRootDomain: string, stageRootDomain: string, basicAuthUser: string, basicAuthPassword: string): Promise<void> {
+        await this.createEnvFiles(prodRootDomain, stageRootDomain, basicAuthUser, basicAuthPassword);
         await this.createGlobalEnvironmentModel();
     }
 
@@ -395,8 +402,10 @@ export abstract class EnvUtilities {
                 '* This is also used by the "mx prepare" command to validate the .env-file and create the project environment.ts files',
                 '*/',
                 'type StaticGlobalEnvironment = {',
-                `\t${DefaultEnvKeys.IS_PUBLIC}: boolean`,
-                `\t${DefaultEnvKeys.PROD_ROOT_DOMAIN}: string`,
+                `\t${DefaultEnvKeys.PROD_ROOT_DOMAIN}: string,`,
+                `\t${DefaultEnvKeys.STAGE_ROOT_DOMAIN}: string,`,
+                `\t${DefaultEnvKeys.BASIC_AUTH_USER}: string,`,
+                `\t${DefaultEnvKeys.BASIC_AUTH_PASSWORD}: string`,
                 '};',
                 '',
                 '/**',
@@ -405,11 +414,15 @@ export abstract class EnvUtilities {
                 // eslint-disable-next-line stylistic/max-len
                 '* the subdomain environment variable + baseDomain environment variable + http/https, based on the used docker compose file.',
                 '*/',
-                'type CalculatedGlobalEnvironment = {};',
+                'type CalculatedGlobalEnvironment = {',
+                `\t${DefaultEnvKeys.ENV}: Env`,
+                '};',
                 '',
                 'export type GlobalEnvironment = StaticGlobalEnvironment & CalculatedGlobalEnvironment;',
                 '',
-                'type DockerComposeFileName = \'docker-compose.yaml\' | \'dev.docker-compose.yaml\' | \'local.docker-compose.yaml\';',
+                // eslint-disable-next-line stylistic/max-len
+                'type DockerComposeFileName = \'docker-compose.yaml\' | \'dev.docker-compose.yaml\' | \'local.docker-compose.yaml\' | \'stage.docker-compose.yaml\';',
+                'type Env = \'dev\' | \'local\' | \'stage\' | \'prod\';',
                 '',
                 '/**',
                 '* Defines how the CalculatedGlobalEnvironment values should be calculated.',
@@ -420,20 +433,46 @@ export abstract class EnvUtilities {
                 '\tkeyof CalculatedGlobalEnvironment,',
                 // eslint-disable-next-line stylistic/max-len
                 '\t(env: StaticGlobalEnvironment, fileName: DockerComposeFileName) => CalculatedGlobalEnvironment[keyof CalculatedGlobalEnvironment]',
-                '> = {};'
+                '> = {',
+                `\t${DefaultEnvKeys.ENV}: (env, fileName) => {`,
+                '\t\tswitch (fileName) {',
+                `\t\t\tcase '${DEV_DOCKER_COMPOSE_FILE_NAME}': {`,
+                '\t\t\t\treturn \'dev\';',
+                '\t\t\t}',
+                `\t\t\tcase '${LOCAL_DOCKER_COMPOSE_FILE_NAME}': {`,
+                '\t\t\t\treturn \'local\';',
+                '\t\t\t}',
+                `\t\t\tcase '${STAGE_DOCKER_COMPOSE_FILE_NAME}': {`,
+                '\t\t\t\treturn \'stage\';',
+                '\t\t\t}',
+                `\t\t\tcase '${PROD_DOCKER_COMPOSE_FILE_NAME}': {`,
+                '\t\t\t\treturn \'prod\';',
+                '\t\t\t}',
+                '\t\t}',
+                '\t}',
+                '};'
             ]
         );
     }
 
-    private static async createEnvFile(prodRootDomain: string): Promise<void> {
+    private static async createEnvFiles(
+        prodRootDomain: string,
+        stageRootDomain: string,
+        basicAuthUser: string,
+        basicAuthPassword: string
+    ): Promise<void> {
         await FsUtilities.createFile(getPath(ENV_FILE_NAME), [
-            `${DefaultEnvKeys.IS_PUBLIC}=false`,
-            `${DefaultEnvKeys.PROD_ROOT_DOMAIN}=${prodRootDomain}`
+            `${DefaultEnvKeys.BASIC_AUTH_USER}=${basicAuthUser}`,
+            `${DefaultEnvKeys.BASIC_AUTH_PASSWORD}=${basicAuthPassword}`
+        ]);
+        await FsUtilities.createFile(getPath(ENV_PUBLIC_FILE_NAME), [
+            `${DefaultEnvKeys.PROD_ROOT_DOMAIN}=${prodRootDomain}`,
+            `${DefaultEnvKeys.STAGE_ROOT_DOMAIN}=${stageRootDomain}`
         ]);
     }
 
     /**
-     * Validates the .env file.
+     * Validates the .env files.
      * @param rootDir - The directory of the Monux monorepo.
      * @returns An array of error messages mapped to the keys that caused them.
      */
@@ -442,6 +481,14 @@ export abstract class EnvUtilities {
             return [
                 {
                     key: ENV_FILE_NAME,
+                    value: EnvValidationErrorMessage.FILE_DOES_NOT_EXIST
+                }
+            ];
+        }
+        if (!await FsUtilities.exists(getPath(rootDir, ENV_PUBLIC_FILE_NAME))) {
+            return [
+                {
+                    key: ENV_PUBLIC_FILE_NAME,
                     value: EnvValidationErrorMessage.FILE_DOES_NOT_EXIST
                 }
             ];
@@ -509,13 +556,23 @@ export abstract class EnvUtilities {
     /**
      * Adds a variable to the .env file.
      * @param variable - The variable to add.
+     * @param isPublic - Whether or not the variable should be public (checked into git).
      */
-    static async addStaticVariable(variable: EnvVariable): Promise<void> {
+    static async addStaticVariable(variable: EnvVariable, isPublic: boolean): Promise<void> {
         const environmentFilePath: Path = getPath(ENV_FILE_NAME);
+        const publicEnvironmentFilePath: Path = getPath(ENV_PUBLIC_FILE_NAME);
         if ((await FsUtilities.readFile(environmentFilePath)).includes(`${variable.key}=`)) {
             throw new Error(`The variable ${variable.key} has already been set.`);
         }
-        await FsUtilities.updateFile(environmentFilePath, `${variable.key}=${variable.value ?? ''}`, 'append');
+        if ((await FsUtilities.readFile(publicEnvironmentFilePath)).includes(`${variable.key}=`)) {
+            throw new Error(`The variable ${variable.key} has already been set.`);
+        }
+
+        await FsUtilities.updateFile(
+            isPublic ? publicEnvironmentFilePath : environmentFilePath,
+            `${variable.key}=${variable.value ?? ''}`,
+            'append'
+        );
 
         const environmentModelFilePath: Path = getPath(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
 

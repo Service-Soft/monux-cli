@@ -11,11 +11,13 @@ export const defaultFilesToMock: (keyof FileMockConstants)[] = [
     'WORKSPACE_JSON',
     'BASE_TS_CONFIG_JSON',
     'ENV',
+    'ENV_PUBLIC',
     'GLOBAL_ENV_MODEL',
     'ROOT_PACKAGE_JSON',
     'DOCKER_COMPOSE_YAML',
     'DEV_DOCKER_COMPOSE_YAML',
-    'LOCAL_DOCKER_COMPOSE_YAML'
+    'LOCAL_DOCKER_COMPOSE_YAML',
+    'STAGE_DOCKER_COMPOSE_YAML'
 ] as const;
 
 export const defaultFoldersToMock: (keyof DirMockConstants)[] = [
@@ -33,6 +35,7 @@ export abstract class FileMockUtilities {
             DOCKER_COMPOSE_YAML: this.createEmptyFile,
             DEV_DOCKER_COMPOSE_YAML: this.createEmptyFile,
             LOCAL_DOCKER_COMPOSE_YAML: this.createEmptyFile,
+            STAGE_DOCKER_COMPOSE_YAML: this.createEmptyFile,
             ANGULAR_ESLINT_CONFIG_MJS: this.createEmptyFile,
             ANGULAR_PACKAGE_JSON: this.createAngularPackageJson,
             ANGULAR_APP_COMPONENT_TS: this.createAppComponentTsFile,
@@ -46,6 +49,7 @@ export abstract class FileMockUtilities {
             TS_LIBRARY_PACKAGE_JSON: this.createEmptyFile,
             ROOT_PACKAGE_JSON: this.createRootPackageJson,
             ENV: this.createEnv,
+            ENV_PUBLIC: this.createEnvPublic,
             GLOBAL_ENV_MODEL: this.createGlobalEnvModel,
             WORKSPACE_JSON: WorkspaceUtilities.createConfig,
             BASE_TS_CONFIG_JSON: TsConfigUtilities.createBaseTsConfig
@@ -201,6 +205,16 @@ export abstract class FileMockUtilities {
     }
 
     private static async createEnv(mockConstants: MockConstants): Promise<void> {
-        await FsUtilities.createFile(mockConstants.ENV, ['prod_root_domain=test.com', 'is_public=false']);
+        await FsUtilities.createFile(
+            mockConstants.ENV,
+            ['basic_auth_user=user', 'basic_auth_password=password']
+        );
+    }
+
+    private static async createEnvPublic(mockConstants: MockConstants): Promise<void> {
+        await FsUtilities.createFile(
+            mockConstants.ENV_PUBLIC,
+            ['prod_root_domain=test.com', 'stage_root_domain=test-staging.com']
+        );
     }
 }

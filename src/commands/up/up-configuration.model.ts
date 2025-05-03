@@ -1,4 +1,4 @@
-import { DockerComposeFileName } from '../../constants';
+import { DockerComposeFileName } from '../../docker';
 
 /**
  * Configuration for the up command.

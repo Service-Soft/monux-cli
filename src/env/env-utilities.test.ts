@@ -13,30 +13,31 @@ const mockConstants: MockConstants = getMockConstants('env-utilities');
 describe('EnvUtilities', () => {
     beforeEach(async () => {
         await FileMockUtilities.setup(mockConstants, []);
-        await EnvUtilities.init('test.com');
+        await EnvUtilities.init('test.com', 'test-staging.com', 'user', 'password');
     });
 
     test('addStaticVariable', async () => {
         for (let i: number = 0; i < 50; i++) {
             await FileMockUtilities.setup(mockConstants, []);
-            await EnvUtilities.init('test.com');
+            await EnvUtilities.init('test.com', 'test-staging.com', 'user', 'password');
 
             const variable: EnvVariable = fakeEnvVariable();
-            await EnvUtilities.addStaticVariable(variable);
+            await EnvUtilities.addStaticVariable(variable, true);
 
-            const lines: string[] = await FsUtilities.readFileLines(mockConstants.ENV);
-            expect(lines[2]).toEqual(`${variable.key}=${variable.value}`);
+            const lines: string[] = await FsUtilities.readFileLines(mockConstants.ENV_PUBLIC);
+            const firstCustomLineIndex: number = 2;
+            expect(lines[firstCustomLineIndex]).toEqual(`${variable.key}=${variable.value}`);
 
             const variable2: EnvVariable = fakeEnvVariable();
-            await EnvUtilities.addStaticVariable(variable2);
+            await EnvUtilities.addStaticVariable(variable2, false);
 
             const lines2: string[] = await FsUtilities.readFileLines(mockConstants.ENV);
-            expect(lines2[3]).toEqual(`${variable2.key}=${variable2.value}`);
+            expect(lines2[firstCustomLineIndex]).toEqual(`${variable2.key}=${variable2.value}`);
 
             const globalEnvLines: string[] = await FsUtilities.readFileLines(mockConstants.GLOBAL_ENV_MODEL);
 
-            expect(globalEnvLines[7]).toEqual(`    ${variable.key}${variable.required ? '' : '?'}: ${variable.type},`);
-            expect(globalEnvLines[8]).toEqual(`    ${variable2.key}${variable2.required ? '' : '?'}: ${variable2.type}`);
+            expect(globalEnvLines[9]).toEqual(`    ${variable.key}${variable.required ? '' : '?'}: ${variable.type},`);
+            expect(globalEnvLines[10]).toEqual(`    ${variable2.key}${variable2.required ? '' : '?'}: ${variable2.type}`);
         }
     });
 
@@ -46,7 +47,8 @@ describe('EnvUtilities', () => {
         const subDomain: string = 'admin';
 
         await EnvUtilities.addStaticVariable(
-            { key: DefaultEnvKeys.port(name), value: port, required: true, type: 'number' }
+            { key: DefaultEnvKeys.port(name), value: port, required: true, type: 'number' },
+            true
         );
         await EnvUtilities.addCalculatedVariable(
             {
@@ -59,6 +61,9 @@ describe('EnvUtilities', () => {
                         case 'local.docker-compose.yaml': {
                             return `http://${'SUB_DOMAIN_PLACEHOLDER'}.localhost`;
                         }
+                        case 'stage.docker-compose.yaml': {
+                            return `https://${'SUB_DOMAIN_PLACEHOLDER'}.${'STAGE_ROOT_DOMAIN_PLACEHOLDER'}`;
+                        }
                         case 'docker-compose.yaml': {
                             return `https://${'SUB_DOMAIN_PLACEHOLDER'}.${'PROD_ROOT_DOMAIN_PLACEHOLDER'}`;
                         }
@@ -69,7 +74,8 @@ describe('EnvUtilities', () => {
             }
         );
         await EnvUtilities.addStaticVariable(
-            { key: DefaultEnvKeys.subDomain(name), value: subDomain, required: true, type: 'string' }
+            { key: DefaultEnvKeys.subDomain(name), value: subDomain, required: true, type: 'string' },
+            true
         );
         await EnvUtilities.addCalculatedVariable(
             {
@@ -81,6 +87,9 @@ describe('EnvUtilities', () => {
                         }
                         case 'local.docker-compose.yaml': {
                             return `${'SUB_DOMAIN_PLACEHOLDER'}.localhost`;
+                        }
+                        case 'stage.docker-compose.yaml': {
+                            return `${'SUB_DOMAIN_PLACEHOLDER'}.${'STAGE_ROOT_DOMAIN_PLACEHOLDER'}`;
                         }
                         case 'docker-compose.yaml': {
                             return `${'SUB_DOMAIN_PLACEHOLDER'}.${'PROD_ROOT_DOMAIN_PLACEHOLDER'}`;
@@ -96,6 +105,7 @@ describe('EnvUtilities', () => {
         await FsUtilities.replaceAllInFile(environmentModelFilePath, '\'PORT_PLACEHOLDER\'', `env.${DefaultEnvKeys.port(name)}`);
         await FsUtilities.replaceAllInFile(environmentModelFilePath, '\'SUB_DOMAIN_PLACEHOLDER\'', `env.${DefaultEnvKeys.subDomain(name)}`);
         await FsUtilities.replaceAllInFile(environmentModelFilePath, '\'PROD_ROOT_DOMAIN_PLACEHOLDER\'', `env.${DefaultEnvKeys.PROD_ROOT_DOMAIN}`);
+        await FsUtilities.replaceAllInFile(environmentModelFilePath, '\'STAGE_ROOT_DOMAIN_PLACEHOLDER\'', `env.${DefaultEnvKeys.STAGE_ROOT_DOMAIN}`);
 
         const fileLines: string[] = await FsUtilities.readFileLines(environmentModelFilePath);
         expect(fileLines).toEqual([
@@ -104,8 +114,10 @@ describe('EnvUtilities', () => {
             '* This is also used by the "mx prepare" command to validate the .env-file and create the project environment.ts files',
             '*/',
             'type StaticGlobalEnvironment = {',
-            '    is_public: boolean',
             '    prod_root_domain: string,',
+            '    stage_root_domain: string,',
+            '    basic_auth_user: string,',
+            '    basic_auth_password: string,',
             '    test_port: number,',
             '    test_sub_domain: string',
             '};',
@@ -116,13 +128,15 @@ describe('EnvUtilities', () => {
             '* the subdomain environment variable + baseDomain environment variable + http/https, based on the used docker compose file.',
             '*/',
             'type CalculatedGlobalEnvironment = {',
+            '    env: Env,',
             '    test_base_url: string,',
             '    test_domain: string',
             '};',
             '',
             'export type GlobalEnvironment = StaticGlobalEnvironment & CalculatedGlobalEnvironment;',
             '',
-            'type DockerComposeFileName = \'docker-compose.yaml\' | \'dev.docker-compose.yaml\' | \'local.docker-compose.yaml\';',
+            'type DockerComposeFileName = \'docker-compose.yaml\' | \'dev.docker-compose.yaml\' | \'local.docker-compose.yaml\' | \'stage.docker-compose.yaml\';',
+            'type Env = \'dev\' | \'local\' | \'stage\' | \'prod\';',
             '',
             '/**',
             '* Defines how the CalculatedGlobalEnvironment values should be calculated.',
@@ -133,6 +147,22 @@ describe('EnvUtilities', () => {
             '    keyof CalculatedGlobalEnvironment,',
             '    (env: StaticGlobalEnvironment, fileName: DockerComposeFileName) => CalculatedGlobalEnvironment[keyof CalculatedGlobalEnvironment]',
             '> = {',
+            '    env: (env, fileName) => {',
+            '        switch (fileName) {',
+            '            case \'dev.docker-compose.yaml\': {',
+            '                return \'dev\';',
+            '            }',
+            '            case \'local.docker-compose.yaml\': {',
+            '                return \'local\';',
+            '            }',
+            '            case \'stage.docker-compose.yaml\': {',
+            '                return \'stage\';',
+            '            }',
+            '            case \'docker-compose.yaml\': {',
+            '                return \'prod\';',
+            '            }',
+            '        }',
+            '    },',
             '    test_base_url: (env, fileName) => {',
             '        switch (fileName) {',
             '            case \'dev.docker-compose.yaml\': {',
@@ -140,6 +170,9 @@ describe('EnvUtilities', () => {
             '            }',
             '            case \'local.docker-compose.yaml\': {',
             '                return `http://${env.test_sub_domain}.localhost`;',
+            '            }',
+            '            case \'stage.docker-compose.yaml\': {',
+            '                return `https://${env.test_sub_domain}.${env.stage_root_domain}`;',
             '            }',
             '            case \'docker-compose.yaml\': {',
             '                return `https://${env.test_sub_domain}.${env.prod_root_domain}`;',
@@ -153,6 +186,9 @@ describe('EnvUtilities', () => {
             '            }',
             '            case \'local.docker-compose.yaml\': {',
             '                return `${env.test_sub_domain}.localhost`;',
+            '            }',
+            '            case \'stage.docker-compose.yaml\': {',
+            '                return `${env.test_sub_domain}.${env.stage_root_domain}`;',
             '            }',
             '            case \'docker-compose.yaml\': {',
             '                return `${env.test_sub_domain}.${env.prod_root_domain}`;',
@@ -180,7 +216,7 @@ describe('EnvUtilities', () => {
 
     test('validate', async () => {
         const variable: EnvVariable = fakeEnvVariable({ required: true, type: 'number', value: 42 });
-        await EnvUtilities.addStaticVariable(variable);
+        await EnvUtilities.addStaticVariable(variable, false);
         const errorMessages: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(getPath('.'));
         expect(errorMessages.length).toEqual(0);
 

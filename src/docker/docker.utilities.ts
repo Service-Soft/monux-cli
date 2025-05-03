@@ -1,48 +1,13 @@
 import yaml from 'js-yaml';
 
-import { DEV_DOCKER_COMPOSE_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, LOCAL_DOCKER_COMPOSE_FILE_NAME, DockerComposeFileName, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME, dockerComposeFileNames } from '../constants';
+import { DEV_DOCKER_COMPOSE_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, LOCAL_DOCKER_COMPOSE_FILE_NAME, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME, STAGE_DOCKER_COMPOSE_FILE_NAME } from '../constants';
 import { FsUtilities } from '../encapsulation';
 import { ComposeBuild, ComposeDefinition, ComposePort, ComposeService, ComposeServiceEnvironment } from './compose-file.model';
 import { DefaultEnvKeys, EnvUtilities } from '../env';
-import { OmitStrict } from '../types';
 import { getPath, Path } from '../utilities';
-import { DockerTraefikUtilities } from './docker-traefik.utilities';
-
-// eslint-disable-next-line jsdoc/require-jsdoc
-type ParsedDockerComposeEnvironment = { [key: string]: string } | string[];
-
-// eslint-disable-next-line jsdoc/require-jsdoc
-type ParsedDockerComposeServiceNetwork = string[] | Record<string, unknown>;
-
-// eslint-disable-next-line jsdoc/require-jsdoc
-type ParsedDockerComposeService = OmitStrict<ComposeService, 'volumes' | 'environment' | 'networks' | 'ports'> & {
-    // eslint-disable-next-line jsdoc/require-jsdoc
-    volumes?: string[],
-    // eslint-disable-next-line jsdoc/require-jsdoc
-    environment?: ParsedDockerComposeEnvironment,
-    // eslint-disable-next-line jsdoc/require-jsdoc
-    networks?: ParsedDockerComposeServiceNetwork,
-    // eslint-disable-next-line jsdoc/require-jsdoc
-    ports?: string[]
-};
-
-// eslint-disable-next-line jsdoc/require-jsdoc
-type ParsedDockerCompose = {
-    // eslint-disable-next-line jsdoc/require-jsdoc
-    version?: string,
-    // eslint-disable-next-line jsdoc/require-jsdoc
-    services?: {
-        [serviceName: string]: ParsedDockerComposeService
-    },
-    // eslint-disable-next-line jsdoc/require-jsdoc
-    volumes?: {
-        [volumeName: string]: unknown
-    },
-    // eslint-disable-next-line jsdoc/require-jsdoc
-    networks?: {
-        [networkName: string]: unknown
-    }
-};
+import { DockerComposeFileName, dockerComposeFileNames } from './docker-compose-file-name.model';
+import { DockerTraefikUtilities, TRAEFIK_BASE_DOCKER_COMMANDS, TRAEFIK_DOCKER_IMAGE, TRAEFIK_DOCKER_SOCK_VOLUME } from './docker-traefik.utilities';
+import { ParsedDockerCompose, ParsedDockerComposeEnvironment, ParsedDockerComposeService, ParsedDockerComposeServiceNetwork } from './parsed-docker-compose.model';
 
 /**
  * Utilities for docker specific code generation/manipulation.
@@ -68,6 +33,10 @@ export abstract class DockerUtilities {
                     }
                     case LOCAL_DOCKER_COMPOSE_FILE_NAME: {
                         await this.createLocalDockerCompose();
+                        return;
+                    }
+                    case STAGE_DOCKER_COMPOSE_FILE_NAME: {
+                        await this.createStageDockerCompose(email);
                     }
                 }
             })
@@ -99,13 +68,45 @@ export abstract class DockerUtilities {
         const compose: ComposeDefinition = {
             services: [
                 {
-                    image: 'traefik:v3.2',
+                    image: TRAEFIK_DOCKER_IMAGE,
+                    name: 'traefik',
+                    command: TRAEFIK_BASE_DOCKER_COMMANDS,
+                    ports: [
+                        {
+                            internal: 80,
+                            external: 80
+                        },
+                        {
+                            internal: 443,
+                            external: 443
+                        }
+                    ],
+                    volumes: [TRAEFIK_DOCKER_SOCK_VOLUME],
+                    labels: []
+                }
+            ],
+            volumes: [],
+            networks: []
+        };
+        const yaml: string[] = this.composeDefinitionToYaml(compose);
+        await FsUtilities.createFile(getPath(LOCAL_DOCKER_COMPOSE_FILE_NAME), yaml);
+    }
+
+    private static async createStageDockerCompose(email: string): Promise<void> {
+        const compose: ComposeDefinition = {
+            services: [
+                {
+                    image: TRAEFIK_DOCKER_IMAGE,
                     name: 'traefik',
                     command: [
-                        '--providers.docker=true',
-                        '--providers.docker.exposedbydefault=false',
-                        '--entryPoints.web.address=:80',
-                        '--entryPoints.websecure.address=:443'
+                        ...TRAEFIK_BASE_DOCKER_COMMANDS,
+                        '--entrypoints.web.http.redirections.entrypoint.to=websecure',
+                        '--entryPoints.web.http.redirections.entrypoint.scheme=https',
+                        '--entrypoints.websecure.asDefault=true',
+                        '--certificatesresolvers.sslresolver.acme.httpchallenge=true',
+                        '--certificatesresolvers.sslresolver.acme.httpchallenge.entrypoint=web',
+                        `--certificatesresolvers.sslresolver.acme.email=${email}`,
+                        '--certificatesresolvers.sslresolver.acme.storage=/letsencrypt/acme.json'
                     ],
                     ports: [
                         {
@@ -117,7 +118,27 @@ export abstract class DockerUtilities {
                             external: 443
                         }
                     ],
-                    volumes: ['/var/run/docker.sock:/var/run/docker.sock:ro'],
+                    volumes: [
+                        './config:/config',
+                        './letsencrypt:/letsencrypt',
+                        TRAEFIK_DOCKER_SOCK_VOLUME
+                    ],
+                    environment: [
+                        {
+                            key: DefaultEnvKeys.BASIC_AUTH_USER,
+                            value: `\${${DefaultEnvKeys.BASIC_AUTH_USER}}`
+                        },
+                        {
+                            key: DefaultEnvKeys.BASIC_AUTH_PASSWORD,
+                            value: `\${${DefaultEnvKeys.BASIC_AUTH_PASSWORD}}`
+                        }
+                    ],
+                    entrypoint: [
+                        '/bin/sh',
+                        '-c',
+                        // eslint-disable-next-line stylistic/max-len
+                        `htpasswd -nbB "$$${DefaultEnvKeys.BASIC_AUTH_USER}" "$$${DefaultEnvKeys.BASIC_AUTH_PASSWORD}" > /config/.htpasswd && exec traefik`
+                    ],
                     labels: []
                 }
             ],
@@ -125,22 +146,19 @@ export abstract class DockerUtilities {
             networks: []
         };
         const yaml: string[] = this.composeDefinitionToYaml(compose);
-        await FsUtilities.createFile(getPath(LOCAL_DOCKER_COMPOSE_FILE_NAME), yaml);
+        await FsUtilities.createFile(getPath(STAGE_DOCKER_COMPOSE_FILE_NAME), yaml);
     }
 
     private static async createProdDockerCompose(email: string): Promise<void> {
         const compose: ComposeDefinition = {
             services: [
                 {
-                    image: 'traefik:v3.2',
+                    image: TRAEFIK_DOCKER_IMAGE,
                     name: 'traefik',
                     command: [
-                        '--providers.docker=true',
-                        '--providers.docker.exposedbydefault=false',
-                        '--entryPoints.web.address=:80',
+                        ...TRAEFIK_BASE_DOCKER_COMMANDS,
                         '--entrypoints.web.http.redirections.entrypoint.to=websecure',
                         '--entryPoints.web.http.redirections.entrypoint.scheme=https',
-                        '--entryPoints.websecure.address=:443',
                         '--entrypoints.websecure.asDefault=true',
                         '--certificatesresolvers.sslresolver.acme.httpchallenge=true',
                         '--certificatesresolvers.sslresolver.acme.httpchallenge.entrypoint=web',
@@ -159,7 +177,7 @@ export abstract class DockerUtilities {
                     ],
                     volumes: [
                         './letsencrypt:/letsencrypt',
-                        '/var/run/docker.sock:/var/run/docker.sock:ro'
+                        TRAEFIK_DOCKER_SOCK_VOLUME
                     ],
                     labels: []
                 }
@@ -177,6 +195,7 @@ export abstract class DockerUtilities {
      * @param port - The port used in local and prod.
      * @param devPort - The port used in development.
      * @param addTraefik - Whether or not the service should be exposed via traefik.
+     * @param traefikBasicAuth - ONLY VALID FOR THE STAGE DOCKER COMPOSE FILE. Whether or not to use basic auth.
      * @param subDomain - The domain of the service. Optional.
      * Defaults to "" (which creates the file in the current directory).
      * @param composeFileName - The name of the compose file.
@@ -187,6 +206,7 @@ export abstract class DockerUtilities {
         port: number,
         devPort: number,
         addTraefik: boolean,
+        traefikBasicAuth: boolean,
         subDomain?: string,
         composeFileName: DockerComposeFileName = PROD_DOCKER_COMPOSE_FILE_NAME
     ): Promise<void> {
@@ -195,7 +215,13 @@ export abstract class DockerUtilities {
 
         const labels: string[] = [];
         if (addTraefik) {
-            const traefikLabels: string[] = DockerTraefikUtilities.getTraefikLabels(service.name, port, composeFileName, subDomain);
+            const traefikLabels: string[] = DockerTraefikUtilities.getTraefikLabels(
+                service.name,
+                port,
+                composeFileName,
+                subDomain,
+                traefikBasicAuth
+            );
             labels.push(...traefikLabels);
         }
 
@@ -203,18 +229,21 @@ export abstract class DockerUtilities {
         await FsUtilities.updateFile(composePath, this.composeDefinitionToYaml(definition), 'replace');
 
         if (composeFileName === PROD_DOCKER_COMPOSE_FILE_NAME) {
-            await this.addServiceToCompose(service, port, devPort, addTraefik, subDomain, LOCAL_DOCKER_COMPOSE_FILE_NAME);
+            await this.addServiceToCompose(service, port, devPort, addTraefik, false, subDomain, LOCAL_DOCKER_COMPOSE_FILE_NAME);
+            await this.addServiceToCompose(service, port, devPort, addTraefik, false, subDomain, STAGE_DOCKER_COMPOSE_FILE_NAME);
             if (!addTraefik) {
                 return;
             }
 
             await EnvUtilities.addStaticVariable(
-                { key: DefaultEnvKeys.port(service.name), value: devPort, required: true, type: 'number' }
+                { key: DefaultEnvKeys.port(service.name), value: devPort, required: true, type: 'number' },
+                true
             );
 
             if (subDomain) {
                 await EnvUtilities.addStaticVariable(
-                    { key: DefaultEnvKeys.subDomain(service.name), value: subDomain, required: true, type: 'string' }
+                    { key: DefaultEnvKeys.subDomain(service.name), value: subDomain, required: true, type: 'string' },
+                    true
                 );
                 await EnvUtilities.addCalculatedVariable(
                     {
@@ -232,6 +261,10 @@ export abstract class DockerUtilities {
                                 // eslint-disable-next-line sonar/no-duplicate-string
                                 case 'docker-compose.yaml': {
                                     return `https://${'SUB_DOMAIN_PLACEHOLDER'}.${'PROD_ROOT_DOMAIN_PLACEHOLDER'}`;
+                                }
+                                // eslint-disable-next-line sonar/no-duplicate-string
+                                case 'stage.docker-compose.yaml': {
+                                    return `https://${'SUB_DOMAIN_PLACEHOLDER'}.${'STAGE_ROOT_DOMAIN_PLACEHOLDER'}`;
                                 }
                             }
                         },
@@ -251,8 +284,10 @@ export abstract class DockerUtilities {
                                     return `${'SUB_DOMAIN_PLACEHOLDER'}.localhost`;
                                 }
                                 case 'docker-compose.yaml': {
-
                                     return `${'SUB_DOMAIN_PLACEHOLDER'}.${'PROD_ROOT_DOMAIN_PLACEHOLDER'}`;
+                                }
+                                case 'stage.docker-compose.yaml': {
+                                    return `${'SUB_DOMAIN_PLACEHOLDER'}.${'STAGE_ROOT_DOMAIN_PLACEHOLDER'}`;
                                 }
                             }
                         },
@@ -276,6 +311,9 @@ export abstract class DockerUtilities {
                                 case 'docker-compose.yaml': {
                                     return `https://${'PROD_ROOT_DOMAIN_PLACEHOLDER'}`;
                                 }
+                                case 'stage.docker-compose.yaml': {
+                                    return `https://${'STAGE_ROOT_DOMAIN_PLACEHOLDER'}`;
+                                }
                             }
                         },
                         required: true,
@@ -295,6 +333,9 @@ export abstract class DockerUtilities {
                                 }
                                 case 'docker-compose.yaml': {
                                     return 'PROD_ROOT_DOMAIN_PLACEHOLDER';
+                                }
+                                case 'stage.docker-compose.yaml': {
+                                    return 'STAGE_ROOT_DOMAIN_PLACEHOLDER';
                                 }
                             }
                         },
@@ -316,6 +357,11 @@ export abstract class DockerUtilities {
             environmentModelFilePath,
             '\'PROD_ROOT_DOMAIN_PLACEHOLDER\'',
             `env.${DefaultEnvKeys.PROD_ROOT_DOMAIN}`
+        );
+        await FsUtilities.replaceAllInFile(
+            environmentModelFilePath,
+            '\'STAGE_ROOT_DOMAIN_PLACEHOLDER\'',
+            `env.${DefaultEnvKeys.STAGE_ROOT_DOMAIN}`
         );
     }
 

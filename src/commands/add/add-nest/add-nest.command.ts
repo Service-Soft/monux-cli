@@ -118,6 +118,7 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
                 3000,
                 config.port,
                 true,
+                false,
                 config.subDomain
             ),
             this.createDockerfile(root, config),

@@ -69,6 +69,7 @@ export class AddWordpressCommand extends BaseAddCommand<AddWordpressConfiguratio
             80,
             80,
             true,
+            true,
             config.subDomain
         );
         await DockerUtilities.addVolumeToComposeFiles(`${toKebabCase(config.name)}-data`);
@@ -79,6 +80,7 @@ export class AddWordpressCommand extends BaseAddCommand<AddWordpressConfiguratio
             },
             80,
             80,
+            false,
             false,
             undefined,
             DEV_DOCKER_COMPOSE_FILE_NAME
