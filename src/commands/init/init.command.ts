@@ -25,7 +25,7 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
             NpmPackage.AUTOPREFIXER
         ], true);
 
-        await EnvUtilities.init(config.prodRootDomain);
+        await EnvUtilities.init(config.prodRootDomain, config.stageRootDomain, 'user', 'password');
 
         await Promise.all([
             WorkspaceUtilities.createConfig(),
@@ -106,7 +106,7 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
             '',
             '// eslint-disable-next-line jsdoc/require-description',
             '/** @type {import(\'eslint\').Linter.Config} */',
-            'export default [...configs];'
+            'export default [...configs , { ignores: [\'./global-environment.model.ts\'] }];'
         ]);
     }
 

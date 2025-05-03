@@ -90,6 +90,7 @@ export class AddAngularCommand extends BaseAddCommand<AddAngularConfiguration> {
                 4000,
                 config.port,
                 true,
+                true,
                 config.subDomain
             ),
             AngularUtilities.updateAngularJson(

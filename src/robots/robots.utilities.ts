@@ -1,6 +1,7 @@
-import { DockerComposeFileName, ENV_FILE_NAME, ROBOTS_FILE_NAME, SITEMAP_FILE_NAME } from '../constants';
+import { ROBOTS_FILE_NAME, SITEMAP_FILE_NAME } from '../constants';
+import { DockerComposeFileName } from '../docker';
 import { FsUtilities } from '../encapsulation';
-import { DefaultEnvKeys, EnvUtilities } from '../env';
+import { DefaultEnvKeys, EnvUtilities, EnvValue } from '../env';
 import { filterAsync, getPath, Path } from '../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../workspace';
 
@@ -15,11 +16,6 @@ export abstract class RobotsUtilities {
      * @param rootDir - The directory of the Monux monorepo where the files should be created.
      */
     static async createRobotsTxtFiles(fileName: DockerComposeFileName, rootDir: string): Promise<void> {
-        const environmentFilePath: Path = getPath(rootDir, ENV_FILE_NAME);
-        if (!(await FsUtilities.readFile(environmentFilePath)).includes(`${DefaultEnvKeys.IS_PUBLIC}=`)) {
-            return;
-        }
-
         // Only projects that have a sitemap file get a robots.txt file.
         const apps: WorkspaceProject[] = await filterAsync(await WorkspaceUtilities.getProjects('apps', rootDir), async a => {
             const sitemapPath: Path = getPath(a.path, 'src', SITEMAP_FILE_NAME);
@@ -46,11 +42,11 @@ export abstract class RobotsUtilities {
         const robotsTxtPath: Path = getPath(app.path, 'src', ROBOTS_FILE_NAME);
         await FsUtilities.rm(robotsTxtPath);
 
-        const isPublic: boolean = await EnvUtilities.getEnvVariable(DefaultEnvKeys.IS_PUBLIC, fileName, rootDir);
+        const env: EnvValue = await EnvUtilities.getEnvVariable(DefaultEnvKeys.ENV, fileName, rootDir);
 
         const content: string[] = [
             'User-agent: *',
-            `${isPublic ? 'Allow' : 'Disallow'}: /`
+            `${env === EnvValue.PROD ? 'Allow' : 'Disallow'}: /`
         ];
 
         const baseUrl: string = domain ? `https://${domain}` : await EnvUtilities.getEnvVariable(DefaultEnvKeys.baseUrl(app.name), fileName, rootDir);

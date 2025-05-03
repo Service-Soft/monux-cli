@@ -2,7 +2,7 @@
 import { AddLoopbackConfiguration } from '../commands/add/add-loopback';
 import { ENVIRONMENT_MODEL_TS_FILE_NAME } from '../constants';
 import { CPUtilities, FsUtilities } from '../encapsulation';
-import { DefaultEnvKeys, EnvUtilities } from '../env';
+import { DefaultEnvKeys, EnvUtilities, EnvValue } from '../env';
 import { TsUtilities } from '../ts';
 import { generatePlaceholderPassword, getPath, optionsToCliString, Path, toKebabCase, toPascalCase } from '../utilities';
 import { LbDatabaseConfig } from './lb-database-config.model';
@@ -337,7 +337,7 @@ export abstract class LoopbackUtilities {
             '            pass: environment.webserver_mail_password',
             '        }',
             '    });',
-            `    protected override readonly PRODUCTION: boolean = !!environment.${DefaultEnvKeys.IS_PUBLIC};`,
+            `    protected override readonly PRODUCTION: boolean = environment.${DefaultEnvKeys.ENV} === '${EnvValue.PROD}';`,
             '    protected override readonly SAVED_EMAILS_PATH: string = path.join(__dirname, \'../../../test-emails\');',
             // eslint-disable-next-line stylistic/max-len
             `    protected override readonly LOGO_HEADER_URL: string = \`\${environment.${DefaultEnvKeys.baseUrl(config.name)}}/assets/email/logo-header.png\`;`,
@@ -357,30 +357,36 @@ export abstract class LoopbackUtilities {
             required: true,
             type: 'string',
             value: config.defaultUserEmail
-        });
+        }, false);
         await EnvUtilities.addStaticVariable({
             key: DefaultEnvKeys.defaultUserPassword(config.name),
             required: true,
             type: 'string',
             value: config.defaultUserPassword
-        });
+        }, false);
         await EnvUtilities.addStaticVariable(
-            { key: DefaultEnvKeys.ACCESS_TOKEN_SECRET, required: true, type: 'string', value: generatePlaceholderPassword() }
+            { key: DefaultEnvKeys.ACCESS_TOKEN_SECRET, required: true, type: 'string', value: generatePlaceholderPassword() },
+            false
         );
         await EnvUtilities.addStaticVariable(
-            { key: DefaultEnvKeys.REFRESH_TOKEN_SECRET, required: true, type: 'string', value: generatePlaceholderPassword() }
+            { key: DefaultEnvKeys.REFRESH_TOKEN_SECRET, required: true, type: 'string', value: generatePlaceholderPassword() },
+            false
         );
         await EnvUtilities.addStaticVariable(
-            { key: DefaultEnvKeys.WEBSERVER_MAIL_USER, required: true, type: 'string', value: undefined }
+            { key: DefaultEnvKeys.WEBSERVER_MAIL_USER, required: true, type: 'string', value: undefined },
+            false
         );
         await EnvUtilities.addStaticVariable(
-            { key: DefaultEnvKeys.WEBSERVER_MAIL_PASSWORD, required: true, type: 'string', value: undefined }
+            { key: DefaultEnvKeys.WEBSERVER_MAIL_PASSWORD, required: true, type: 'string', value: undefined },
+            false
         );
         await EnvUtilities.addStaticVariable(
-            { key: DefaultEnvKeys.WEBSERVER_MAIL_HOST, required: true, type: 'string', value: undefined }
+            { key: DefaultEnvKeys.WEBSERVER_MAIL_HOST, required: true, type: 'string', value: undefined },
+            false
         );
         await EnvUtilities.addStaticVariable(
-            { key: DefaultEnvKeys.WEBSERVER_MAIL_PORT, required: true, type: 'number', value: undefined }
+            { key: DefaultEnvKeys.WEBSERVER_MAIL_PORT, required: true, type: 'number', value: undefined },
+            false
         );
 
         const environmentModel: Path = getPath(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
@@ -412,7 +418,7 @@ export abstract class LoopbackUtilities {
             getPath('.')
         );
         await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.baseUrl(config.name), false, getPath('.'));
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.IS_PUBLIC, false, getPath('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.ENV, false, getPath('.'));
         await EnvUtilities.addProjectVariableKey(
             config.name,
             environmentModel,

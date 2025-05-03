@@ -1,7 +1,7 @@
 /* eslint-disable jsdoc/require-jsdoc */
 import { PrepareConfig, prepareConfigQuestions } from './prepare-config.model';
-import { DockerComposeFileName } from '../../constants';
 import { DbUtilities } from '../../db';
+import { DockerComposeFileName } from '../../docker';
 import { InquirerUtilities } from '../../encapsulation';
 import { EnvUtilities, EnvValidationErrorMessage } from '../../env';
 import { RobotsUtilities } from '../../robots';

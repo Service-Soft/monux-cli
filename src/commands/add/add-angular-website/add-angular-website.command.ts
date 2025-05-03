@@ -100,6 +100,7 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
             4000,
             config.port,
             true,
+            true,
             config.subDomain
         );
         await AngularUtilities.updateAngularJson(

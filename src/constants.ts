@@ -47,6 +47,11 @@ export const DEV_DOCKER_COMPOSE_FILE_NAME: 'dev.docker-compose.yaml' = 'dev.dock
 export const LOCAL_DOCKER_COMPOSE_FILE_NAME: 'local.docker-compose.yaml' = 'local.docker-compose.yaml';
 
 /**
+ * The name of the stage docker compose file.
+ */
+export const STAGE_DOCKER_COMPOSE_FILE_NAME: 'stage.docker-compose.yaml' = 'stage.docker-compose.yaml';
+
+/**
  * The name of the docker compose file.
  */
 export const DOCKER_FILE_NAME: string = 'Dockerfile';
@@ -55,6 +60,11 @@ export const DOCKER_FILE_NAME: string = 'Dockerfile';
  * The name of the .env file.
  */
 export const ENV_FILE_NAME: string = '.env';
+
+/**
+ * The name of the .env-public file.
+ */
+export const ENV_PUBLIC_FILE_NAME: string = '.env.public';
 
 /**
  * The name of the environment.ts file.
@@ -152,20 +162,3 @@ export const VITE_CONFIG: string = 'vite.config.ts';
 export const MORE_INFORMATION_MESSAGE: string = `run ${ChalkUtilities.secondary(
     `${CLI_BASE_COMMAND} ${Command.HELP}`
 )} for more information.`;
-
-/**
- * The possible file names of the different docker-compose files Monux provides.
- */
-// eslint-disable-next-line stylistic/max-len
-export type DockerComposeFileName = typeof PROD_DOCKER_COMPOSE_FILE_NAME | typeof DEV_DOCKER_COMPOSE_FILE_NAME | typeof LOCAL_DOCKER_COMPOSE_FILE_NAME;
-
-const dockerComposeFileNameRecord: Record<DockerComposeFileName, DockerComposeFileName> = {
-    'dev.docker-compose.yaml': 'dev.docker-compose.yaml',
-    'docker-compose.yaml': 'docker-compose.yaml',
-    'local.docker-compose.yaml': 'local.docker-compose.yaml'
-};
-
-/**
- * All possible docker compose file names as an array.
- */
-export const dockerComposeFileNames: DockerComposeFileName[] = Object.values(dockerComposeFileNameRecord);
