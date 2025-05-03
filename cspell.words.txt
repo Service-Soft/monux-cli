@@ -38,3 +38,6 @@ nestjs
 cloudflare
 cldr
 cldrjs
+htpasswd
+basicauth
+usersfile

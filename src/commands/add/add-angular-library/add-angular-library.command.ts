@@ -91,14 +91,14 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
     private async createProject(config: AddAngularLibraryConfiguration): Promise<CreateResult> {
         // eslint-disable-next-line no-console
         console.log('Creates a temporary angular workspace');
-        AngularUtilities.runCommand(
+        await AngularUtilities.runCommand(
             getPath(LIBS_DIRECTORY_NAME),
             `new ${config.name}`,
             { '--no-create-application': true }
         );
         // eslint-disable-next-line no-console
         console.log('Creates the base library');
-        AngularUtilities.runCommand(
+        await AngularUtilities.runCommand(
             getPath(LIBS_DIRECTORY_NAME, config.name),
             `generate library ${config.name}`,
             {}
@@ -106,7 +106,7 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
 
         // eslint-disable-next-line no-console
         console.log('Sets up the storybook');
-        StorybookUtilities.setup(getPath(LIBS_DIRECTORY_NAME, config.name));
+        await StorybookUtilities.setup(getPath(LIBS_DIRECTORY_NAME, config.name));
 
         const oldPackageJson: PackageJson = await FsUtilities.parseFileAs(
             getPath(LIBS_DIRECTORY_NAME, config.name, 'projects', config.name, PACKAGE_JSON_FILE_NAME)

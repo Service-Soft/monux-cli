@@ -14,10 +14,11 @@ jobs:
     test:
         runs-on: ubuntu-latest
         steps:
-            -
-                name: Set up Docker Compose
-                uses: docker/setup-compose-action@v1
+            - uses: docker/setup-compose-action@v1
             - uses: actions/checkout@v4
+            - run: docker pull adminer
+            - run: docker pull postgres
+            - run: npm i -g @angular/cli@18 @loopback/cli@6 @nestjs/cli@11
             - run: npm ci
             - run: npm run build
             - run: npm run test

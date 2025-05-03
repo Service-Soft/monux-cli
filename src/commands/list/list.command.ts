@@ -1,11 +1,12 @@
 import path from 'path';
 
 import { CLI_BASE_COMMAND } from '../../constants';
-import { DockerLabel, FullyParsedDockerService } from '../../docker';
+import { DockerLabel, FullyParsedDockerService, isDockerComposeFileName } from '../../docker';
 import { getDockerServices } from '../../docker/get-docker-services.function';
 import { ChalkUtilities, CliTable, CliTableUtilities } from '../../encapsulation';
 import { BaseCommand } from '../base-command.model';
 import { DockerServiceStatus } from './docker-service-status.model';
+import { EnvValue, envValueForDockerComposeFileName } from '../../env';
 
 /**
  * Lists the docker services grouped by their monorepo.
@@ -85,31 +86,21 @@ export class ListCommand extends BaseCommand {
 
     private getEnv(labels: Record<DockerLabel, string | undefined>, color: 'error' | 'success' | undefined): string {
         const dockerFile: string | undefined = labels['com.docker.compose.project.config_files'];
-        let res: 'local' | 'prod' | 'dev' | '-' = '-';
         if (!dockerFile) {
             switch (color) {
                 case 'success': {
-                    return ChalkUtilities.success(res);
+                    return ChalkUtilities.success('-');
                 }
                 case 'error': {
-                    return ChalkUtilities.error(res);
+                    return ChalkUtilities.error('-');
                 }
                 case undefined: {
-                    return res;
+                    return '-';
                 }
             }
         }
         const fileName: string = path.basename(dockerFile);
-        if (fileName === 'docker-compose.yaml' || fileName === 'docker-compose.yml') {
-            res = 'prod';
-        }
-        if (fileName.startsWith('dev.')) {
-            res = 'dev';
-        }
-        if (fileName.startsWith('local.')) {
-            res = 'local';
-        }
-
+        const res: EnvValue | '-' = isDockerComposeFileName(fileName) ? envValueForDockerComposeFileName[fileName] : '-';
         if (res === '-') {
             // eslint-disable-next-line no-console
             console.error(ChalkUtilities.error('Could not determine environment for the docker compose file', fileName));

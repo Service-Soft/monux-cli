@@ -1,7 +1,7 @@
 /* eslint-disable jsdoc/require-jsdoc */
 import { PrepareConfig, prepareConfigQuestions } from './prepare-config.model';
-import { DockerComposeFileName } from '../../constants';
 import { DbUtilities } from '../../db';
+import { DockerComposeFileName } from '../../docker';
 import { InquirerUtilities } from '../../encapsulation';
 import { EnvUtilities, EnvValidationErrorMessage } from '../../env';
 import { RobotsUtilities } from '../../robots';
@@ -30,7 +30,7 @@ export class PrepareCommand extends BaseCommand<PrepareConfig> {
     private async buildEnv(fileName: DockerComposeFileName, rootDir: string): Promise<void> {
         const validationErrors: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(rootDir);
         if (validationErrors.length) {
-            exitWithError(
+            await exitWithError(
                 'Error when validating the .env file:\n'
                 + validationErrors.map(e => `\t${e.key}: ${e.value}`).join('\n')
             );

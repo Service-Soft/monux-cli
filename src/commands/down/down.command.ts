@@ -13,14 +13,14 @@ export class DownCommand extends BaseCommand<DownConfiguration> {
     protected override readonly insideWorkspace: boolean = true;
     protected override readonly maxLength: number = 2;
 
-    protected override run(input: DownConfiguration): Promise<void> | void {
+    protected override async run(input: DownConfiguration): Promise<void> {
         for (const filePath of input.dockerFilePaths) {
-            CPUtilities.execSync(`docker compose -f ${filePath} -p ${input.projectName} stop`);
+            await CPUtilities.exec(`docker compose -f ${filePath} -p ${input.projectName} stop`);
         }
     }
 
     protected override async validate(args: string[]): Promise<void> {
-        this.validateMaxLength(args);
+        await this.validateMaxLength(args);
         if (args.length === 1) {
             await this.validateInsideWorkspace();
         }
@@ -36,7 +36,7 @@ export class DownCommand extends BaseCommand<DownConfiguration> {
             .filter(d => d != undefined);
 
         if (!dockerFilePaths.length) {
-            exitWithError(`Error: Could not find any running docker services for "${projectName}"`);
+            await exitWithError(`Error: Could not find any running docker services for "${projectName}"`);
         }
 
         return {

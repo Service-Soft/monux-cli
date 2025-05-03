@@ -12,8 +12,8 @@ export abstract class StorybookUtilities {
      * Sets up storybook inside the given root.
      * @param root - The root of the project where storybook should be setup.
      */
-    static setup(root: Path): void {
-        CPUtilities.execSync(
+    static async setup(root: Path): Promise<void> {
+        await CPUtilities.exec(
             `cd ${root} && npm create storybook@${this.CLI_VERSION} -- --no-dev --yes --features docs test --disable-telemetry`
         );
     }

@@ -43,12 +43,12 @@ export abstract class NpmUtilities {
     static async init(config: 'root' | NpmInitConfig, output?: boolean): Promise<void> {
         if (config === 'root') {
             const rootPackageJson: Path = getPath(PACKAGE_JSON_FILE_NAME);
-            CPUtilities.execSync('npm init -y', output);
+            await CPUtilities.exec('npm init -y', output);
             const oldPackageJson: PackageJson = await FsUtilities.parseFileAs(rootPackageJson);
             await FsUtilities.updateFile(rootPackageJson, JsonUtilities.stringify(oldPackageJson), 'replace', false);
             return;
         }
-        CPUtilities.execSync(
+        await CPUtilities.exec(
             `npm init -y --scope=${config.scope} -w ${config.path}`,
             output
         );
@@ -66,18 +66,18 @@ export abstract class NpmUtilities {
     static async run(projectName: string, commands: string, isNativeCommand: boolean): Promise<void> {
         const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName, getPath('.'));
         if (!isNativeCommand) {
-            CPUtilities.execSync(`npm run ${commands} --workspace=${project.npmWorkspaceString}`);
+            await CPUtilities.exec(`npm run ${commands} --workspace=${project.npmWorkspaceString}`);
             return;
         }
-        CPUtilities.execSync(`npm ${commands} --workspace=${project.npmWorkspaceString}`);
+        await CPUtilities.exec(`npm ${commands} --workspace=${project.npmWorkspaceString}`);
     }
 
     /**
      * Runs the given script inside all projects that have it.
      * @param npmScript - The npm script to run.
      */
-    static runAll(npmScript: NpmScript): void {
-        CPUtilities.execSync(`npm run ${npmScript} --workspaces --if-present`);
+    static async runAll(npmScript: NpmScript): Promise<void> {
+        await CPUtilities.exec(`npm run ${npmScript} --workspaces --if-present`);
     }
 
     /**
@@ -96,9 +96,9 @@ export abstract class NpmUtilities {
      * @param npmPackages - The packages to install.
      * @param development - Whether or not the packages will be installed with -D or not.
      */
-    static installInRoot(npmPackages: NpmPackage[], development: boolean = false): void {
+    static async installInRoot(npmPackages: NpmPackage[], development: boolean = false): Promise<void> {
         const installCommand: string = development ? 'npm i -D' : 'npm i';
-        CPUtilities.execSync(`${installCommand} ${npmPackages.join(' ')}`, true);
+        await CPUtilities.exec(`${installCommand} ${npmPackages.join(' ')}`, true);
     }
 
     /**

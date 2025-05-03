@@ -110,6 +110,7 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
                 3000,
                 config.port,
                 true,
+                false,
                 config.subDomain
             ),
             this.updateDockerFile(root, config)

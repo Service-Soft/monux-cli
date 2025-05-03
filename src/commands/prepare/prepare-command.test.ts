@@ -1,7 +1,7 @@
 import { describe, beforeEach, jest, test, afterEach, expect } from '@jest/globals';
 
 import { PrepareCommand } from './prepare.command';
-import { FileMockUtilities, getMockConstants, MAX_INSTANT_TIME, MockConstants, mockInquire } from '../../__testing__';
+import { FileMockUtilities, getMockConstants, MAX_INSTANT_TIME, MockConstants, inquireMock } from '../../__testing__';
 import { InquirerUtilities } from '../../encapsulation';
 
 const mockConstants: MockConstants = getMockConstants('prepare-command');
@@ -9,7 +9,7 @@ const mockConstants: MockConstants = getMockConstants('prepare-command');
 describe('PrepareCommand', () => {
     beforeEach(async () => {
         await FileMockUtilities.setup(mockConstants);
-        InquirerUtilities['inquire'] = jest.fn(mockInquire({
+        InquirerUtilities['inquire'] = jest.fn(inquireMock({
             env: 'dev.docker-compose.yaml'
         }));
     });

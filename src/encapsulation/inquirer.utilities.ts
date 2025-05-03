@@ -35,7 +35,7 @@ export abstract class InquirerUtilities {
             }
             catch (error) {
                 if (isExitPromptError(error) || (isErrorWithSignal(error) && error.signal === 'SIGINT')) {
-                    exitWithInterrupt();
+                    return await exitWithInterrupt();
                 }
                 else {
                     throw error;

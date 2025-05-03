@@ -17,7 +17,7 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
     protected override async run(config: InitConfiguration): Promise<void> {
         await NpmUtilities.init('root', false);
 
-        NpmUtilities.installInRoot([
+        await NpmUtilities.installInRoot([
             NpmPackage.ESLINT_CONFIG_SERVICE_SOFT,
             NpmPackage.ESLINT,
             NpmPackage.TAILWIND,
@@ -25,7 +25,7 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
             NpmPackage.AUTOPREFIXER
         ], true);
 
-        await EnvUtilities.init(config.prodRootDomain);
+        await EnvUtilities.init(config.prodRootDomain, config.stageRootDomain, 'user', 'password');
 
         await Promise.all([
             WorkspaceUtilities.createConfig(),
@@ -40,7 +40,7 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
             this.addNpmWorkspaces()
         ]);
 
-        CPUtilities.execSync('git init');
+        await CPUtilities.exec('git init');
         if (config.setupGithubActions) {
             await GithubUtilities.createWorkflow({
                 name: 'main',
@@ -69,7 +69,7 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
         await super.validate(args);
         const config: WorkspaceConfig | undefined = await WorkspaceUtilities.getConfig();
         if (config?.isWorkspace === true) {
-            exitWithError('Error: The current directory is already a monorepo workspace');
+            await exitWithError('Error: The current directory is already a monorepo workspace');
         }
     }
 
@@ -106,7 +106,7 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
             '',
             '// eslint-disable-next-line jsdoc/require-description',
             '/** @type {import(\'eslint\').Linter.Config} */',
-            'export default [...configs];'
+            'export default [...configs , { ignores: [\'./global-environment.model.ts\'] }];'
         ]);
     }
 

@@ -513,8 +513,8 @@ export abstract class AngularUtilities {
      * @param command - The command to run.
      * @param options - Options for running the command.
      */
-    static runCommand(directory: Path, command: AngularCliCommands, options: AngularCliOptions<typeof command>): void {
-        CPUtilities.execSync(`cd ${directory} && npx @angular/cli@${this.CLI_VERSION} ${command} ${optionsToCliString(options)}`);
+    static async runCommand(directory: Path, command: AngularCliCommands, options: AngularCliOptions<typeof command>): Promise<void> {
+        await CPUtilities.exec(`cd ${directory} && npx @angular/cli@${this.CLI_VERSION} ${command} ${optionsToCliString(options)}`);
     }
 
     /**
@@ -530,7 +530,7 @@ export abstract class AngularUtilities {
         navElement: AddNavElementConfig | undefined,
         domain: string | undefined
     ): Promise<void> {
-        this.runCommand(root, `generate component pages/${pageName}`, { '--skip-tests': true, '--inline-style': true });
+        await this.runCommand(root, `generate component pages/${pageName}`, { '--skip-tests': true, '--inline-style': true });
 
         if (navElement) {
             await this.addNavElement(root, navElement);
@@ -805,7 +805,7 @@ export abstract class AngularUtilities {
             { provide: 'HTTP_INTERCEPTORS', useClass: 'OfflineRequestInterceptor' as any, multi: true },
             [{ defaultImport: false, element: 'OfflineRequestInterceptor', path: NpmPackage.NGX_PWA }]
         );
-        this.runCommand(root, `add @angular/pwa@${this.CLI_VERSION}`, { '--skip-confirmation': true });
+        await this.runCommand(root, `add @angular/pwa@${this.CLI_VERSION}`, { '--skip-confirmation': true });
         await NpmUtilities.install(name, [NpmPackage.NGX_PWA]);
         await FsUtilities.updateFile(
             getPath(root, 'src', 'app', 'app.component.html'),

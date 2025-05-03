@@ -1,8 +1,8 @@
 /* eslint-disable jsdoc/require-jsdoc */
 import { faker } from '@faker-js/faker';
 
-import { fakeStringKeyValue, fakeUniqueString, fakeArray } from './helpers';
 import { ComposePort, ComposeService } from '../../docker';
+import { fakeStringKeyValue, fakeUniqueString, fakeArray } from '../helpers';
 
 function fakeComposePort(): ComposePort {
     return {

@@ -7,16 +7,16 @@ import { isCommand } from './is-command.function';
  * @param args - The args provided by the cli.
  * @returns The resolved command.
  */
-export function resolveCommand(args: string[]): Command | 'run' {
+export async function resolveCommand(args: string[]): Promise<Command | 'run'> {
     if (args.length < 1) {
-        exitWithError('Error: You need to specify a command.');
+        await exitWithError('Error: You need to specify a command.');
     }
 
     const command: string = args[0];
 
     if (!isCommand(command)) {
         if (args.length === 1) {
-            exitWithError(`Error: Unknown command ${command}.`);
+            await exitWithError(`Error: Unknown command ${command}.`);
         }
         return 'run';
     }

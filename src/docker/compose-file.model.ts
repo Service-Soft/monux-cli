@@ -57,6 +57,10 @@ export type ComposeService = {
      */
     environment?: ComposeServiceEnvironment,
     /**
+     * The entrypoint to use by the service.
+     */
+    entrypoint?: string[],
+    /**
      * The labels to use on the service.
      */
     labels?: string[]

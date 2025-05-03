@@ -20,7 +20,7 @@ export abstract class JsonUtilities {
             return json5.parse(value);
         }
         catch (error) {
-            throw new Error(`Could not parse value:\n ${this.stringify(value)}\n${error}`);
+            throw new Error(`Could not parse value:\n ${value}\n${error}`);
         }
     }
 
@@ -28,9 +28,15 @@ export abstract class JsonUtilities {
      * Stringifies the given value into a json string.
      * @param value - The value to stringify.
      * @returns The json string, formatted with 4 spaces.
+     * @throws
      */
     static stringify<T>(value: T): string {
-        return JSON.stringify(value, undefined, this.indent);
+        try {
+            return JSON.stringify(value, undefined, this.indent);
+        }
+        catch (error) {
+            throw new Error(`Could not stringify value:\n ${value}\n${error}`);
+        }
     }
 
     /**

@@ -100,6 +100,7 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
             4000,
             config.port,
             true,
+            true,
             config.subDomain
         );
         await AngularUtilities.updateAngularJson(
@@ -233,7 +234,7 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
     private async createProject(config: AddAngularWebsiteConfiguration): Promise<Path> {
         // eslint-disable-next-line no-console
         console.log('Creates the base website');
-        AngularUtilities.runCommand(
+        await AngularUtilities.runCommand(
             getPath(APPS_DIRECTORY_NAME),
             `new ${config.name}`,
             { '--skip-git': true, '--style': 'css', '--inline-style': true, '--ssr': true }

@@ -6,13 +6,25 @@ import { EnvironmentVariableKey } from './environment-variable-key.model';
  */
 export abstract class DefaultEnvKeys {
     /**
-     * The variable that defines if eg. Robots.txt should be genereated that allow crawling.
+     * The variable that defines the currently used environment.
      */
-    static readonly IS_PUBLIC: 'is_public' = 'is_public';
+    static readonly ENV: 'env' = 'env';
     /**
-     * The variable that define the root domain to use in production, like test.com.
+     * The variable that defines the root domain to use in production, like test.com.
      */
     static readonly PROD_ROOT_DOMAIN: 'prod_root_domain' = 'prod_root_domain';
+    /**
+     * The variable that defines the root domain to use in stage, like my-test-site.com.
+     */
+    static readonly STAGE_ROOT_DOMAIN: 'stage_root_domain' = 'stage_root_domain';
+    /**
+     * The username of the basic auth user for stage.
+     */
+    static readonly BASIC_AUTH_USER: 'basic_auth_user' = 'basic_auth_user';
+    /**
+     * The password of the basic auth user for stage.
+     */
+    static readonly BASIC_AUTH_PASSWORD: 'basic_auth_password' = 'basic_auth_password';
     /**
      * The variable that is used to generate access tokens.
      */
