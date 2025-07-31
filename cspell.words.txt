@@ -41,3 +41,4 @@ cldrjs
 htpasswd
 basicauth
 usersfile
+zibri

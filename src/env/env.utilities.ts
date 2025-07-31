@@ -196,7 +196,13 @@ export abstract class EnvUtilities {
     }
 
     private static stringifyEnvKeyValue(v: EnvVariable): string {
-        const q: string = v.type === 'string' ? '\'' : '';
+        let q: string = '';
+        if (
+            v.type === 'string'
+            || ['dev', 'local', 'stage', 'prod'].includes(v.value as string)
+        ) {
+            q = '\'';
+        }
         return `\n\t${v.key}: ${q}${v.value}${q}`;
     }
 
@@ -206,6 +212,9 @@ export abstract class EnvUtilities {
         fileName: DockerComposeFileName,
         rootDir: string
     ): Promise<EnvVariable[]> {
+        if (variableKeys != undefined && !variableKeys.length) {
+            return [];
+        }
         const keys: VariableKeys = await this.splitVariableKeys(variableKeys, failOnMissingVariable, rootDir);
         const staticVariables: EnvVariable[] = await this.getStaticEnvVariables(keys.static, failOnMissingVariable, rootDir);
         const calculatedVariables: EnvVariable[] = await this.getCalculatedEnvVariables(

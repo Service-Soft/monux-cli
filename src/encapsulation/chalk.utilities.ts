@@ -36,8 +36,8 @@ export abstract class ChalkUtilities {
     }
 
     /**
-     * Used to log errors in red.
-     * @param value - The value that should be logged as an error.
+     * Used to log success in green.
+     * @param value - The value that should be logged as a success message.
      * @returns The string to log.
      */
     static success(...value: string[]): string {

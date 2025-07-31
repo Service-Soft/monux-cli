@@ -8,6 +8,7 @@ import { AddConfiguration, addConfigurationQuestions, AddType } from './models';
 import { InquirerUtilities } from '../../encapsulation';
 import { BaseCommand } from '../base-command.model';
 import { AddNestCommand } from './add-nest';
+import { AddZibriCommand } from './add-zibri';
 
 /**
  * Adds a new project to the current monorepo.
@@ -35,6 +36,10 @@ export class AddCommand extends BaseCommand<AddConfiguration> {
             }
             case AddType.NEST: {
                 await new AddNestCommand(config).run();
+                return;
+            }
+            case AddType.ZIBRI: {
+                await new AddZibriCommand(config).run();
                 return;
             }
             case AddType.TS_LIBRARY: {
