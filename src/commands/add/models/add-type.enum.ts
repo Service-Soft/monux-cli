@@ -8,6 +8,7 @@ export enum AddType {
     ANGULAR_LIBRARY = 'angular-library',
     LOOPBACK = 'loopback',
     NEST = 'nest',
+    ZIBRI = 'zibri',
     TS_LIBRARY = 'ts-library',
     WORDPRESS = 'wordpress'
 }

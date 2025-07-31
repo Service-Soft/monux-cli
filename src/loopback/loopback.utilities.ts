@@ -159,7 +159,7 @@ type LoopbackCliOptions<T extends LoopbackCliCommands> =
  */
 export abstract class LoopbackUtilities {
 
-    private static readonly CLI_VERSION: number = 6;
+    private static readonly CLI_VERSION: number = 7;
 
     /**
      * Runs an loopback cli command inside the provided directory.
@@ -533,7 +533,8 @@ export abstract class LoopbackUtilities {
      * @param dbName - The name of the database used by the api.
      */
     static async setupLogging(root: string, name: string, dbName: string): Promise<void> {
-        await NpmUtilities.install(name, [NpmPackage.LBX_PERSISTENCE_LOGGER, NpmPackage.LOOPBACK_CRON]);
+        await NpmUtilities.install(name, [NpmPackage.LBX_PERSISTENCE_LOGGER]);
+        await NpmUtilities.install(name, [NpmPackage.LOOPBACK_CRON]);
 
         const applicationTs: Path = getPath(root, 'src', 'application.ts');
         await TsUtilities.addImportStatements(
