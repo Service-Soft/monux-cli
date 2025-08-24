@@ -114,7 +114,7 @@ export const ANGULAR_ROUTES_FILE_NAME: string = 'routes.ts';
 /**
  * The name of the angular app component file.
  */
-export const ANGULAR_APP_COMPONENT_FILE_NAME: string = 'app.component.ts';
+export const ANGULAR_APP_COMPONENT_FILE_NAME: string = 'app.ts';
 
 /**
  * Name of the .gitignore file.

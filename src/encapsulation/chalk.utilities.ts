@@ -1,7 +1,9 @@
 import chalk from 'chalk';
 
-const COLOR_PRIMARY: string = '#37517e';
-const COLOR_SECONDARY: string = '#47b2e4';
+// eslint-disable-next-line jsdoc/require-jsdoc
+export const COLOR_PRIMARY: string = '#37517e';
+// eslint-disable-next-line jsdoc/require-jsdoc
+export const COLOR_SECONDARY: string = '#47b2e4';
 
 /**
  * Encapsulates functionality of the chalk package.

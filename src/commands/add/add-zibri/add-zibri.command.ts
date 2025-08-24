@@ -1,4 +1,4 @@
-import { APPS_DIRECTORY_NAME, BASE_TS_CONFIG_FILE_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME } from '../../../constants';
+import { APPS_DIRECTORY_NAME, BASE_TS_CONFIG_FILE_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ESLINT_CONFIG_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME } from '../../../constants';
 import { DbType, DbUtilities } from '../../../db';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, QuestionsFor } from '../../../encapsulation';
@@ -107,6 +107,15 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
             ),
             this.createDockerfile(root, config)
         ]);
+
+        await FsUtilities.replaceInFile(
+            getPath(root, ESLINT_CONFIG_FILE_NAME),
+            '    ...baseConfig,',
+            [
+                '    ...baseConfig,',
+                '    { ignores: [\'./assets\'] },'
+            ].join('\n')
+        );
 
         const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
         await EnvUtilities.buildEnvironmentFileForApp(app, false, 'dev.docker-compose.yaml', getPath('.'));

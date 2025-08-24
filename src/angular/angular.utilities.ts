@@ -62,7 +62,15 @@ type NewOptions = {
     /**
      * Whether or not to use inline styles instead of a whole css file for each component.
      */
-    '--inline-style'?: boolean
+    '--inline-style'?: boolean,
+    /**
+     * Whether or not to configure some ai.
+     */
+    '--ai-config': 'none',
+    /**
+     * Whether or not to use zoneless change detection.
+     */
+    '--zoneless': false
 };
 
 /**
@@ -103,7 +111,7 @@ type AngularCliOptions<T extends AngularCliCommands> =
  */
 export abstract class AngularUtilities {
 
-    private static readonly CLI_VERSION: number = 18;
+    private static readonly CLI_VERSION: number = 20;
 
     /**
      * Sets up logging.
@@ -454,14 +462,14 @@ export abstract class AngularUtilities {
      * @param root - The root of the angular project to setup material for.
      */
     static async setupMaterial(root: string): Promise<void> {
-        await Promise.all([
-            this.addProvider(
-                root,
-                'provideAnimations()',
-                [{ defaultImport: false, element: 'provideAnimations', path: '@angular/platform-browser/animations' }]
-            ),
-            FsUtilities.updateFile(getPath(root, 'src', 'styles.css'), [
-                '@import "@angular/material/prebuilt-themes/indigo-pink.css";',
+        await this.addProvider(
+            root,
+            'provideAnimations()',
+            [{ defaultImport: false, element: 'provideAnimations', path: '@angular/platform-browser/animations' }]
+        );
+        await FsUtilities.updateFile(
+            getPath(root, 'src', 'styles.css'),
+            [
                 '',
                 'html,',
                 'body {',
@@ -473,8 +481,14 @@ export abstract class AngularUtilities {
                 '\tmargin: 0;',
                 '\tfont-family: Arial, Helvetica, sans-serif;',
                 '}'
-            ], 'append')
-        ]);
+            ],
+            'append'
+        );
+        await FsUtilities.updateFile(
+            getPath(root, 'src', 'styles.css'),
+            '\'@import "@angular/material/prebuilt-themes/indigo-pink.css";\'',
+            'prepend'
+        );
     }
 
     /**
@@ -671,7 +685,7 @@ export abstract class AngularUtilities {
 
         await NpmUtilities.install(name, [NpmPackage.NGX_MATERIAL_NAVIGATION]);
         await FsUtilities.updateFile(
-            getPath(root, 'src', 'app', 'app.component.html'),
+            getPath(root, 'src', 'app', 'app.html'),
             [
                 // eslint-disable-next-line stylistic/max-len
                 '<ngx-mat-navigation-navbar [minHeight]="80" [minSidenavWidth]="\'30%\'" [minHeightOtherElements]="70" [navbarRows]="navbarRows">',
@@ -808,7 +822,7 @@ export abstract class AngularUtilities {
         await this.runCommand(root, `add @angular/pwa@${this.CLI_VERSION}`, { '--skip-confirmation': true });
         await NpmUtilities.install(name, [NpmPackage.NGX_PWA]);
         await FsUtilities.updateFile(
-            getPath(root, 'src', 'app', 'app.component.html'),
+            getPath(root, 'src', 'app', 'app.html'),
             ['<ngx-pwa-offline-status-bar></ngx-pwa-offline-status-bar>'],
             'prepend'
         );

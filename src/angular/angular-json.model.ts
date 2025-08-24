@@ -153,6 +153,14 @@ interface AngularJsonSchematicOptions {
      */
     style?: 'css' | 'scss' | 'sass' | 'less',
     /**
+     *
+     */
+    type?: 'component' | 'service' | 'directive',
+    /**
+     * 
+     */
+    typeSeparator?: string,
+    /**
      * Whether or not to use inlineTemplates.
      */
     inlineTemplate?: boolean,

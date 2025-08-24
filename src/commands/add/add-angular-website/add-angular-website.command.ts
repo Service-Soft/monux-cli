@@ -228,7 +228,7 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
         await FsUtilities.rm(getPath(root, '.vscode'));
         await FsUtilities.rm(getPath(root, '.editorconfig'));
         await FsUtilities.rm(getPath(root, GIT_IGNORE_FILE_NAME));
-        await FsUtilities.rm(getPath(root, 'src', 'app', 'app.component.spec.ts'));
+        await FsUtilities.rm(getPath(root, 'src', 'app', 'app.spec.ts'));
     }
 
     private async createProject(config: AddAngularWebsiteConfiguration): Promise<Path> {
@@ -237,10 +237,34 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
         await AngularUtilities.runCommand(
             getPath(APPS_DIRECTORY_NAME),
             `new ${config.name}`,
-            { '--skip-git': true, '--style': 'css', '--inline-style': true, '--ssr': true }
+            { '--skip-git': true, '--style': 'css', '--inline-style': true, '--ssr': true, '--ai-config': 'none', '--zoneless': false }
         );
         const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
-        await FsUtilities.updateFile(getPath(newProject.path, 'src', 'app', 'app.component.html'), '', 'replace');
+        await AngularUtilities.updateAngularJson(
+            getPath(newProject.path, ANGULAR_JSON_FILE_NAME),
+            {
+                projects: {
+                    [newProject.name]: {
+                        schematics: {
+                            '@schematics/angular:component': {
+                                style: 'css',
+                                type: 'component'
+                            },
+                            '@schematics/angular:service': {
+                                type: 'service'
+                            },
+                            '@schematics/angular:pipe': { 
+                                typeSeparator: '.'
+                            },
+                            '@schematics/angular:guard': { 
+                                typeSeparator: '.'
+                            }
+                        }
+                    }
+                }
+            }
+        );
+        await FsUtilities.updateFile(getPath(newProject.path, 'src', 'app', 'app.html'), '', 'replace');
         await AngularUtilities.addProvider(newProject.path, 'provideHttpClient(withInterceptorsFromDi(), withFetch())', [
             // eslint-disable-next-line sonar/no-duplicate-string
             { defaultImport: false, element: 'provideHttpClient', path: '@angular/common/http' },
