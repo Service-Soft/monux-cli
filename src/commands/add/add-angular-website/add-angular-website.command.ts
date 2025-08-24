@@ -253,10 +253,10 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
                             '@schematics/angular:service': {
                                 type: 'service'
                             },
-                            '@schematics/angular:pipe': { 
+                            '@schematics/angular:pipe': {
                                 typeSeparator: '.'
                             },
-                            '@schematics/angular:guard': { 
+                            '@schematics/angular:guard': {
                                 typeSeparator: '.'
                             }
                         }
