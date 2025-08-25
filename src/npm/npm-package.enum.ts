@@ -2,7 +2,7 @@
  * All known npm packages.
  */
 export enum NpmPackage {
-    TAILWIND = 'tailwindcss',
+    TAILWIND = 'tailwindcss@3',
     NGX_PERSISTENCE_LOGGER = 'ngx-persistence-logger',
     NGX_MATERIAL_AUTH = 'ngx-material-auth',
     NGX_MATERIAL_CHANGE_SETS = 'ngx-material-change-sets',
