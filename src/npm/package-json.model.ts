@@ -72,5 +72,9 @@ export type PackageJson = {
     /**
      * PeerDependencies of the package.
      */
-    peerDependencies?: Record<string, string>
+    peerDependencies?: Record<string, string>,
+    /**
+     * Prettier configuration. Is used by default by storybook.
+     */
+    prettier?: unknown
 };

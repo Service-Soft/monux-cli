@@ -1,7 +1,7 @@
 import { initConfigQuestions, InitConfiguration } from './init-configuration.model';
 import { APPS_DIRECTORY_NAME, ENV_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, ESLINT_CONFIG_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, ROBOTS_FILE_NAME, TAILWIND_CONFIG_FILE_NAME } from '../../constants';
 import { DockerUtilities } from '../../docker';
-import { COLOR_PRIMARY, CPUtilities, FsUtilities, InquirerUtilities } from '../../encapsulation';
+import { CPUtilities, FsUtilities, InquirerUtilities } from '../../encapsulation';
 import { EnvUtilities } from '../../env';
 import { GithubUtilities } from '../../github';
 import { NpmPackage, NpmUtilities } from '../../npm';
@@ -9,6 +9,7 @@ import { TsConfigUtilities } from '../../tsconfig';
 import { exitWithError, getPath } from '../../utilities';
 import { WorkspaceConfig, WorkspaceUtilities } from '../../workspace';
 import { BaseCommand } from '../base-command.model';
+import { tailwindConfigJsContent } from './tailwind-config-js.content';
 
 /**
  * Initializes a new Monux monorepo.
@@ -113,22 +114,7 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
     private async createTailwindConfig(): Promise<void> {
         await FsUtilities.createFile(
             getPath(TAILWIND_CONFIG_FILE_NAME),
-            [
-                `const PRIMARY = '${COLOR_PRIMARY}'`,
-                '',
-                '// eslint-disable-next-line jsdoc/require-description',
-                '/** @type {import(\'tailwindcss\').Config} */',
-                'module.exports = {',
-                '    theme: {',
-                '        colors: {',
-                '            primary: {',
-                '                DEFAULT: PRIMARY,',
-                '                darker: `color-mix(in srgb, ${PRIMARY} 90%, black)`',
-                '            }',
-                '        }',
-                '    }',
-                '};'
-            ]
+            tailwindConfigJsContent
         );
     }
 }

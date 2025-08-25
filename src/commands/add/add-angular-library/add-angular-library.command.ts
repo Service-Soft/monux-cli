@@ -1,3 +1,7 @@
+import { buttonComponentHtmlContent } from './button-component-html.content';
+import { buttonComponentTsContent } from './button-component-ts.content';
+import { buttonStoriesTsContent } from './button-stories-ts.content';
+import { storybookMainTsContent } from './storybook-main-ts.content';
 import { AngularUtilities } from '../../../angular';
 import { ANGULAR_JSON_FILE_NAME, BASE_TS_CONFIG_FILE_NAME, ESLINT_CONFIG_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, PACKAGE_JSON_FILE_NAME } from '../../../constants';
 import { FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
@@ -56,7 +60,6 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
             FsUtilities.rm(getPath(result.root, '.editorconfig')),
             FsUtilities.rm(getPath(result.root, GIT_IGNORE_FILE_NAME)),
             FsUtilities.rm(getPath(result.root, 'src', 'lib')),
-            this.updatePublicApi(result.root),
             this.updateNgPackageJson(result.root),
             this.updateAngularJson(result.root, config.name),
             this.setupTsConfig(result.root, config),
@@ -74,13 +77,9 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
                 '        rules: {',
                 '            \'jsdoc/require-jsdoc\': \'off\'',
                 '        }',
-                '    }'
+                '    },'
             ].join('\n')
         );
-    }
-
-    private async updatePublicApi(root: string): Promise<void> {
-        await FsUtilities.updateFile(getPath(root, 'src', 'public-api.ts'), '', 'replace');
     }
 
     private async setupTailwind(root: string): Promise<void> {
@@ -96,7 +95,8 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
         await NpmUtilities.updatePackageJson(name, {
             peerDependencies: result.oldPackageJson.peerDependencies,
             dependencies: undefined,
-            devDependencies: undefined
+            devDependencies: undefined,
+            prettier: undefined
         });
     }
 
@@ -176,8 +176,54 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
                 }
             }
         );
-        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', '.eslintrc.json'));
+
+        await FsUtilities.updateFile(
+            getPath(newProject.path, '.storybook', 'main.ts'),
+            storybookMainTsContent,
+            'replace'
+        );
+
+        await this.cleanup(newProject);
+
+        await this.createDefaultFiles(newProject);
+
         return { root: newProject.path, oldPackageJson };
+    }
+
+    private async createDefaultFiles(newProject: WorkspaceProject): Promise<void> {
+        await FsUtilities.updateFile(getPath(newProject.path, 'src', 'public-api.ts'), 'export * from \'./stories\';', 'replace');
+        await FsUtilities.createFile(
+            getPath(newProject.path, 'src', 'stories', 'index.ts'),
+            'export * from \'./button/button.component\';'
+        );
+        await FsUtilities.createFile(
+            getPath(newProject.path, 'src', 'stories', 'button', 'button.component.ts'),
+            buttonComponentTsContent
+        );
+        await FsUtilities.createFile(
+            getPath(newProject.path, 'src', 'stories', 'button', 'button.component.html'),
+            buttonComponentHtmlContent
+        );
+        await FsUtilities.createFile(
+            getPath(newProject.path, 'src', 'stories', 'button', 'button.stories.ts'),
+            buttonStoriesTsContent
+        );
+    }
+
+    private async cleanup(newProject: WorkspaceProject): Promise<void> {
+        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', '.eslintrc.json'));
+        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'button.component.ts'));
+        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'button.css'));
+        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'button.stories.ts'));
+        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'header.component.ts'));
+        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'header.css'));
+        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'header.stories.ts'));
+        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'page.component.ts'));
+        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'page.css'));
+        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'page.stories.ts'));
+        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'user.ts'));
+        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'Configure.mdx'));
+        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'assets'));
     }
 
     private async setupTsConfig(root: Path, config: AddAngularLibraryConfiguration): Promise<void> {
@@ -238,7 +284,8 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
             include: [
                 'src/**/*.spec.ts',
                 'src/**/*.d.ts',
-                'src/**/*.stories.ts'
+                'src/**/*.stories.ts',
+                '.storybook/*.ts'
             ]
         };
         await FsUtilities.createFile(getPath(root, 'tsconfig.eslint.json'), JsonUtilities.stringify(eslintTsconfig));
