@@ -153,6 +153,14 @@ interface AngularJsonSchematicOptions {
      */
     style?: 'css' | 'scss' | 'sass' | 'less',
     /**
+     * The type of the schematic.
+     */
+    type?: 'component' | 'service' | 'directive',
+    /**
+     * The separator for the filename.
+     */
+    typeSeparator?: string,
+    /**
      * Whether or not to use inlineTemplates.
      */
     inlineTemplate?: boolean,

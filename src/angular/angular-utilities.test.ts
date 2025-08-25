@@ -42,8 +42,8 @@ describe('AngularUtilities', () => {
             '    selector: \'app-root\',',
             '    standalone: true,',
             `    imports: [RouterOutlet, ${def.element}],`,
-            '    templateUrl: \'./app.component.html\',',
-            '    styleUrl: \'./app.component.css\'',
+            '    templateUrl: \'./app.html\',',
+            '    styleUrl: \'./app.css\'',
             '})',
             'export class AppComponent {}'
         ]);
@@ -75,8 +75,8 @@ describe('AngularUtilities', () => {
             '    selector: \'app-root\',',
             '    standalone: true,',
             '    imports: [RouterOutlet, NgxMatNavigationNavbarComponent, NgxMatNavigationFooterComponent],',
-            '    templateUrl: \'./app.component.html\',',
-            '    styleUrl: \'./app.component.css\'',
+            '    templateUrl: \'./app.html\',',
+            '    styleUrl: \'./app.css\'',
             '})',
             'export class AppComponent {',
             '    navbarRows: NavbarRow[] = navbarRows;',
@@ -325,7 +325,7 @@ describe('AngularUtilities', () => {
         await AngularUtilities.setupPwa(mockConstants.ANGULAR_APP_DIR, mockConstants.ANGULAR_APP_NAME);
 
         expect(cpExecSyncMock).toHaveBeenCalledTimes(1);
-        expect(cpExecSyncMock).toHaveBeenCalledWith(`cd ${mockConstants.ANGULAR_APP_DIR} && npx @angular/cli@18 add @angular/pwa@18 --skip-confirmation`);
+        expect(cpExecSyncMock).toHaveBeenCalledWith(`cd ${mockConstants.ANGULAR_APP_DIR} && npx @angular/cli@20 add @angular/pwa@20 --skip-confirmation`);
         expect(npmInstallMock).toHaveBeenCalledTimes(1);
         expect(npmInstallMock).toHaveBeenCalledWith(mockConstants.ANGULAR_APP_NAME, ['ngx-pwa']);
 
@@ -342,8 +342,8 @@ describe('AngularUtilities', () => {
             '    selector: \'app-root\',',
             '    standalone: true,',
             '    imports: [RouterOutlet, NgxPwaOfflineStatusBarComponent],',
-            '    templateUrl: \'./app.component.html\',',
-            '    styleUrl: \'./app.component.css\'',
+            '    templateUrl: \'./app.html\',',
+            '    styleUrl: \'./app.css\'',
             '})',
             'export class AppComponent {}'
         ]);

@@ -9,10 +9,8 @@ import { JsonUtilities } from '../encapsulation';
 export function optionsToCliString<T extends object>(options: T, separator: string = '='): string {
     let res: string = '';
     for (const key in options) {
-        if (options[key] !== false) {
-            res += res.length ? ' ' : ''; // Add space to separate from prior argument
-            res += `${key}${transformValue(options[key], separator)}`;
-        }
+        res += res.length ? ' ' : ''; // Add space to separate from prior argument
+        res += `${key}${transformValue(options[key], separator)}`;
     }
     return res;
 }
@@ -21,6 +19,9 @@ export function optionsToCliString<T extends object>(options: T, separator: stri
 function transformValue(value: unknown, separator: string): string {
     if (value === true) {
         return '';
+    }
+    if (value === false) {
+        return `${separator}false`;
     }
     if (typeof value === 'object') {
         return `${separator}'${JsonUtilities.stringify(value)}'`;
