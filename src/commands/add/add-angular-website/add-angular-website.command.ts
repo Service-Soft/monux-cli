@@ -1,5 +1,5 @@
 import { AngularUtilities, NavElementTypes } from '../../../angular';
-import { ANGULAR_JSON_FILE_NAME, APPS_DIRECTORY_NAME, BASE_TS_CONFIG_FILE_NAME, DOCKER_FILE_NAME, GIT_IGNORE_FILE_NAME } from '../../../constants';
+import { ANGULAR_APP_COMPONENT_FILE_NAME, ANGULAR_JSON_FILE_NAME, APPS_DIRECTORY_NAME, BASE_TS_CONFIG_FILE_NAME, DOCKER_FILE_NAME, GIT_IGNORE_FILE_NAME } from '../../../constants';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
 import { DefaultEnvKeys, EnvUtilities } from '../../../env';
@@ -82,7 +82,7 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
 
         await AngularUtilities.addSitemapAndRobots(root, config.name, domain);
 
-        await this.cleanUp(root);
+        await this.cleanUp(root, config.name);
         await this.setupTsConfig(root, config.name);
         await this.createDockerfile(root, config);
         await AngularUtilities.setupNavigation(root, config.name);
@@ -222,9 +222,19 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
         await FsUtilities.createFile(getPath(root, 'tsconfig.eslint.json'), JsonUtilities.stringify(eslintTsconfig));
     }
 
-    private async cleanUp(root: string): Promise<void> {
+    private async cleanUp(root: string, name: string): Promise<void> {
         // eslint-disable-next-line no-console
         console.log('cleans up');
+        await FsUtilities.replaceInFile(
+            getPath(root, 'src', 'app', ANGULAR_APP_COMPONENT_FILE_NAME),
+            `protected readonly title = signal('${name}');`,
+            '  constructor() {}'
+        );
+        await FsUtilities.replaceInFile(
+            getPath(root, 'src', 'app', ANGULAR_APP_COMPONENT_FILE_NAME),
+            'Component, signal',
+            'Component'
+        );
         await FsUtilities.rm(getPath(root, '.vscode'));
         await FsUtilities.rm(getPath(root, '.editorconfig'));
         await FsUtilities.rm(getPath(root, GIT_IGNORE_FILE_NAME));
