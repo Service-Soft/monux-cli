@@ -1,5 +1,5 @@
 import { AngularUtilities } from '../../../angular';
-import { ANGULAR_JSON_FILE_NAME, BASE_TS_CONFIG_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, PACKAGE_JSON_FILE_NAME } from '../../../constants';
+import { ANGULAR_JSON_FILE_NAME, BASE_TS_CONFIG_FILE_NAME, ESLINT_CONFIG_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, PACKAGE_JSON_FILE_NAME } from '../../../constants';
 import { FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
 import { EslintUtilities } from '../../../eslint';
 import { NpmUtilities, PackageJson } from '../../../npm';
@@ -50,7 +50,7 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
     override async run(): Promise<void> {
         const config: AddAngularLibraryConfiguration = await this.getConfig();
         const result: CreateResult = await this.createProject(config);
-
+        await EslintUtilities.setupProjectEslint(result.root, false);
         await Promise.all([
             FsUtilities.rm(getPath(result.root, '.vscode')),
             FsUtilities.rm(getPath(result.root, '.editorconfig')),
@@ -61,10 +61,22 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
             this.updateAngularJson(result.root, config.name),
             this.setupTsConfig(result.root, config),
             this.updatePackageJson(result, config.name),
-            this.setupTailwind(result.root),
-            EslintUtilities.setupProjectEslint(result.root, false)
+            this.setupTailwind(result.root)
         ]);
         await FsUtilities.rm(getPath(result.root, 'projects'));
+        await FsUtilities.replaceInFile(
+            getPath(result.root, ESLINT_CONFIG_FILE_NAME),
+            '    ...baseConfig,',
+            [
+                '    ...baseConfig,',
+                '    {',
+                '        files: [\'**/*.stories.ts\'],',
+                '        rules: {',
+                '            \'jsdoc/require-jsdoc\': \'off\'',
+                '        }',
+                '    }'
+            ].join('\n')
+        );
     }
 
     private async updatePublicApi(root: string): Promise<void> {
@@ -94,7 +106,7 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
         await AngularUtilities.runCommand(
             getPath(LIBS_DIRECTORY_NAME),
             `new ${config.name}`,
-            { '--no-create-application': true }
+            { '--no-create-application': true, '--ai-config': 'none', '--zoneless': false }
         );
         // eslint-disable-next-line no-console
         console.log('Creates the base library');
@@ -140,6 +152,30 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
         await FsUtilities.replaceInFile(getPath(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME), '"root": ,', '"root": "./",');
 
         const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
+        await AngularUtilities.updateAngularJson(
+            getPath(newProject.path, ANGULAR_JSON_FILE_NAME),
+            {
+                projects: {
+                    [newProject.name]: {
+                        schematics: {
+                            '@schematics/angular:component': {
+                                style: 'css',
+                                type: 'component'
+                            },
+                            '@schematics/angular:service': {
+                                type: 'service'
+                            },
+                            '@schematics/angular:pipe': {
+                                typeSeparator: '.'
+                            },
+                            '@schematics/angular:guard': {
+                                typeSeparator: '.'
+                            }
+                        }
+                    }
+                }
+            }
+        );
         await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', '.eslintrc.json'));
         return { root: newProject.path, oldPackageJson };
     }
@@ -201,7 +237,8 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
             files: ['src/public-api.ts'],
             include: [
                 'src/**/*.spec.ts',
-                'src/**/*.d.ts'
+                'src/**/*.d.ts',
+                'src/**/*.stories.ts'
             ]
         };
         await FsUtilities.createFile(getPath(root, 'tsconfig.eslint.json'), JsonUtilities.stringify(eslintTsconfig));
@@ -243,6 +280,11 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
                         test: {
                             options: {
                                 tsConfig: 'tsconfig.spec.json'
+                            }
+                        },
+                        storybook: {
+                            options: {
+                                styles: ['src/styles.css']
                             }
                         }
                     }

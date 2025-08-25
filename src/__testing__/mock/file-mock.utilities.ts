@@ -114,7 +114,17 @@ export abstract class FileMockUtilities {
                     projectType: 'application',
                     schematics: {
                         '@schematics/angular:component': {
-                            style: 'css'
+                            style: 'css',
+                            type: 'component'
+                        },
+                        '@schematics/angular:service': {
+                            type: 'service'
+                        },
+                        '@schematics/angular:pipe': {
+                            typeSeparator: '.'
+                        },
+                        '@schematics/angular:guard': {
+                            typeSeparator: '.'
                         }
                     },
                     root: '',
@@ -167,8 +177,8 @@ export abstract class FileMockUtilities {
             '\tselector: \'app-root\',',
             '\tstandalone: true,',
             '\timports: [RouterOutlet],',
-            '\ttemplateUrl: \'./app.component.html\',',
-            '\tstyleUrl: \'./app.component.css\'',
+            '\ttemplateUrl: \'./app.html\',',
+            '\tstyleUrl: \'./app.css\'',
             '})',
             'export class AppComponent {}'
         ], true, false);

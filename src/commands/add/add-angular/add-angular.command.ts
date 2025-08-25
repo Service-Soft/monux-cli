@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import { AngularUtilities, NavElementTypes } from '../../../angular';
-import { ANGULAR_JSON_FILE_NAME, APP_CONFIG_FILE_NAME, APPS_DIRECTORY_NAME, BASE_TS_CONFIG_FILE_NAME, DOCKER_FILE_NAME, GIT_IGNORE_FILE_NAME } from '../../../constants';
+import { ANGULAR_APP_COMPONENT_FILE_NAME, ANGULAR_JSON_FILE_NAME, APP_CONFIG_FILE_NAME, APPS_DIRECTORY_NAME, BASE_TS_CONFIG_FILE_NAME, DOCKER_FILE_NAME, GIT_IGNORE_FILE_NAME } from '../../../constants';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
 import { DefaultEnvKeys, EnvUtilities } from '../../../env';
@@ -72,7 +72,7 @@ export class AddAngularCommand extends BaseAddCommand<AddAngularConfiguration> {
         const config: AddAngularConfiguration = await this.getConfig();
         const root: Path = await this.createProject(config);
         await Promise.all([
-            this.cleanUp(root),
+            this.cleanUp(root, config.name),
             this.setupTsConfig(root, config.name),
             this.createDockerfile(root, config),
             EslintUtilities.setupProjectEslint(root, true),
@@ -217,10 +217,34 @@ export class AddAngularCommand extends BaseAddCommand<AddAngularConfiguration> {
         await AngularUtilities.runCommand(
             getPath(APPS_DIRECTORY_NAME),
             `new ${config.name}`,
-            { '--skip-git': true, '--style': 'css', '--inline-style': true, '--ssr': true }
+            { '--skip-git': true, '--style': 'css', '--inline-style': true, '--ssr': true, '--ai-config': 'none', '--zoneless': false }
         );
         const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
-        await FsUtilities.updateFile(getPath(newProject.path, 'src', 'app', 'app.component.html'), '', 'replace');
+        await AngularUtilities.updateAngularJson(
+            getPath(newProject.path, ANGULAR_JSON_FILE_NAME),
+            {
+                projects: {
+                    [newProject.name]: {
+                        schematics: {
+                            '@schematics/angular:component': {
+                                style: 'css',
+                                type: 'component'
+                            },
+                            '@schematics/angular:service': {
+                                type: 'service'
+                            },
+                            '@schematics/angular:pipe': {
+                                typeSeparator: '.'
+                            },
+                            '@schematics/angular:guard': {
+                                typeSeparator: '.'
+                            }
+                        }
+                    }
+                }
+            }
+        );
+        await FsUtilities.updateFile(getPath(newProject.path, 'src', 'app', 'app.html'), '', 'replace');
         await AngularUtilities.addProvider(newProject.path, 'provideHttpClient(withInterceptorsFromDi(), withFetch())', [
             // eslint-disable-next-line sonar/no-duplicate-string
             { defaultImport: false, element: 'provideHttpClient', path: '@angular/common/http' },
@@ -230,12 +254,22 @@ export class AddAngularCommand extends BaseAddCommand<AddAngularConfiguration> {
         return newProject.path;
     }
 
-    private async cleanUp(root: string): Promise<void> {
+    private async cleanUp(root: string, name: string): Promise<void> {
         console.log('cleans up');
+        await FsUtilities.replaceInFile(
+            getPath(root, 'src', 'app', ANGULAR_APP_COMPONENT_FILE_NAME),
+            `protected readonly title = signal('${name}');`,
+            '  constructor() {}'
+        );
+        await FsUtilities.replaceInFile(
+            getPath(root, 'src', 'app', ANGULAR_APP_COMPONENT_FILE_NAME),
+            'Component, signal',
+            'Component'
+        );
         await FsUtilities.rm(getPath(root, '.vscode'));
         await FsUtilities.rm(getPath(root, '.editorconfig'));
         await FsUtilities.rm(getPath(root, GIT_IGNORE_FILE_NAME));
-        await FsUtilities.rm(getPath(root, 'src', 'app', 'app.component.spec.ts'));
+        await FsUtilities.rm(getPath(root, 'src', 'app', 'app.spec.ts'));
     }
 
     private async setupTsConfig(root: string, projectName: string): Promise<void> {

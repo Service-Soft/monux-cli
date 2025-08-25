@@ -1,9 +1,9 @@
 
-import { GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, TS_CONFIG_FILE_NAME } from '../../../constants';
-import { CPUtilities, FsUtilities, QuestionsFor } from '../../../encapsulation';
+import { BASE_TS_CONFIG_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME } from '../../../constants';
+import { CPUtilities, FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
 import { EslintUtilities } from '../../../eslint';
 import { NpmPackage, NpmUtilities } from '../../../npm';
-import { TsConfigUtilities } from '../../../tsconfig';
+import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
 import { getPath } from '../../../utilities';
 import { WorkspaceConfig, WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
@@ -42,8 +42,8 @@ export class AddTsLibraryCommand extends BaseAddCommand<TsLibraryConfiguration> 
         const root: string = await this.createProject(config);
 
         await Promise.all([
-            EslintUtilities.setupProjectEslint(root, false, TS_CONFIG_FILE_NAME),
-            this.updateBaseTsConfig(config, root),
+            EslintUtilities.setupProjectEslint(root, false),
+            this.setupTsConfig(config, root),
             FsUtilities.rm(getPath(root, GIT_IGNORE_FILE_NAME)),
             FsUtilities.rm(getPath(root, 'index.html')),
             FsUtilities.rm(getPath(root, 'public')),
@@ -64,7 +64,7 @@ export class AddTsLibraryCommand extends BaseAddCommand<TsLibraryConfiguration> 
         await Promise.all(projects.map((p) => NpmUtilities.install(p.name, [npmPackage as NpmPackage])));
     }
 
-    private async updateBaseTsConfig(config: TsLibraryConfiguration, root: string): Promise<void> {
+    private async setupTsConfig(config: TsLibraryConfiguration, root: string): Promise<void> {
         await TsConfigUtilities.updateBaseTsConfig({
             compilerOptions: {
                 paths: {
@@ -72,6 +72,14 @@ export class AddTsLibraryCommand extends BaseAddCommand<TsLibraryConfiguration> 
                 }
             }
         });
+        const eslintTsconfig: TsConfig = {
+            compilerOptions: {
+                outDir: './out-tsc/eslint'
+            },
+            extends: `../../${BASE_TS_CONFIG_FILE_NAME}`,
+            include: ['src/**/*.ts', 'vite.config.ts']
+        };
+        await FsUtilities.createFile(getPath(root, 'tsconfig.eslint.json'), JsonUtilities.stringify(eslintTsconfig));
     }
 
     private async createProject(config: TsLibraryConfiguration): Promise<string> {
