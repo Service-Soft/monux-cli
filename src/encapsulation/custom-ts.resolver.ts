@@ -7,8 +7,8 @@ import { NavElementTypes } from '../angular/nav-element-types.enum';
 export type CustomTsValues = NavElementTypes
     | 'provideZoneChangeDetection({ eventCoalescing: true })'
     | 'provideRouter(routes)'
-    | 'provideClientHydration()'
-    | 'provideAnimations()'
+    | 'provideClientHydration(withEventReplay())'
+    | 'provideBrowserGlobalErrorListeners()'
     | 'NGX_LOGGER_SERVICE'
     | 'LoggerService'
     | 'ErrorHandler'
@@ -41,8 +41,8 @@ export const customTsValueToString: Record<CustomTsValues, string> = {
     titleWithInternalLink: 'NavElementTypes.TITLE_WITH_INTERNAL_LINK',
     'provideZoneChangeDetection({ eventCoalescing: true })': 'provideZoneChangeDetection({ eventCoalescing: true })',
     'provideRouter(routes)': 'provideRouter(routes)',
-    'provideClientHydration()': 'provideClientHydration()',
-    'provideAnimations()': 'provideAnimations()',
+    'provideClientHydration(withEventReplay())': 'provideClientHydration(withEventReplay())',
+    'provideBrowserGlobalErrorListeners()': 'provideBrowserGlobalErrorListeners()',
     NGX_LOGGER_SERVICE: 'NGX_LOGGER_SERVICE',
     LoggerService: 'LoggerService',
     ErrorHandler: 'ErrorHandler',
@@ -76,8 +76,8 @@ export const customTsStringToValue: Record<string, CustomTsValues> = {
     'NavElementTypes.TITLE_WITH_INTERNAL_LINK': NavElementTypes.TITLE_WITH_INTERNAL_LINK,
     'provideZoneChangeDetection({ eventCoalescing: true })': 'provideZoneChangeDetection({ eventCoalescing: true })',
     'provideRouter(routes)': 'provideRouter(routes)',
-    'provideClientHydration()': 'provideClientHydration()',
-    'provideAnimations()': 'provideAnimations()',
+    'provideClientHydration(withEventReplay())': 'provideClientHydration(withEventReplay())',
+    'provideBrowserGlobalErrorListeners()': 'provideBrowserGlobalErrorListeners()',
     NGX_LOGGER_SERVICE: 'NGX_LOGGER_SERVICE',
     LoggerService: 'LoggerService',
     ErrorHandler: 'ErrorHandler',

@@ -9,7 +9,7 @@
         "forceConsistentCasingInFileNames": true,
         "importHelpers": true,
         "module": "CommonJS",
-        "moduleResolution": "Node",
+        "moduleResolution": "node",
         "noFallthroughCasesInSwitch": true,
         "noImplicitAny": true,
         "noImplicitOverride": true,

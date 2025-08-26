@@ -1,3 +1,5 @@
+import { ModuleResolutionKind } from 'typescript';
+
 import { AngularUtilities, NavElementTypes } from '../../../angular';
 import { ANGULAR_APP_COMPONENT_FILE_NAME, ANGULAR_JSON_FILE_NAME, APPS_DIRECTORY_NAME, BASE_TS_CONFIG_FILE_NAME, DOCKER_FILE_NAME, GIT_IGNORE_FILE_NAME } from '../../../constants';
 import { DockerUtilities } from '../../../docker';
@@ -113,7 +115,7 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
         if (config.addTracking) {
             await AngularUtilities.setupTracking(config.name);
         }
-        await NpmUtilities.updatePackageJson(config.name, { scripts: { start: `ng serve --port ${config.port}` } });
+        await NpmUtilities.updatePackageJson(config.name, { scripts: { start: `ng serve --port ${config.port}` }, prettier: undefined });
         const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
         await EnvUtilities.buildEnvironmentFileForApp(app, true, 'dev.docker-compose.yaml', getPath('.'));
     }
@@ -201,7 +203,16 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
     private async setupTsConfig(root: string, projectName: string): Promise<void> {
         // eslint-disable-next-line no-console
         console.log('sets up tsconfig');
-        await TsConfigUtilities.updateTsConfig(projectName, { extends: `../../${BASE_TS_CONFIG_FILE_NAME}` });
+        await TsConfigUtilities.updateTsConfig(
+            projectName,
+            {
+                extends: `../../${BASE_TS_CONFIG_FILE_NAME}`,
+                compilerOptions: {
+                    moduleResolution: 'bundler' as unknown as ModuleResolutionKind,
+                    isolatedModules: false
+                }
+            }
+        );
 
         const eslintTsconfig: TsConfig = {
             compilerOptions: {

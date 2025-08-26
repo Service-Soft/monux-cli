@@ -28,8 +28,8 @@ type NewOptions = never; {
 /**
  * Possible zibri cli options, narrowed down based on the provided command.
  */
-type ZibriCliOptions<T extends ZibriCliCommands> =
-    T extends CliNew ? NewOptions
+type ZibriCliOptions<T extends ZibriCliCommands>
+    = T extends CliNew ? NewOptions
         : never;
 
 /**
