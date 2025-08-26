@@ -310,6 +310,7 @@ export abstract class FsUtilities {
     private static async copyEntry(entry: Dirent, destination: string): Promise<void> {
         const source: Path = getPath(entry.parentPath, entry.name);
         const dest: Path = getPath(destination, entry.name);
+        // eslint-disable-next-line angular/no-experimental
         await cp(source, dest, { recursive: true, errorOnExist: true });
     }
 }
