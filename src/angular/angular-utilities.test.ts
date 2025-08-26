@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globa
 import { AngularUtilities } from './angular.utilities';
 import { fakeAddNavElementConfig, fakeTsImportDefinition, FileMockUtilities, getMockConstants, MAX_GEN_CODE_TIME, MockConstants } from '../__testing__';
 import { CPUtilities, FsUtilities } from '../encapsulation';
-import { NpmUtilities } from '../npm';
+import { NpmPackage, NpmUtilities } from '../npm';
 import { TsImportDefinition } from '../ts';
 import { AddNavElementConfig } from './add-nav-element-config.model';
 import { getPath } from '../utilities';
@@ -53,7 +53,7 @@ describe('AngularUtilities', () => {
         await AngularUtilities.setupNavigation(mockConstants.ANGULAR_APP_DIR, mockConstants.ANGULAR_APP_NAME);
 
         expect(npmInstallMock).toHaveBeenCalledTimes(1);
-        expect(npmInstallMock).toHaveBeenCalledWith(mockConstants.ANGULAR_APP_NAME, ['ngx-material-navigation']);
+        expect(npmInstallMock).toHaveBeenCalledWith(mockConstants.ANGULAR_APP_NAME, [NpmPackage.NGX_MATERIAL_NAVIGATION]);
 
         const htmlLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_APP_COMPONENT_HTML);
         expect(htmlLines).toEqual([
@@ -327,7 +327,7 @@ describe('AngularUtilities', () => {
         expect(cpExecSyncMock).toHaveBeenCalledTimes(1);
         expect(cpExecSyncMock).toHaveBeenCalledWith(`cd ${mockConstants.ANGULAR_APP_DIR} && npx @angular/cli@20 add @angular/pwa@20 --skip-confirmation`);
         expect(npmInstallMock).toHaveBeenCalledTimes(1);
-        expect(npmInstallMock).toHaveBeenCalledWith(mockConstants.ANGULAR_APP_NAME, ['ngx-pwa']);
+        expect(npmInstallMock).toHaveBeenCalledWith(mockConstants.ANGULAR_APP_NAME, [NpmPackage.NGX_PWA]);
 
         const htmlLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_APP_COMPONENT_HTML);
         const tsLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_APP_COMPONENT_TS);
@@ -363,7 +363,7 @@ describe('AngularUtilities', () => {
 
         expect(tsLines).toEqual([
             'import { ApplicationConfig, provideZoneChangeDetection } from \'@angular/core\';',
-            'import { provideClientHydration } from \'@angular/platform-browser\';',
+            'import { provideClientHydration, withEventReplay } from \'@angular/platform-browser\';',
             'import { provideRouter } from \'@angular/router\';',
             '',
             'import { routes } from \'./app.routes\';',
@@ -372,7 +372,7 @@ describe('AngularUtilities', () => {
             '    providers: [',
             '        provideZoneChangeDetection({ eventCoalescing: true }),',
             '        provideRouter(routes),',
-            '        provideClientHydration(),',
+            '        provideClientHydration(withEventReplay()),',
             '        {',
             '            provide: \'test\',',
             '            useValue: 42',

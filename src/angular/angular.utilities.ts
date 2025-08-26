@@ -100,8 +100,8 @@ type AddOptions = {
 /**
  * Possible angular cli options, narrowed down based on the provided command.
  */
-type AngularCliOptions<T extends AngularCliCommands> =
-    T extends CliNew ? NewOptions
+type AngularCliOptions<T extends AngularCliCommands>
+    = T extends CliNew ? NewOptions
         : T extends CliGenerate ? GenerateOptions
             : T extends CliAdd ? AddOptions
                 : never;
@@ -462,11 +462,6 @@ export abstract class AngularUtilities {
      * @param root - The root of the angular project to setup material for.
      */
     static async setupMaterial(root: string): Promise<void> {
-        await this.addProvider(
-            root,
-            'provideAnimations()',
-            [{ defaultImport: false, element: 'provideAnimations', path: '@angular/platform-browser/animations' }]
-        );
         await FsUtilities.updateFile(
             getPath(root, 'src', 'styles.css'),
             [
@@ -486,7 +481,7 @@ export abstract class AngularUtilities {
         );
         await FsUtilities.updateFile(
             getPath(root, 'src', 'styles.css'),
-            '\'@import "@angular/material/prebuilt-themes/indigo-pink.css";\'',
+            '@import "@angular/material/prebuilt-themes/indigo-pink.css";',
             'prepend'
         );
     }

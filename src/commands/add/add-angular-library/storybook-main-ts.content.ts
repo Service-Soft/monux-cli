@@ -21,6 +21,9 @@ const config: StorybookConfig = {
     framework: {
         name: getAbsolutePath('@storybook/angular'),
         options: {}
+    },
+    core: {
+        disableTelemetry: true
     }
 };
 

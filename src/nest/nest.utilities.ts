@@ -41,8 +41,8 @@ type NewOptions = {
 /**
  * Possible nest cli options, narrowed down based on the provided command.
  */
-type NestCliOptions<T extends NestCliCommands> =
-    T extends CliNew ? NewOptions
+type NestCliOptions<T extends NestCliCommands>
+    = T extends CliNew ? NewOptions
         : never;
 
 /**

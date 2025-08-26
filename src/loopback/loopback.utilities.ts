@@ -146,8 +146,8 @@ type LoopbackCliCommands = CliGenerateDb | CliNew | CliService | CliModel | CliR
 /**
  * Possible angular cli options, narrowed down based on the provided command.
  */
-type LoopbackCliOptions<T extends LoopbackCliCommands> =
-    T extends CliGenerateDb ? GenerateDbOptions
+type LoopbackCliOptions<T extends LoopbackCliCommands>
+    = T extends CliGenerateDb ? GenerateDbOptions
         : T extends CliNew ? NewOptions
             : T extends CliService ? ServiceOptions
                 : T extends CliModel ? ModelOptions

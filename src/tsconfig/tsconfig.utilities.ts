@@ -34,7 +34,7 @@ export abstract class TsConfigUtilities {
                 importHelpers: true,
                 lib: ['ESNext', 'DOM'],
                 module: 'ESNext' as unknown as ModuleKind,
-                moduleResolution: 'Node' as unknown as ModuleResolutionKind,
+                moduleResolution: 'node' as unknown as ModuleResolutionKind,
                 noFallthroughCasesInSwitch: true,
                 noImplicitOverride: true,
                 noImplicitReturns: true,
