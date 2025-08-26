@@ -195,7 +195,7 @@ export abstract class FileMockUtilities {
     private static async createAppConfig(mockConstants: MockConstants): Promise<void> {
         await FsUtilities.createFile(mockConstants.ANGULAR_APP_CONFIG_TS, [
             'import { ApplicationConfig, provideZoneChangeDetection } from \'@angular/core\';',
-            'import { provideClientHydration } from \'@angular/platform-browser\';',
+            'import { provideClientHydration, withEventReplay } from \'@angular/platform-browser\';',
             'import { provideRouter } from \'@angular/router\';',
             '',
             'import { routes } from \'./app.routes\';',
@@ -204,7 +204,7 @@ export abstract class FileMockUtilities {
             '\tproviders: [',
             '\t\tprovideZoneChangeDetection({ eventCoalescing: true }),',
             '\t\tprovideRouter(routes),',
-            '\t\tprovideClientHydration()',
+            '\t\tprovideClientHydration(withEventReplay())',
             '\t]',
             '};'
         ], true, false);
