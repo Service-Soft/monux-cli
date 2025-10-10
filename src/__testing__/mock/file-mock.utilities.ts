@@ -42,7 +42,10 @@ export abstract class FileMockUtilities {
         ANGULAR_APP_COMPONENT_HTML: this.createEmptyFile,
         ANGULAR_APP_ROUTES_TS: this.createAppRoutesTs,
         ANGULAR_ROUTES_TS: this.createEmptyFile,
+        ANGULAR_APP_ROUTES_SERVER_TS: this.createAppRoutesServerTs,
+        ANGULAR_SERVER_ROUTES_TS: this.createEmptyFile,
         ANGULAR_APP_CONFIG_TS: this.createAppConfig,
+        ANGULAR_APP_CONFIG_SERVER_TS: this.createAppConfigServer,
         ANGULAR_JSON: this.createAngularJson,
         ANGULAR_ENVIRONMENT_MODEL: this.createEmptyFile,
         ANGULAR_ENVIRONMENT: this.createEmptyFile,
@@ -192,6 +195,19 @@ export abstract class FileMockUtilities {
         ], true, false);
     }
 
+    private static async createAppRoutesServerTs(mockConstants: MockConstants): Promise<void> {
+        await FsUtilities.createFile(mockConstants.ANGULAR_APP_ROUTES_SERVER_TS, [
+            `import { RenderMode, ServerRoute } from '@angular/ssr';`,
+            '',
+            `export const serverRoutes: ServerRoute[] = [`,
+            '\t{',
+            `\t\tpath: '**',`,
+            `\t\trenderMode: RenderMode.Prerender`,
+            '\t}',
+            '];'
+        ], true, false);
+    }
+
     private static async createAppConfig(mockConstants: MockConstants): Promise<void> {
         await FsUtilities.createFile(mockConstants.ANGULAR_APP_CONFIG_TS, [
             'import { ApplicationConfig, provideZoneChangeDetection } from \'@angular/core\';',
@@ -207,6 +223,22 @@ export abstract class FileMockUtilities {
             '\t\tprovideClientHydration(withEventReplay())',
             '\t]',
             '};'
+        ], true, false);
+    }
+
+    private static async createAppConfigServer(mockConstants: MockConstants): Promise<void> {
+        await FsUtilities.createFile(mockConstants.ANGULAR_APP_CONFIG_SERVER_TS, [
+            `import { mergeApplicationConfig, ApplicationConfig } from '@angular/core';`,
+            `import { provideServerRendering, withRoutes } from '@angular/ssr';`,
+            '',
+            `import { appConfig } from './app.config';`,
+            `import { serverRoutes } from './app.routes.server';`,
+            '',
+            `const serverConfig: ApplicationConfig = {`,
+            `\tproviders: [provideServerRendering(withRoutes(serverRoutes))]`,
+            `};`,
+            '',
+            `export const config: ApplicationConfig = mergeApplicationConfig(appConfig, serverConfig);`
         ], true, false);
     }
 

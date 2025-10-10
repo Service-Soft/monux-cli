@@ -21,7 +21,9 @@ describe('AngularUtilities', () => {
                 'ANGULAR_APP_COMPONENT_HTML',
                 'ANGULAR_APP_COMPONENT_TS',
                 'ANGULAR_APP_ROUTES_TS',
+                'ANGULAR_APP_ROUTES_SERVER_TS',
                 'ANGULAR_APP_CONFIG_TS',
+                'ANGULAR_APP_CONFIG_SERVER_TS',
                 'ANGULAR_JSON'
             ]
         );
@@ -57,24 +59,29 @@ describe('AngularUtilities', () => {
 
         const htmlLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_APP_COMPONENT_HTML);
         expect(htmlLines).toEqual([
-            '<ngx-mat-navigation-navbar [minHeight]="80" [minSidenavWidth]="\'30%\'" [minHeightOtherElements]="70" [navbarRows]="navbarRows">',
-            '    <router-outlet></router-outlet>',
+            '<ngx-mat-navigation-navbar [minHeight]="80" [minSidenavWidth]="\'40%\'" [minHeightOtherElements]="150" [navbarRows]="navbarRows">',
+            '    <div class="p-4">',
+            '        <div class="w-full mx-auto" style="max-width: max(80%, 1200px);">',
+            '            <ngx-mat-navigation-breadcrumbs class="-ml-4 inline-block"></ngx-mat-navigation-breadcrumbs>',
+            '            <router-outlet></router-outlet>',
+            '        </div>',
+            '    </div>',
             '</ngx-mat-navigation-navbar>',
             '',
-            '<ngx-mat-navigation-footer [minHeight]="70" [footerRows]="footerRows"></ngx-mat-navigation-footer>'
+            '<ngx-mat-navigation-footer [minHeight]="150" [footerRows]="footerRows"></ngx-mat-navigation-footer>'
         ]);
 
         const tsLines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_APP_COMPONENT_TS);
         expect(tsLines).toEqual([
             'import { navbarRows, footerRows } from \'./routes\';',
-            'import { FooterRow, NavbarRow, NgxMatNavigationFooterComponent, NgxMatNavigationNavbarComponent } from \'ngx-material-navigation\';',
+            'import { FooterRow, NavbarRow, NgxMatNavigationBreadcrumbsComponent, NgxMatNavigationFooterComponent, NgxMatNavigationNavbarComponent } from \'ngx-material-navigation\';',
             'import { Component } from \'@angular/core\';',
             'import { RouterOutlet } from \'@angular/router\';',
             '',
             '@Component({',
             '    selector: \'app-root\',',
             '    standalone: true,',
-            '    imports: [RouterOutlet, NgxMatNavigationNavbarComponent, NgxMatNavigationFooterComponent],',
+            '    imports: [RouterOutlet, NgxMatNavigationNavbarComponent, NgxMatNavigationFooterComponent, NgxMatNavigationBreadcrumbsComponent],',
             '    templateUrl: \'./app.html\',',
             '    styleUrl: \'./app.css\'',
             '})',

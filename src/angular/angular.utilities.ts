@@ -709,8 +709,12 @@ export abstract class AngularUtilities {
             [
                 // eslint-disable-next-line stylistic/max-len
                 '<ngx-mat-navigation-navbar [minHeight]="80" [minSidenavWidth]="\'40%\'" [minHeightOtherElements]="150" [navbarRows]="navbarRows">',
-                '\t<ngx-mat-navigation-breadcrumbs></ngx-mat-navigation-breadcrumbs>',
-                '\t<router-outlet></router-outlet>',
+                '    <div class="p-4">',
+                '        <div class="w-full mx-auto" style="max-width: max(80%, 1200px);">',
+                '            <ngx-mat-navigation-breadcrumbs class="-ml-4 inline-block"></ngx-mat-navigation-breadcrumbs>',
+                '            <router-outlet></router-outlet>',
+                '        </div>',
+                '    </div>',
                 '</ngx-mat-navigation-navbar>',
                 '',
                 '<ngx-mat-navigation-footer [minHeight]="150" [footerRows]="footerRows"></ngx-mat-navigation-footer>'
