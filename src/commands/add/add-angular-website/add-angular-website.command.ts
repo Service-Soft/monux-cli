@@ -109,11 +109,11 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
             getPath(root, ANGULAR_JSON_FILE_NAME),
             { $schema: '../../node_modules/@angular/cli/lib/config/schema.json' }
         );
-        await AngularUtilities.setupMaterial(root);
+        await AngularUtilities.setupBaseStyles(root);
         await EnvUtilities.setupProjectEnvironment(root, false);
         await this.createDefaultPages(root, config.titleSuffix, domain);
         if (config.addTracking) {
-            await AngularUtilities.setupTracking(config.name);
+            await AngularUtilities.setupTracking(config.name, root);
         }
         await NpmUtilities.updatePackageJson(config.name, { scripts: { start: `ng serve --port ${config.port}` }, prettier: undefined });
         const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));

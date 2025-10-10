@@ -112,6 +112,11 @@ export const ANGULAR_JSON_FILE_NAME: string = 'angular.json';
 export const ANGULAR_ROUTES_FILE_NAME: string = 'routes.ts';
 
 /**
+ * The name of the angular server routes file.
+ */
+export const ANGULAR_SERVER_ROUTES_FILE_NAME: string = 'server.routes.ts';
+
+/**
  * The name of the angular app component file.
  */
 export const ANGULAR_APP_COMPONENT_FILE_NAME: string = 'app.ts';
@@ -135,6 +140,11 @@ export const SITEMAP_FILE_NAME: string = 'sitemap.xml';
  * The name of the angular app config file.
  */
 export const APP_CONFIG_FILE_NAME: string = 'app.config.ts';
+
+/**
+ * The name of the angular app server config file.
+ */
+export const APP_CONFIG_SERVER_FILE_NAME: string = 'app.config.server.ts';
 
 /**
  * The name of the angular ng package file.
