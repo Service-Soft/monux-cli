@@ -37,7 +37,7 @@ type ZibriCliOptions<T extends ZibriCliCommands>
  */
 export abstract class ZibriUtilities {
 
-    private static readonly CLI_VERSION: string = '1.6.4';
+    private static readonly CLI_VERSION: string = '2.1.1';
 
     /**
      * Runs a zibri cli command inside the provided directory.
