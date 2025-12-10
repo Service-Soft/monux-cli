@@ -7,7 +7,7 @@ import { NpmPackage, NpmUtilities } from '../npm';
 import { ArrayStartIdentifier, TsImportDefinition, TsUtilities } from '../ts';
 import { AngularJson, AngularJsonAssetPattern } from './angular-json.model';
 import { NgPackageJson } from './ng-package-json.model';
-import { ANGULAR_APP_COMPONENT_FILE_NAME, ANGULAR_JSON_FILE_NAME, ANGULAR_ROUTES_FILE_NAME, APP_CONFIG_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ROBOTS_FILE_NAME, SITEMAP_FILE_NAME } from '../constants';
+import { ANGULAR_APP_COMPONENT_FILE_NAME, ANGULAR_JSON_FILE_NAME, ANGULAR_ROUTES_FILE_NAME, ANGULAR_SERVER_ROUTES_FILE_NAME, APP_CONFIG_FILE_NAME, APP_CONFIG_SERVER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ROBOTS_FILE_NAME, SITEMAP_FILE_NAME } from '../constants';
 import { DefaultEnvKeys, EnvUtilities } from '../env';
 import { DeepPartial } from '../types';
 import { AddNavElementConfig } from './add-nav-element-config.model';
@@ -462,6 +462,19 @@ export abstract class AngularUtilities {
      * @param root - The root of the angular project to setup material for.
      */
     static async setupMaterial(root: string): Promise<void> {
+        await AngularUtilities.setupBaseStyles(root);
+        await FsUtilities.updateFile(
+            getPath(root, 'src', 'styles.css'),
+            '@import "@angular/material/prebuilt-themes/indigo-pink.css";',
+            'prepend'
+        );
+    }
+
+    /**
+     * Sets up the base styles.
+     * @param root - The root of the project.
+     */
+    static async setupBaseStyles(root: string): Promise<void> {
         await FsUtilities.updateFile(
             getPath(root, 'src', 'styles.css'),
             [
@@ -478,11 +491,6 @@ export abstract class AngularUtilities {
                 '}'
             ],
             'append'
-        );
-        await FsUtilities.updateFile(
-            getPath(root, 'src', 'styles.css'),
-            '@import "@angular/material/prebuilt-themes/indigo-pink.css";',
-            'prepend'
         );
     }
 
@@ -623,12 +631,29 @@ export abstract class AngularUtilities {
     /**
      * Adds tracking to the angular project with the given name.
      * @param projectName - The name of the angular project to add tracking to.
+     * @param root - The root dir of the project.
      */
-    static async setupTracking(projectName: string): Promise<void> {
+    static async setupTracking(projectName: string, root: Path): Promise<void> {
         // eslint-disable-next-line no-console
         console.log('Adds tracking');
         await NpmUtilities.install(projectName, [NpmPackage.NGX_MATERIAL_TRACKING]);
         // TODO: Angular Tracking
+        await this.addProvider(
+            root,
+            {
+                provide: 'NGX_TRACKING_SNACKBAR_COMPONENT',
+                useValue: 'SnackbarComponent'
+            },
+            [{ defaultImport: false, element: 'SnackbarComponent', path: NpmPackage.NGX_MATERIAL_TRACKING }]
+        );
+        await this.addProvider(
+            root,
+            {
+                provide: 'NGX_GDPR_TRACKINGS',
+                useValue: []
+            },
+            [{ defaultImport: false, element: 'NGX_GDPR_TRACKINGS', path: NpmPackage.NGX_MATERIAL_TRACKING }]
+        );
     }
 
     /**
@@ -683,11 +708,16 @@ export abstract class AngularUtilities {
             getPath(root, 'src', 'app', 'app.html'),
             [
                 // eslint-disable-next-line stylistic/max-len
-                '<ngx-mat-navigation-navbar [minHeight]="80" [minSidenavWidth]="\'30%\'" [minHeightOtherElements]="70" [navbarRows]="navbarRows">',
-                '\t<router-outlet></router-outlet>',
+                '<ngx-mat-navigation-navbar [minHeight]="80" [minSidenavWidth]="\'40%\'" [minHeightOtherElements]="150" [navbarRows]="navbarRows">',
+                '    <div class="p-4">',
+                '        <div class="w-full mx-auto" style="max-width: max(80%, 1200px);">',
+                '            <ngx-mat-navigation-breadcrumbs class="-ml-4 inline-block"></ngx-mat-navigation-breadcrumbs>',
+                '            <router-outlet></router-outlet>',
+                '        </div>',
+                '    </div>',
                 '</ngx-mat-navigation-navbar>',
                 '',
-                '<ngx-mat-navigation-footer [minHeight]="70" [footerRows]="footerRows"></ngx-mat-navigation-footer>'
+                '<ngx-mat-navigation-footer [minHeight]="150" [footerRows]="footerRows"></ngx-mat-navigation-footer>'
             ],
             'append'
         );
@@ -702,6 +732,11 @@ export abstract class AngularUtilities {
                 },
                 {
                     element: 'NgxMatNavigationFooterComponent',
+                    path: NpmPackage.NGX_MATERIAL_NAVIGATION,
+                    defaultImport: false
+                },
+                {
+                    element: 'NgxMatNavigationBreadcrumbsComponent',
                     path: NpmPackage.NGX_MATERIAL_NAVIGATION,
                     defaultImport: false
                 }
@@ -742,6 +777,15 @@ export abstract class AngularUtilities {
         await FsUtilities.updateFile(appComponentTs, tsLines, 'replace');
 
         const routesTs: Path = getPath(root, 'src', 'app', ANGULAR_ROUTES_FILE_NAME);
+        await FsUtilities.rename(
+            getPath(root, 'src', 'app', 'app.routes.server.ts'),
+            getPath(root, 'src', 'app', ANGULAR_SERVER_ROUTES_FILE_NAME)
+        );
+        await FsUtilities.replaceAllInFile(
+            getPath(root, 'src', 'app', APP_CONFIG_SERVER_FILE_NAME),
+            'import { serverRoutes } from \'./app.routes.server\';',
+            'import { serverRoutes } from \'./server.routes\';'
+        );
         await FsUtilities.rename(
             getPath(root, 'src', 'app', 'app.routes.ts'),
             routesTs
