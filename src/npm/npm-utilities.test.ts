@@ -19,6 +19,7 @@ describe('NpmUtilities', () => {
             '{',
             '    "name": "@library/library",',
             '    "version": "1.0.0",',
+            '    "description": "",',
             '    "main": "index.js",',
             '    "scripts": {',
             '        "test": "echo \\\"Error: no test specified\\\" && exit 1"',
@@ -26,7 +27,7 @@ describe('NpmUtilities', () => {
             '    "keywords": [],',
             '    "author": "",',
             '    "license": "ISC",',
-            '    "description": ""',
+            '    \"type\": \"commonjs\"',
             '}'
         ]);
     }, MAX_ADD_TIME);

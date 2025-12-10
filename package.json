@@ -6,6 +6,9 @@
     "engines": {
         "node": ">=20"
     },
+    "repository": {
+        "url": "https://github.com/Service-Soft/monux-cli"
+    },
     "keywords": [
         "monux",
         "mx",

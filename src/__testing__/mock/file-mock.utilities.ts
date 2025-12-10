@@ -197,12 +197,12 @@ export abstract class FileMockUtilities {
 
     private static async createAppRoutesServerTs(mockConstants: MockConstants): Promise<void> {
         await FsUtilities.createFile(mockConstants.ANGULAR_APP_ROUTES_SERVER_TS, [
-            `import { RenderMode, ServerRoute } from '@angular/ssr';`,
+            'import { RenderMode, ServerRoute } from \'@angular/ssr\';',
             '',
-            `export const serverRoutes: ServerRoute[] = [`,
+            'export const serverRoutes: ServerRoute[] = [',
             '\t{',
-            `\t\tpath: '**',`,
-            `\t\trenderMode: RenderMode.Prerender`,
+            '\t\tpath: \'**\',',
+            '\t\trenderMode: RenderMode.Prerender',
             '\t}',
             '];'
         ], true, false);
@@ -228,17 +228,17 @@ export abstract class FileMockUtilities {
 
     private static async createAppConfigServer(mockConstants: MockConstants): Promise<void> {
         await FsUtilities.createFile(mockConstants.ANGULAR_APP_CONFIG_SERVER_TS, [
-            `import { mergeApplicationConfig, ApplicationConfig } from '@angular/core';`,
-            `import { provideServerRendering, withRoutes } from '@angular/ssr';`,
+            'import { mergeApplicationConfig, ApplicationConfig } from \'@angular/core\';',
+            'import { provideServerRendering, withRoutes } from \'@angular/ssr\';',
             '',
-            `import { appConfig } from './app.config';`,
-            `import { serverRoutes } from './app.routes.server';`,
+            'import { appConfig } from \'./app.config\';',
+            'import { serverRoutes } from \'./app.routes.server\';',
             '',
-            `const serverConfig: ApplicationConfig = {`,
-            `\tproviders: [provideServerRendering(withRoutes(serverRoutes))]`,
-            `};`,
+            'const serverConfig: ApplicationConfig = {',
+            '\tproviders: [provideServerRendering(withRoutes(serverRoutes))]',
+            '};',
             '',
-            `export const config: ApplicationConfig = mergeApplicationConfig(appConfig, serverConfig);`
+            'export const config: ApplicationConfig = mergeApplicationConfig(appConfig, serverConfig);'
         ], true, false);
     }
 
