@@ -4,6 +4,7 @@ import { DockerUtilities } from '../../../docker';
 import { FsUtilities, QuestionsFor } from '../../../encapsulation';
 import { DefaultEnvKeys, EnvUtilities } from '../../../env';
 import { EslintUtilities } from '../../../eslint';
+import { TsUtilities } from '../../../ts';
 import { TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
 import { generatePlaceholderPassword, getPath, Path, toKebabCase, toPascalCase } from '../../../utilities';
@@ -197,6 +198,11 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
             'dataSources: [DbDataSource]',
             `dataSources: [${toPascalCase(databaseName)}DataSource]`
         );
+        await FsUtilities.replaceInFile(
+            getPath(root, 'src', 'index.ts'),
+            'createDefaultData(DbDataSource);',
+            `createDefaultData(${toPascalCase(databaseName)}DataSource);`
+        );
 
         const environmentModel: Path = getPath(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
 
@@ -289,6 +295,10 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
             '\'zibri@zibri.de\'',
             `environment.${DefaultEnvKeys.defaultUserEmail(config.name)}`
         );
+        await TsUtilities.addImportStatements(
+            createDefaultDataTs,
+            [{ defaultImport: false, element: 'environment', path: './environment/environment' }]
+        );
     }
 
     private async setupTsConfig(projectName: string): Promise<void> {
@@ -306,7 +316,9 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
                     sourceMap: undefined,
                     skipLibCheck: undefined,
                     noImplicitAny: undefined,
-                    noFallthroughCasesInSwitch: undefined
+                    noFallthroughCasesInSwitch: undefined,
+                    module: undefined,
+                    moduleResolution: undefined
                 }
             }
         );
