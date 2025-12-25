@@ -296,7 +296,7 @@ export class AddAngularCommand extends BaseAddCommand<AddAngularConfiguration> {
             files: [
                 'src/main.ts',
                 'src/main.server.ts',
-                'server.ts'
+                'src/server.ts'
             ],
             include: [
                 'src/**/*.spec.ts',
