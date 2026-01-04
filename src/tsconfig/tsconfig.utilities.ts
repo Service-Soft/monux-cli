@@ -1,10 +1,10 @@
 import { ModuleKind, ModuleResolutionKind, ScriptTarget } from 'typescript';
 
+import { BASE_TS_CONFIG_FILE_NAME, TS_CONFIG_FILE_NAME } from '../constants';
 import { CPUtilities, FsUtilities, JsonUtilities } from '../encapsulation';
+import { getPath, mergeDeep, Path } from '../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../workspace';
 import { TsConfig } from './tsconfig.model';
-import { BASE_TS_CONFIG_FILE_NAME, TS_CONFIG_FILE_NAME } from '../constants';
-import { getPath, mergeDeep, Path } from '../utilities';
 
 /**
  * Utilities for tsconfig.
