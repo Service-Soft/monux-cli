@@ -1,3 +1,5 @@
+import { ModuleKind } from 'typescript';
+
 import { APPS_DIRECTORY_NAME, BASE_TS_CONFIG_FILE_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ESLINT_CONFIG_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME } from '../../../constants';
 import { DbType, DbUtilities } from '../../../db';
 import { DockerUtilities } from '../../../docker';
@@ -317,7 +319,7 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
                     skipLibCheck: undefined,
                     noImplicitAny: undefined,
                     noFallthroughCasesInSwitch: undefined,
-                    module: undefined,
+                    module: 'commonjs' as unknown as ModuleKind,
                     moduleResolution: undefined
                 }
             }

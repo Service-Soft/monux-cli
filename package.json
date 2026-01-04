@@ -1,6 +1,6 @@
 {
     "name": "monux-cli",
-    "version": "2.5.5",
+    "version": "2.5.6",
     "license": "MIT",
     "main": "index.js",
     "engines": {
@@ -59,7 +59,7 @@
         "@types/figlet": "^1.7.0",
         "@types/js-yaml": "^4.0.9",
         "eslint": "^9.34.0",
-        "eslint-config-service-soft": "^2.1.0",
+        "eslint-config-service-soft": "^2.1.2",
         "jest": "^30.0.5",
         "ngx-material-navigation": "^20.0.0",
         "ts-jest": "^29.4.1"
