@@ -59,41 +59,44 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
         port: {
             type: 'number',
             message: 'port',
-            required: true,
+            name: 'port',
+            validate: (v: number) => !!v,
             default: 3000
         },
         subDomain: {
             type: 'input',
-            message: 'sub domain',
-            required: false
+            name: 'subDomain',
+            message: 'sub domain'
         },
         defaultUserEmail: {
             type: 'input',
+            name: 'defaultUserEmail',
             message: 'Email of the default user',
-            required: true,
+            validate: (v?: string) => !!v,
             default: async () => (await FsUtilities.readFile(getPath(PROD_DOCKER_COMPOSE_FILE_NAME)))
                 .split('.acme.email=')[1]
                 .split('\n')[0]
         },
         defaultUserPassword: {
             type: 'input',
+            name: 'defaultUserPassword',
             message: 'Password of the default user',
-            required: true,
-            validate: (v) => v.length >= 12 ? true : 'Password must be at least 12 characters strong'
+            validate: (v?: string) => v != undefined && v.length >= 12 ? true : 'Password must be at least 12 characters strong'
         },
         frontendName: {
             type: 'input',
+            name: 'frontendName',
             message: 'Name of the frontend where the reset password ui is implemented',
-            required: true
+            validate: (v?: string) => !!v
         }
     };
 
     override async run(): Promise<void> {
         const config: AddNestConfiguration = await this.getConfig();
-        const { dbServiceName, databaseName, dbType } = await DbUtilities.configureDb(config.name, undefined, getPath('.'));
+        const { dbComposeServiceName, databaseName, dbType } = await DbUtilities.configureDb(config.name, undefined, getPath('.'));
         const root: Path = await this.createProject(config);
         await EnvUtilities.setupProjectEnvironment(root, false);
-        await this.createNestDatasource(dbServiceName, databaseName, dbType, root, config.name);
+        await this.createNestDatasource(dbComposeServiceName, databaseName, dbType, root, config.name);
         await this.updateMainTs(root, config.port);
 
         await Promise.all([

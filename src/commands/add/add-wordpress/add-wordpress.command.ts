@@ -24,22 +24,22 @@ export class AddWordpressCommand extends BaseAddCommand<AddWordpressConfiguratio
     protected override readonly configQuestions: QuestionsFor<OmitStrict<AddWordpressConfiguration, keyof AddConfiguration>> = {
         subDomain: {
             type: 'input',
-            message: 'sub domain',
-            required: false
+            name: 'subDomain',
+            message: 'sub domain'
         }
     };
 
     override async run(): Promise<void> {
         const config: AddWordpressConfiguration = await this.getConfig();
-        const { dbServiceName, databaseName } = await DbUtilities.configureDb(config.name, DbType.MARIADB, getPath('.'));
-        await this.createProject(config, dbServiceName, databaseName);
+        const { dbComposeServiceName, databaseName } = await DbUtilities.configureDb(config.name, DbType.MARIADB, getPath('.'));
+        await this.createProject(config, dbComposeServiceName, databaseName);
     }
 
     private async createProject(
         config: AddWordpressConfiguration,
         dbServiceName: string,
         databaseName: string,
-        version: string = '6.1'
+        version: string = 'php8.5'
     ): Promise<void> {
         const serviceDefinition: ComposeService = {
             name: config.name,

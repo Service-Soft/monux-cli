@@ -42,8 +42,9 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
     protected override configQuestions: QuestionsFor<OmitStrict<AddAngularLibraryConfiguration, keyof AddConfiguration>> = {
         scope: {
             type: 'input',
-            required: true,
+            name: 'scope',
             message: 'scope',
+            validate: (v?: string) => !!v,
             default: async () => {
                 const workspaceConfig: WorkspaceConfig = await WorkspaceUtilities.getConfigOrFail();
                 return `@${workspaceConfig.name}`;

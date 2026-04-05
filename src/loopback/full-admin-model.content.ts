@@ -1,6 +1,5 @@
 // eslint-disable-next-line jsdoc/require-jsdoc
-export const fullAdminModelContent: string
-= `import { model, property } from '@loopback/repository';
+export const fullAdminModelContent: string = `import { model, property } from '@loopback/repository';
 
 import { Admin, Roles } from '../../models';
 

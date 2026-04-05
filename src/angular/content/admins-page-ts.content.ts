@@ -1,6 +1,5 @@
 // eslint-disable-next-line jsdoc/require-jsdoc
-export const adminsPageTsContent: string
-= `import { CommonModule } from '@angular/common';
+export const adminsPageTsContent: string = `import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { NgxMatEntityTableComponent, TableData } from 'ngx-material-entity';
 import { Admin } from '../../models/admin.model';

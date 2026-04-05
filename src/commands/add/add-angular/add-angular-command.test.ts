@@ -12,9 +12,9 @@ describe('AddAngularCommand', () => {
         await FileMockUtilities.setup(mockConstants);
         InquirerUtilities['inquire'] = jest.fn(inquireMock({
             port: 4200,
-            'sub domain': 'admin',
-            'title suffix (eg. "| My Company")': '| Admin',
-            'name of the api to use': 'api'
+            subDomain: 'admin',
+            titleSuffix: '| Admin',
+            apiName: 'api'
         }));
     });
 

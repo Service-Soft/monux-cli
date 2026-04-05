@@ -1,5 +1,12 @@
 import { jest } from '@jest/globals';
 
+jest.mock('inquirer', () => ({
+    __esModule: true,
+    default: {
+        prompt: jest.fn()
+    }
+}));
+
 global.console = {
     ...console,
     // uncomment to ignore a specific log level

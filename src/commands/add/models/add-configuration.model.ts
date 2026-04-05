@@ -23,13 +23,14 @@ export type AddConfiguration = {
 export const addConfigurationQuestions: QuestionsFor<AddConfiguration> = {
     type: {
         type: 'select',
+        name: 'type',
         choices: Object.values(AddType),
         message: 'type'
     },
     name: {
         type: 'input',
+        name: 'name',
         message: 'name',
-        required: true,
-        validate: async (input: string) => await WorkspaceUtilities.findProject(input, getPath('.')) == undefined
+        validate: async (input?: string) => input != undefined && await WorkspaceUtilities.findProject(input, getPath('.')) == undefined
     }
 };

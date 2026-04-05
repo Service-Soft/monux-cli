@@ -1,6 +1,5 @@
 // eslint-disable-next-line jsdoc/require-jsdoc
-export const rootTailwindConfigContent: string
-= `const PRIMARY = '#37517e';
+export const rootTailwindConfigContent: string = `const PRIMARY = '#37517e';
 const PRIMARY_CONTRAST = 'white';
 
 const SECONDARY = '#00B4D8';

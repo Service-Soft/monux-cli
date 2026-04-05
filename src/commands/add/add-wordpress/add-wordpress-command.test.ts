@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
+import { AddWordpressCommand } from './add-wordpress.command';
 import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MockConstants, inquireMock } from '../../../__testing__';
+import { DbType } from '../../../db';
 import { InquirerUtilities } from '../../../encapsulation';
 import { AddConfiguration, AddType } from '../models';
-import { AddWordpressCommand } from './add-wordpress.command';
-import { DbType } from '../../../db';
 
 const mockConstants: MockConstants = getMockConstants('add-wordpress-command');
 
@@ -12,11 +12,11 @@ describe('AddWordpressCommand', () => {
     beforeEach(async () => {
         await FileMockUtilities.setup(mockConstants);
         InquirerUtilities['inquire'] = jest.fn(inquireMock({
-            'sub domain': 'wordpress',
-            'Database compose service': 'NEW',
-            'Compose service name': 'db',
-            'Database name': 'sandbox',
-            'database type': DbType.MARIADB
+            subDomain: 'wordpress',
+            dbComposeService: 'NEW',
+            dbComposeServiceName: 'db',
+            databaseName: 'sandbox',
+            dbType: DbType.MARIADB
         }));
     });
 

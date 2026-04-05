@@ -22,7 +22,7 @@ describe('UpCommand', () => {
             ]
         });
         InquirerUtilities['inquire'] = jest.fn(inquireMock({
-            env: 'dev.docker-compose.yaml'
+            fileName: 'dev.docker-compose.yaml'
         }));
     });
 

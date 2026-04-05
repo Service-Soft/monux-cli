@@ -47,5 +47,6 @@ export enum NpmPackage {
     CLDRJS = 'cldrjs',
     CLDR_DATA = 'cldr-data',
     VITE = 'vite',
-    VITE_TS_CONFIG_PATHS = 'vite-tsconfig-paths'
+    VITE_TS_CONFIG_PATHS = 'vite-tsconfig-paths',
+    VUE_LANGUAGE_CORE = '@vue/language-core'
 }

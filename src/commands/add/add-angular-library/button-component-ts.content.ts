@@ -1,6 +1,5 @@
 // eslint-disable-next-line jsdoc/require-jsdoc
-export const buttonComponentTsContent: string
-= `import { CommonModule } from '@angular/common';
+export const buttonComponentTsContent: string = `import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
 
 /**

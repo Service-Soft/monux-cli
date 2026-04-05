@@ -5,7 +5,7 @@ const config = {
     testEnvironment: 'node',
     rootDir: 'src',
     transform: {
-        '^.+.tsx?$': ['ts-jest', {}]
+        '^.+.tsx?$': ['ts-jest']
     },
     setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
     bail: false,

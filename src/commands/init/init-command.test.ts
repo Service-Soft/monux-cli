@@ -10,10 +10,10 @@ describe('InitCommand', () => {
     beforeEach(async () => {
         await FileMockUtilities.setup(mockConstants, []);
         InquirerUtilities['inquire'] = jest.fn(inquireMock({
-            'prod root domain (eg. "test.com")': 'test.com',
-            'stage root domain (eg. "test-staging.com")': 'test-staging.com',
-            'E-Mail (needed for ssl certificates)': 'user@test.com',
-            'Setup Github Actions?': true
+            prodRootDomain: 'test.com',
+            stageRootDomain: 'test-staging.com',
+            email: 'user@test.com',
+            setupGithubActions: true
         }));
     });
 

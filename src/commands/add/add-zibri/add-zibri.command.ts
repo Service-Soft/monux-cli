@@ -51,42 +51,45 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
     protected override configQuestions: QuestionsFor<OmitStrict<AddZibriConfiguration, keyof AddConfiguration>> = {
         port: {
             type: 'number',
+            name: 'port',
             message: 'port',
-            required: true,
+            validate: (v?: number) => !!v,
             default: 3000
         },
         subDomain: {
             type: 'input',
-            message: 'sub domain',
-            required: false
+            name: 'subDomain',
+            message: 'sub domain'
         },
         defaultUserEmail: {
             type: 'input',
+            name: 'defaultUserEmail',
             message: 'Email of the default user',
-            required: true,
+            validate: (v?: string) => !!v,
             default: async () => (await FsUtilities.readFile(getPath(PROD_DOCKER_COMPOSE_FILE_NAME)))
                 .split('.acme.email=')[1]
                 .split('\n')[0]
         },
         defaultUserPassword: {
             type: 'input',
+            name: 'defaultUserPassword',
             message: 'Password of the default user',
-            required: true,
-            validate: (v) => v.length >= 12 ? true : 'Password must be at least 12 characters strong'
+            validate: (v?: string) => v != undefined && v.length >= 12 ? true : 'Password must be at least 12 characters strong'
         },
         frontendName: {
             type: 'input',
+            name: 'frontendName',
             message: 'Name of the frontend where the reset password ui is implemented',
-            required: true
+            validate: (v?: string) => !!v
         }
     };
 
     override async run(): Promise<void> {
         const config: AddZibriConfiguration = await this.getConfig();
-        const { dbServiceName, databaseName } = await DbUtilities.configureDb(config.name, DbType.POSTGRES, getPath('.'));
+        const { dbComposeServiceName, databaseName } = await DbUtilities.configureDb(config.name, DbType.POSTGRES, getPath('.'));
         const root: Path = await this.createProject(config);
         await EnvUtilities.setupProjectEnvironment(root, false);
-        await this.createZibriDatasource(dbServiceName, databaseName, DbType.POSTGRES, root, config.name);
+        await this.createZibriDatasource(dbComposeServiceName, databaseName, DbType.POSTGRES, root, config.name);
         await this.updateIndexTs(root, config);
         await this.setupAuthVariables(root, config);
 
@@ -319,7 +322,7 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
                     skipLibCheck: undefined,
                     noImplicitAny: undefined,
                     noFallthroughCasesInSwitch: undefined,
-                    module: 'commonjs' as unknown as ModuleKind,
+                    module: 'nodenext' as unknown as ModuleKind,
                     moduleResolution: undefined
                 }
             }
