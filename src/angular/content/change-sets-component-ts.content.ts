@@ -1,6 +1,5 @@
 // eslint-disable-next-line jsdoc/require-jsdoc
-export const changeSetsComponentTsContent: string
-= `import { Component, OnInit } from '@angular/core';
+export const changeSetsComponentTsContent: string = `import { Component, OnInit } from '@angular/core';
 import { ChangeSet, ChangeSetEntity, ChangeSetsComponent, ChangeSetsConfig } from 'ngx-material-change-sets';
 import { DecoratorTypes, NgxMatEntityBaseInputComponent } from 'ngx-material-entity';
 import { LodashUtilities } from '../../utilities/lodash.utilities';

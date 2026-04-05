@@ -1,6 +1,5 @@
 // eslint-disable-next-line jsdoc/require-jsdoc
-export const storybookMainTsContent: string
-= `import { join, dirname } from 'path';
+export const storybookMainTsContent: string = `import { join, dirname } from 'path';
 
 import type { StorybookConfig } from '@storybook/angular';
 

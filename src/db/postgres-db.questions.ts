@@ -17,17 +17,18 @@ export type PostgresDbConfig = {
     /**
      * The name of the docker postgres service.
      */
-    dbServiceName: string
+    dbComposeServiceName: string
 };
 
 /**
  * Questions for getting a postgres db config.
  */
 export const postgresDbConfigQuestions: QuestionsFor<OmitStrict<PostgresDbConfig, 'dbType' | 'databaseName'>> = {
-    dbServiceName: {
+    dbComposeServiceName: {
         type: 'input',
+        name: 'dbComposeServiceName',
         message: 'Compose service name',
-        required: true,
+        validate: (v?: string) => !!v,
         default: 'db'
     }
 };

@@ -28,8 +28,9 @@ export class AddTsLibraryCommand extends BaseAddCommand<TsLibraryConfiguration> 
     protected override configQuestions: QuestionsFor<OmitStrict<TsLibraryConfiguration, keyof AddConfiguration>> = {
         scope: {
             type: 'input',
-            required: true,
+            name: 'scope',
             message: 'scope',
+            validate: (v?: string) => !!v,
             default: async () => {
                 const workspaceConfig: WorkspaceConfig = await WorkspaceUtilities.getConfigOrFail();
                 return `@${workspaceConfig.name}`;
@@ -107,7 +108,7 @@ export class AddTsLibraryCommand extends BaseAddCommand<TsLibraryConfiguration> 
             '\t}',
             '});'
         ]);
-        await NpmUtilities.install(config.name, [NpmPackage.VITE_PLUGIN_DTS], true);
+        await NpmUtilities.install(config.name, [NpmPackage.VITE_PLUGIN_DTS, NpmPackage.VUE_LANGUAGE_CORE], true);
         // const originalPackageJson: PackageJson = await FsUtilities.parseFileAs(getPath(libraryPath, PACKAGE_JSON_FILE_NAME));
         await NpmUtilities.updatePackageJson(
             config.name,

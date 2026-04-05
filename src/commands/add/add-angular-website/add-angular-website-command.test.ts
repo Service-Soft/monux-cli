@@ -12,9 +12,9 @@ describe('AddAngularWebsiteCommand', () => {
         await FileMockUtilities.setup(mockConstants);
         InquirerUtilities['inquire'] = jest.fn(inquireMock({
             port: 4200,
-            'sub domain': undefined,
-            'title suffix (eg. "| My Company")': '| Website',
-            'Add tracking?': false
+            subDomain: undefined,
+            titleSuffix: '| Website',
+            addTracking: false
         }));
     });
 

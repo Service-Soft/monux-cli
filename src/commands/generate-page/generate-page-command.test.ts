@@ -12,14 +12,14 @@ describe('GeneratePageCommand', () => {
     beforeEach(async () => {
         await FileMockUtilities.setup(mockConstants);
         InquirerUtilities['inquire'] = jest.fn(inquireMock({
-            Project: 'website',
-            'Page name': 'dashboard',
-            Route: 'dashboard',
-            Title: 'Dashboard | Website',
+            projectName: 'website',
+            pageName: 'dashboard',
+            route: 'dashboard',
+            title: 'Dashboard | Website',
             port: 4200,
-            'sub domain': undefined,
-            'title suffix (eg. "| My Company")': '| Website',
-            'Add tracking?': false
+            subDomain: undefined,
+            titleSuffix: '| Website',
+            addTracking: false
         }));
     });
 

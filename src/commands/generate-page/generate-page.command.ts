@@ -26,6 +26,7 @@ export class GeneratePageCommand extends BaseCommand<GeneratePageConfiguration> 
         const navElement: AddNavElementConfig = {
             addTo: 'navbar',
             element: {
+                id: input.pageName,
                 type: NavElementTypes.INTERNAL_LINK,
                 name: input.pageName,
                 route: {

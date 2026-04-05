@@ -48,23 +48,26 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
     protected override configQuestions: QuestionsFor<OmitStrict<AddAngularWebsiteConfiguration, keyof AddConfiguration>> = {
         port: {
             type: 'number',
+            name: 'port',
             message: 'port',
-            required: true,
+            validate: (v?: number) => !!v,
             default: 4200
         },
         subDomain: {
             type: 'input',
-            message: 'sub domain',
-            required: false
+            name: 'subDomain',
+            message: 'sub domain'
         },
         titleSuffix: {
             type: 'input',
+            name: 'titleSuffix',
             message: 'title suffix (eg. "| My Company")',
-            default: `| ${toPascalCase(this.baseConfig.name)}`,
-            required: true
+            validate: (v?: string) => !!v,
+            default: `| ${toPascalCase(this.baseConfig.name)}`
         },
         addTracking: {
             type: 'select',
+            name: 'addTracking',
             message: 'Add tracking?',
             choices: [{ value: true, name: 'Yes' }, { value: false, name: 'No' }],
             default: true
@@ -126,6 +129,7 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
             rowIndex: 0,
             element: {
                 type: NavElementTypes.TITLE_WITH_INTERNAL_LINK,
+                id: 'home-navbar',
                 title: 'Home',
                 link: {
                     route: {
@@ -142,6 +146,7 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
             addTo: 'footer',
             rowIndex: 0,
             element: {
+                id: 'imprint-footer',
                 type: NavElementTypes.INTERNAL_LINK,
                 name: 'Imprint',
                 route: {
@@ -158,6 +163,7 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
             rowIndex: 0,
             element: {
                 type: NavElementTypes.INTERNAL_LINK,
+                id: 'privacy-footer',
                 name: 'Privacy',
                 route: {
                     path: 'privacy',

@@ -9,15 +9,16 @@ type DbTypeConfig = {
     /**
      * The type of the database system to use.
      */
-    type: DbType
+    dbType: DbType
 };
 
 /**
  * Questions for getting a db type config.
  */
 export const dbTypeQuestion: QuestionsFor<DbTypeConfig> = {
-    type: {
+    dbType: {
         type: 'select',
+        name: 'dbType',
         message: 'database type',
         default: DbType.POSTGRES,
         choices: Object.values(DbType)

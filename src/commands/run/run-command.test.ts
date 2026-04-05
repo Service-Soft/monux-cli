@@ -13,15 +13,15 @@ describe('RunCommand', () => {
     beforeEach(async () => {
         await FileMockUtilities.setup(mockConstants);
         InquirerUtilities['inquire'] = jest.fn(inquireMock({
-            'sub domain': 'api',
+            subDomain: 'api',
             port: 3000,
-            'Email of the default user': 'test@test.com',
-            'Password of the default user': 'stringstring',
-            'Name of the frontend where the reset password ui is implemented': 'admin',
-            'Database compose service': 'NEW',
-            'Compose service name': 'db',
-            'Database name': 'sandbox',
-            'database type': DbType.POSTGRES
+            defaultUserEmail: 'test@test.com',
+            defaultUserPassword: 'stringstring',
+            frontendName: 'admin',
+            dbComposeService: 'NEW',
+            dbComposeServiceName: 'db',
+            databaseName: 'sandbox',
+            dbType: DbType.POSTGRES
         }));
     });
 

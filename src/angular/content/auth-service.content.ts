@@ -1,7 +1,6 @@
 /* eslint-disable stylistic/max-len */
 // eslint-disable-next-line jsdoc/require-jsdoc
-export const authServiceContent: string
-= `import { HttpClient } from '@angular/common/http';
+export const authServiceContent: string = `import { HttpClient } from '@angular/common/http';
 import { Inject, Injectable, NgZone, PLATFORM_ID } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';

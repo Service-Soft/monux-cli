@@ -1,6 +1,5 @@
 // eslint-disable-next-line jsdoc/require-jsdoc
-export const buttonStoriesTsContent: string
-= `import { componentWrapperDecorator, StoryFn, type Meta } from '@storybook/angular';
+export const buttonStoriesTsContent: string = `import { componentWrapperDecorator, StoryFn, type Meta } from '@storybook/angular';
 
 import { ButtonComponent } from './button.component';
 
