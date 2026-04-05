@@ -1,6 +1,5 @@
 // eslint-disable-next-line jsdoc/require-jsdoc
-export const baseEntityModelContent: string
-= `import { string } from 'ngx-material-entity';
+export const baseEntityModelContent: string = `import { string } from 'ngx-material-entity';
 
 export class BaseEntity {
 

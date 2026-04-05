@@ -29,21 +29,25 @@ export type InitConfiguration = {
 export const initConfigQuestions: QuestionsFor<InitConfiguration> = {
     prodRootDomain: {
         type: 'input',
+        name: 'prodRootDomain',
         message: 'prod root domain (eg. "test.com")',
-        required: true
+        validate: (v?: string) => !!v
     },
     stageRootDomain: {
         type: 'input',
+        name: 'stageRootDomain',
         message: 'stage root domain (eg. "test-staging.com")',
-        required: true
+        validate: (v?: string) => !!v
     },
     email: {
         type: 'input',
+        name: 'email',
         message: 'E-Mail (needed for ssl certificates)',
-        required: true
+        validate: (v?: string) => !!v
     },
     setupGithubActions: {
         type: 'select',
+        name: 'setupGithubActions',
         message: 'Setup Github Actions?',
         choices: [{ value: true, name: 'Yes' }, { value: false, name: 'No' }],
         default: true

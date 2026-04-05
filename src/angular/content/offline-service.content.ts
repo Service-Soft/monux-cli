@@ -1,6 +1,5 @@
 // eslint-disable-next-line jsdoc/require-jsdoc
-export const offlineServiceContent: string
-= `import { HttpClient } from '@angular/common/http';
+export const offlineServiceContent: string = `import { HttpClient } from '@angular/common/http';
 import { Inject, Injectable, NgZone, PLATFORM_ID } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { NgxPwaOfflineService } from 'ngx-pwa';

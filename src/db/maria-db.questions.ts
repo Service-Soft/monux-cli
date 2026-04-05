@@ -11,9 +11,9 @@ export type MariaDbConfig = {
      */
     dbType: DbType.MARIADB,
     /**
-     * The name of the mariadb service.
+     * The name of the docker mariadb service.
      */
-    dbServiceName: string,
+    dbComposeServiceName: string,
     /**
      * The name of the default database to create.
      */
@@ -24,10 +24,11 @@ export type MariaDbConfig = {
  * Questions for getting a maria db config.
  */
 export const mariaDbConfigQuestions: QuestionsFor<OmitStrict<MariaDbConfig, 'dbType' | 'databaseName'>> = {
-    dbServiceName: {
+    dbComposeServiceName: {
         type: 'input',
+        name: 'dbComposeServiceName',
         message: 'Compose service name',
-        required: true,
+        validate: (v?: string) => !!v,
         default: 'db'
     }
 };

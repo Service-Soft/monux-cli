@@ -1,6 +1,5 @@
 // eslint-disable-next-line jsdoc/require-jsdoc
-export const buttonComponentHtmlContent: string
-= `<button 
+export const buttonComponentHtmlContent: string = `<button 
     class="transition duration-200 ease-in-out rounded-md p-2 px-4 font-semibold"
     [ngClass]="{
         'bg-primary hover:bg-primary-darker text-primary-contrast': color === 'primary',

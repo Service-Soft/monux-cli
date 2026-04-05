@@ -47,25 +47,28 @@ export class AddAngularCommand extends BaseAddCommand<AddAngularConfiguration> {
     protected override readonly configQuestions: QuestionsFor<OmitStrict<AddAngularConfiguration, keyof AddConfiguration>> = {
         port: {
             type: 'number',
+            name: 'port',
             message: 'port',
-            required: true,
+            validate: (v?: number) => !!v,
             default: 4200
         },
         subDomain: {
             type: 'input',
-            message: 'sub domain',
-            required: false
+            name: 'subDomain',
+            message: 'sub domain'
         },
         titleSuffix: {
             type: 'input',
+            name: 'titleSuffix',
             message: 'title suffix (eg. "| My Company")',
-            required: true,
+            validate: (v?: string) => !!v,
             default: `| ${toPascalCase(this.baseConfig.name)}`
         },
         apiName: {
             type: 'input',
+            name: 'apiName',
             message: 'name of the api to use',
-            required: true,
+            validate: (v?: string) => !!v,
             default: 'api'
         }
     };

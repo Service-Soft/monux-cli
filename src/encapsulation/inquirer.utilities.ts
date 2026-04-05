@@ -1,5 +1,4 @@
-import inquirer from 'inquirer';
-import { BuiltInQuestion, Answers } from 'inquirer/dist/cjs/types/types';
+import inquirer, { Question, Answers } from 'inquirer';
 
 import { exitWithInterrupt, isErrorWithSignal, isExitPromptError } from '../utilities';
 
@@ -7,7 +6,7 @@ import { exitWithInterrupt, isErrorWithSignal, isExitPromptError } from '../util
  * Inquirer Questions to get the generic object result.
  */
 export type QuestionsFor<T> = {
-    [key in keyof T]: BuiltInQuestion | QuestionsFor<T[key]>;
+    [key in keyof T]: Question | QuestionsFor<T[key]>;
 };
 
 /**
@@ -27,7 +26,7 @@ export abstract class InquirerUtilities {
         return res;
     }
 
-    private static async getResultForQuestion<T>(question: BuiltInQuestion | QuestionsFor<T>): Promise<T> {
+    private static async getResultForQuestion<T>(question: Question | QuestionsFor<T>): Promise<T> {
         if (this.isQuestion(question)) {
             try {
                 const res: T = await this.inquire(question);
@@ -49,13 +48,13 @@ export abstract class InquirerUtilities {
         return res;
     }
 
-    private static isQuestion<T>(question: BuiltInQuestion | QuestionsFor<T>): question is BuiltInQuestion {
-        const q: BuiltInQuestion = question as BuiltInQuestion;
+    private static isQuestion<T>(question: Question | QuestionsFor<T>): question is Question {
+        const q: Question = question as Question;
         return q.type != undefined && q.message != undefined;
     }
 
-    private static async inquire<T>(question: BuiltInQuestion): Promise<T> {
+    private static async inquire<T>(question: Question): Promise<T> {
         const answers: Answers = await inquirer.prompt([question]);
-        return answers[''] as T;
+        return answers[question.name] as T;
     }
 }

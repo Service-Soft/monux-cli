@@ -1,6 +1,5 @@
 // eslint-disable-next-line jsdoc/require-jsdoc
-export const changeSetServiceContent: string
-= `import { HttpClient } from '@angular/common/http';
+export const changeSetServiceContent: string = `import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BaseChangeSetService, ChangeSet } from 'ngx-material-change-sets';
 

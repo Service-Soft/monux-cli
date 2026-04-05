@@ -23,7 +23,7 @@ jobs:
                 node-version: '20'
                 registry-url: 'https://registry.npmjs.org'
             - run: npm i -g npm@latest
-            - run: npm i -g @angular/cli@20 zibri-cli @loopback/cli@6 @nestjs/cli@11 create-vite@6 create-storybook@9.1.16
+            - run: npm i -g @angular/cli@20 zibri-cli @loopback/cli@7 @nestjs/cli@11 create-vite@6 create-storybook@9.1.20
             - run: npm i
             - run: npm run build
             - run: npm run test

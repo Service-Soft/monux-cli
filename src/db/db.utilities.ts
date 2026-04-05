@@ -18,7 +18,7 @@ type DbConfig = {
     /**
      * The database service to be used by the api.
      */
-    dbServiceName: string,
+    dbComposeServiceName: string,
     /**
      * The name of the database.
      */
@@ -145,52 +145,54 @@ export abstract class DbUtilities {
      */
     static async configureDb(projectName: string, dbType: DbType | undefined, rootDir: string): Promise<DbConfig> {
         const baseDbQuestions: QuestionsFor<OmitStrict<DbConfig, 'dbType'>> = {
-            dbServiceName: {
+            dbComposeServiceName: {
                 type: 'select',
+                name: 'dbComposeService',
                 message: 'Database compose service',
                 choices: ['NEW', ...(await this.getAvailableDatabases(rootDir)).map(db => db.name)],
                 default: 'NEW'
             },
             databaseName: {
                 type: 'input',
+                name: 'databaseName',
                 message: 'Database name',
                 default: projectName
             }
         };
         const baseDbConfig: OmitStrict<DbConfig, 'dbType'> = await InquirerUtilities.prompt(baseDbQuestions);
 
-        if (baseDbConfig.dbServiceName !== 'NEW') {
-            const type: DbType = await this.getDbTypeForService(baseDbConfig.dbServiceName, rootDir);
+        if (baseDbConfig.dbComposeServiceName !== 'NEW') {
+            const type: DbType = await this.getDbTypeForService(baseDbConfig.dbComposeServiceName, rootDir);
             const user: string = `${toSnakeCase(baseDbConfig.databaseName)}_user`;
             const password: string = generatePlaceholderPassword();
             await EnvUtilities.addStaticVariable({
-                key: DefaultEnvKeys.dbPassword(baseDbConfig.dbServiceName, baseDbConfig.databaseName),
+                key: DefaultEnvKeys.dbPassword(baseDbConfig.dbComposeServiceName, baseDbConfig.databaseName),
                 value: password,
                 required: true,
                 type: 'string'
             }, false);
             await EnvUtilities.addStaticVariable({
-                key: DefaultEnvKeys.dbUser(baseDbConfig.dbServiceName, baseDbConfig.databaseName),
+                key: DefaultEnvKeys.dbUser(baseDbConfig.dbComposeServiceName, baseDbConfig.databaseName),
                 value: user,
                 required: true,
                 type: 'string'
             }, false);
             await EnvUtilities.addStaticVariable({
-                key: DefaultEnvKeys.dbName(baseDbConfig.dbServiceName, baseDbConfig.databaseName),
+                key: DefaultEnvKeys.dbName(baseDbConfig.dbComposeServiceName, baseDbConfig.databaseName),
                 value: baseDbConfig.databaseName,
                 required: true,
                 type: 'string'
             }, false);
-            await this.addDbInitConfig(baseDbConfig.dbServiceName, {
+            await this.addDbInitConfig(baseDbConfig.dbComposeServiceName, {
                 type,
-                nameEnvVariable: DefaultEnvKeys.dbName(baseDbConfig.dbServiceName, baseDbConfig.databaseName),
-                passwordEnvVariable: DefaultEnvKeys.dbPassword(baseDbConfig.dbServiceName, baseDbConfig.databaseName),
-                userEnvVariable: DefaultEnvKeys.dbUser(baseDbConfig.dbServiceName, baseDbConfig.databaseName)
+                nameEnvVariable: DefaultEnvKeys.dbName(baseDbConfig.dbComposeServiceName, baseDbConfig.databaseName),
+                passwordEnvVariable: DefaultEnvKeys.dbPassword(baseDbConfig.dbComposeServiceName, baseDbConfig.databaseName),
+                userEnvVariable: DefaultEnvKeys.dbUser(baseDbConfig.dbComposeServiceName, baseDbConfig.databaseName)
             });
             return { ...baseDbConfig, dbType: type };
         }
 
-        dbType = dbType ?? (await InquirerUtilities.prompt(dbTypeQuestion)).type;
+        dbType = dbType ?? (await InquirerUtilities.prompt(dbTypeQuestion)).dbType;
         switch (dbType) {
             case DbType.POSTGRES: {
                 const dbConfig: PostgresDbConfig = {
@@ -198,12 +200,12 @@ export abstract class DbUtilities {
                     databaseName: baseDbConfig.databaseName,
                     dbType: dbType
                 };
-                await this.createPostgresDatabase(dbConfig.dbServiceName, dbConfig.databaseName);
-                await this.addDbInitConfig(dbConfig.dbServiceName, {
+                await this.createPostgresDatabase(dbConfig.dbComposeServiceName, dbConfig.databaseName);
+                await this.addDbInitConfig(dbConfig.dbComposeServiceName, {
                     type: dbConfig.dbType,
-                    nameEnvVariable: DefaultEnvKeys.dbName(dbConfig.dbServiceName, dbConfig.databaseName),
-                    passwordEnvVariable: DefaultEnvKeys.dbPassword(dbConfig.dbServiceName, dbConfig.databaseName),
-                    userEnvVariable: DefaultEnvKeys.dbUser(dbConfig.dbServiceName, dbConfig.databaseName)
+                    nameEnvVariable: DefaultEnvKeys.dbName(dbConfig.dbComposeServiceName, dbConfig.databaseName),
+                    passwordEnvVariable: DefaultEnvKeys.dbPassword(dbConfig.dbComposeServiceName, dbConfig.databaseName),
+                    userEnvVariable: DefaultEnvKeys.dbUser(dbConfig.dbComposeServiceName, dbConfig.databaseName)
                 });
                 return dbConfig;
             }
@@ -213,12 +215,12 @@ export abstract class DbUtilities {
                     databaseName: baseDbConfig.databaseName,
                     dbType: dbType
                 };
-                await this.createMariaDbDatabase(dbConfig.dbServiceName, dbConfig.databaseName);
-                await this.addDbInitConfig(dbConfig.dbServiceName, {
+                await this.createMariaDbDatabase(dbConfig.dbComposeServiceName, dbConfig.databaseName);
+                await this.addDbInitConfig(dbConfig.dbComposeServiceName, {
                     type: dbConfig.dbType,
-                    nameEnvVariable: DefaultEnvKeys.dbName(dbConfig.dbServiceName, dbConfig.databaseName),
-                    passwordEnvVariable: DefaultEnvKeys.dbPassword(dbConfig.dbServiceName, dbConfig.databaseName),
-                    userEnvVariable: DefaultEnvKeys.dbUser(dbConfig.dbServiceName, dbConfig.databaseName)
+                    nameEnvVariable: DefaultEnvKeys.dbName(dbConfig.dbComposeServiceName, dbConfig.databaseName),
+                    passwordEnvVariable: DefaultEnvKeys.dbPassword(dbConfig.dbComposeServiceName, dbConfig.databaseName),
+                    userEnvVariable: DefaultEnvKeys.dbUser(dbConfig.dbComposeServiceName, dbConfig.databaseName)
                 });
                 return dbConfig;
             }

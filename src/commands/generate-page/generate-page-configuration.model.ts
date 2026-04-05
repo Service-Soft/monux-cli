@@ -30,22 +30,26 @@ export type GeneratePageConfiguration = {
 export const generatePageConfigurationQuestions: QuestionsFor<GeneratePageConfiguration> = {
     projectName: {
         message: 'Project',
+        name: 'projectName',
         type: 'select',
         choices: async () => (await WorkspaceUtilities.getProjects('apps', getPath('.'))).map(a => a.name)
     },
     pageName: {
         message: 'Page name',
+        name: 'pageName',
         type: 'input',
-        required: true
+        validate: (v?: string) => !!v
     },
     route: {
         message: 'Route',
+        name: 'route',
         type: 'input',
-        required: true
+        validate: (v?: string) => !!v
     },
     title: {
         message: 'Title',
+        name: 'title',
         type: 'input',
-        required: true
+        validate: (v?: string) => !!v
     }
 };

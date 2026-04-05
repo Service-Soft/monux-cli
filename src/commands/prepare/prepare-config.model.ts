@@ -29,8 +29,9 @@ const choices: Record<EnvValue, DockerComposeFileName> = {
  */
 export const prepareConfigQuestions: QuestionsFor<Omit<PrepareConfig, 'dockerFilePath' | 'rootDir'>> = {
     fileName: {
-        message: 'env',
         type: 'select',
+        name: 'fileName',
+        message: 'env',
         choices: Object.entries(choices).map(choice => ({ name: choice[0], value: choice[1] }))
     }
 };

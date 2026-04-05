@@ -7,6 +7,7 @@ export function fakeAddNavElementConfig(addTo: 'navbar' | 'footer' = 'navbar'): 
         rowIndex: 0,
         element: {
             type: NavElementTypes.TITLE_WITH_INTERNAL_LINK,
+            id: 'test',
             title: 'Test',
             link: {
                 route: {
