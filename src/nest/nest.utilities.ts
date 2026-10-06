@@ -1,4 +1,4 @@
-import { ModuleMetadata } from '@nestjs/common';
+import type { ModuleMetadata } from '@nestjs/common';
 
 import { CPUtilities, FsUtilities, JsonUtilities } from '../encapsulation';
 import { TsUtilities } from '../ts';
@@ -29,6 +29,10 @@ type NewOptions = {
      */
     '--skip-git': true,
     /**
+     * Don't add nestjs observe.
+     */
+    '--no-observe': true,
+    /**
      * The package manager to use.
      */
     '--package-manager': 'npm',
@@ -50,7 +54,7 @@ type NestCliOptions<T extends NestCliCommands>
  */
 export abstract class NestUtilities {
 
-    private static readonly CLI_VERSION: number = 11;
+    private static readonly CLI_VERSION: number = 12;
 
     /**
      * Runs an nest cli command inside the provided directory.
@@ -59,7 +63,7 @@ export abstract class NestUtilities {
      * @param options - Options for running the command.
      */
     static async runCommand(directory: Path, command: NestCliCommands, options: NestCliOptions<typeof command>): Promise<void> {
-        await CPUtilities.exec(`cd ${directory} && npx @nestjs/cli@${this.CLI_VERSION} ${command} ${optionsToCliString(options)}`);
+        await CPUtilities.exec(`cd ${directory} && npx --yes @nestjs/cli@${this.CLI_VERSION} ${command} ${optionsToCliString(options)}`);
     }
 
     /**

@@ -231,7 +231,8 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
                 '--skip-git': true,
                 '--language': 'TS',
                 '--package-manager': 'npm',
-                '--skip-install': true
+                '--skip-install': true,
+                '--no-observe': true
             }
         );
         const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));

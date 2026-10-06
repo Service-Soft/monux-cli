@@ -17,7 +17,8 @@ describe('NestUtilities', () => {
             '--language': 'TS',
             '--package-manager': 'npm',
             '--skip-git': true,
-            '--skip-install': true
+            '--skip-install': true,
+            '--no-observe': true
         });
 
         const dirExists: boolean = await FsUtilities.exists(getPath(mockConstants.APPS_DIR, 'api'));
