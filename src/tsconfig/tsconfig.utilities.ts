@@ -15,7 +15,7 @@ export abstract class TsConfigUtilities {
      * @param path - Where to initialize typescript.
      */
     static async init(path: Path): Promise<void> {
-        await CPUtilities.exec(`cd ${path} && npx tsc --init`);
+        await CPUtilities.exec(`cd ${path} && npx --yes tsc --init`);
     }
 
     /**

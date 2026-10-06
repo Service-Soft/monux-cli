@@ -14,7 +14,7 @@ export abstract class StorybookUtilities {
      */
     static async setup(root: Path): Promise<void> {
         await CPUtilities.exec(
-            `cd ${root} && npm create storybook@${this.CLI_VERSION} -- --no-dev --yes --features docs test --disable-telemetry`
+            `cd ${root} && npm create storybook@${this.CLI_VERSION} --yes -- --no-dev --yes --features docs test --disable-telemetry`
         );
     }
 }
