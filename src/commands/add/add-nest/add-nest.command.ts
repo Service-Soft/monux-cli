@@ -107,7 +107,6 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
             EslintUtilities.setupProjectEslint(root, true, 'tsconfig.json'),
             this.setupTsConfig(config.name),
             this.updatePackageJson(config.name),
-            this.updateNestCliJson(root),
             this.setupSwagger(root, config.name),
             DockerUtilities.addServiceToCompose(
                 {
@@ -125,7 +124,6 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
                 config.subDomain
             ),
             this.createDockerfile(root, config),
-            this.createWebpackConfig(root)
         ]);
 
         await NpmUtilities.install(
@@ -231,6 +229,7 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
                 '--skip-git': true,
                 '--language': 'TS',
                 '--package-manager': 'npm',
+                '--type': 'cjs',
                 '--skip-install': true,
                 '--no-observe': true
             }
@@ -271,10 +270,18 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
                     sourceMap: undefined,
                     skipLibCheck: undefined,
                     noImplicitAny: undefined,
-                    noFallthroughCasesInSwitch: undefined
+                    noFallthroughCasesInSwitch: undefined,
+                    rootDir: undefined
                 }
             }
         );
+
+        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName, getPath('.'));
+        const tsConfigPath: Path = getPath(project.path, 'tsconfig.build.json');
+        await TsConfigUtilities.update(tsConfigPath, {
+            compilerOptions: { rootDir: undefined }
+        });
+
         await NpmUtilities.updatePackageJson(
             projectName,
             {

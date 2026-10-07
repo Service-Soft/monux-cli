@@ -6,7 +6,7 @@ import { Path } from '../utilities';
  */
 export abstract class StorybookUtilities {
 
-    private static readonly CLI_VERSION: number = 9;
+    private static readonly CLI_VERSION: number = 10;
 
     /**
      * Sets up storybook inside the given root.

@@ -16,6 +16,7 @@ describe('NestUtilities', () => {
         await NestUtilities.runCommand(mockConstants.APPS_DIR, 'new api', {
             '--language': 'TS',
             '--package-manager': 'npm',
+            '--type': 'cjs',
             '--skip-git': true,
             '--skip-install': true,
             '--no-observe': true
