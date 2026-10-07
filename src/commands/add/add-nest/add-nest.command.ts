@@ -123,7 +123,7 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
                 false,
                 config.subDomain
             ),
-            this.createDockerfile(root, config),
+            this.createDockerfile(root, config)
         ]);
 
         await NpmUtilities.install(

@@ -71,6 +71,11 @@ export abstract class TsConfigUtilities {
         await this.update(getPath(BASE_TS_CONFIG_FILE_NAME), data);
     }
 
+    /**
+     * Updates the tsconfig at the given path with the given data.
+     * @param path - The path of the tsconfig.
+     * @param data - The data to update the tsconfig with.
+     */
     static async update(path: Path, data: Partial<TsConfig>): Promise<void> {
         const oldConfig: TsConfig = await FsUtilities.parseFileAs(path);
         const tsconfig: TsConfig = mergeDeep<TsConfig>(oldConfig, data);

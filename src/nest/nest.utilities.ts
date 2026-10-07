@@ -78,14 +78,15 @@ export abstract class NestUtilities {
         const name: string = command.slice('new '.length);
 
         await CPUtilities.exec(
-            `cd ${directory} && npx --yes --package @nestjs/schematics@${this.CLI_VERSION} --package @angular-devkit/schematics-cli schematics @nestjs/schematics:application ` +
-            `--name=${name} ` +
-            `--strict ` +
-            `--package-manager=npm ` +
-            `--language=ts ` +
-            `--type=cjs ` +
-            `--skip-install ` +
-            `--skip-git`
+            // eslint-disable-next-line stylistic/max-len
+            `cd ${directory} && npx --yes --package @nestjs/schematics@${this.CLI_VERSION} --package @angular-devkit/schematics-cli schematics @nestjs/schematics:application `
+            + `--name=${name} `
+            + '--strict '
+            + '--package-manager=npm '
+            + '--language=ts '
+            + '--type=cjs '
+            + '--skip-install '
+            + '--skip-git'
         );
     }
 
