@@ -1,4 +1,4 @@
-import { ModuleMetadata } from '@nestjs/common';
+import type { ModuleMetadata } from '@nestjs/common';
 
 import { CPUtilities, FsUtilities, JsonUtilities } from '../encapsulation';
 import { TsUtilities } from '../ts';
@@ -29,13 +29,21 @@ type NewOptions = {
      */
     '--skip-git': true,
     /**
+     * Don't add nestjs observe.
+     */
+    '--no-observe': true,
+    /**
      * The package manager to use.
      */
     '--package-manager': 'npm',
     /**
      * The language to use.
      */
-    '--language': 'TS'
+    '--language': 'TS',
+    /**
+     * Whether to use common js or ecma script.
+     */
+    '--type': 'cjs'
 };
 
 /**
@@ -50,7 +58,7 @@ type NestCliOptions<T extends NestCliCommands>
  */
 export abstract class NestUtilities {
 
-    private static readonly CLI_VERSION: number = 11;
+    private static readonly CLI_VERSION: number = 12;
 
     /**
      * Runs an nest cli command inside the provided directory.
@@ -59,7 +67,27 @@ export abstract class NestUtilities {
      * @param options - Options for running the command.
      */
     static async runCommand(directory: Path, command: NestCliCommands, options: NestCliOptions<typeof command>): Promise<void> {
-        await CPUtilities.exec(`cd ${directory} && npx @nestjs/cli@${this.CLI_VERSION} ${command} ${optionsToCliString(options)}`);
+        if (command.startsWith('new ')) {
+            await this.runNewSchematic(directory, command);
+            return;
+        }
+        await CPUtilities.exec(`cd ${directory} && npx --yes @nestjs/cli@${this.CLI_VERSION} ${command} ${optionsToCliString(options)}`);
+    }
+
+    private static async runNewSchematic(directory: Path, command: CliNew): Promise<void> {
+        const name: string = command.slice('new '.length);
+
+        await CPUtilities.exec(
+            // eslint-disable-next-line stylistic/max-len
+            `cd ${directory} && npx --yes --package @nestjs/schematics@${this.CLI_VERSION} --package @angular-devkit/schematics-cli schematics @nestjs/schematics:application `
+            + `--name=${name} `
+            + '--strict '
+            + '--package-manager=npm '
+            + '--language=ts '
+            + '--type=cjs '
+            + '--skip-install '
+            + '--skip-git'
+        );
     }
 
     /**

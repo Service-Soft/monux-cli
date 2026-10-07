@@ -23,7 +23,7 @@ describe('DockerUtilities', () => {
             'services:',
             '',
             '    traefik:',
-            '        image: traefik:v3.2',
+            '        image: traefik:v3.6',
             '        restart: unless-stopped',
             '        command:',
             '            - --providers.docker=true',

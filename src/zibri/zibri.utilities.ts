@@ -14,16 +14,7 @@ type ZibriCliCommands = CliNew;
 /**
  * Cli Options for running zi new.
  */
-type NewOptions = never; {
-    // /**
-    //  * Whether or not npm install should be skipped.
-    //  */
-    // '--skip-install': true,
-    // /**
-    //  * Whether or not git initialization should be skipped.
-    //  */
-    // '--skip-git': true
-}
+type NewOptions = never;
 
 /**
  * Possible zibri cli options, narrowed down based on the provided command.
@@ -46,6 +37,6 @@ export abstract class ZibriUtilities {
      * @param options - Options for running the command.
      */
     static async runCommand(directory: Path, command: ZibriCliCommands, options: ZibriCliOptions<typeof command>): Promise<void> {
-        await CPUtilities.exec(`cd ${directory} && npx zibri-cli@${this.CLI_VERSION} ${command} ${optionsToCliString(options)}`);
+        await CPUtilities.exec(`cd ${directory} && npx --yes zibri-cli@${this.CLI_VERSION} ${command} ${optionsToCliString(options)}`);
     }
 }

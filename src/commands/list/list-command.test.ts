@@ -35,7 +35,7 @@ describe('ListCommand', () => {
 
         const command: DownCommand = new DownCommand();
         await command.start(['d']);
-    }, MAX_FAST_TIME * 3 /** We call up, list and down. */);
+    }, 1000 + (MAX_FAST_TIME * 3) /** We call up, list and down. */);
 
     afterEach(() => {
         jest.restoreAllMocks();

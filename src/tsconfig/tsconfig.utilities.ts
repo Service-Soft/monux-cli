@@ -15,7 +15,7 @@ export abstract class TsConfigUtilities {
      * @param path - Where to initialize typescript.
      */
     static async init(path: Path): Promise<void> {
-        await CPUtilities.exec(`cd ${path} && npx tsc --init`);
+        await CPUtilities.exec(`cd ${path} && npx --yes tsc --init`);
     }
 
     /**
@@ -26,7 +26,6 @@ export abstract class TsConfigUtilities {
             compileOnSave: false,
             compilerOptions: {
                 allowSyntheticDefaultImports: true,
-                baseUrl: '.',
                 declaration: false,
                 emitDecoratorMetadata: true,
                 experimentalDecorators: true,
@@ -72,7 +71,12 @@ export abstract class TsConfigUtilities {
         await this.update(getPath(BASE_TS_CONFIG_FILE_NAME), data);
     }
 
-    private static async update(path: Path, data: Partial<TsConfig>): Promise<void> {
+    /**
+     * Updates the tsconfig at the given path with the given data.
+     * @param path - The path of the tsconfig.
+     * @param data - The data to update the tsconfig with.
+     */
+    static async update(path: Path, data: Partial<TsConfig>): Promise<void> {
         const oldConfig: TsConfig = await FsUtilities.parseFileAs(path);
         const tsconfig: TsConfig = mergeDeep<TsConfig>(oldConfig, data);
         await FsUtilities.updateFile(path, JsonUtilities.stringify(tsconfig), 'replace', false);

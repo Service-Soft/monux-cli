@@ -531,7 +531,7 @@ export abstract class AngularUtilities {
      * @param options - Options for running the command.
      */
     static async runCommand(directory: Path, command: AngularCliCommands, options: AngularCliOptions<typeof command>): Promise<void> {
-        await CPUtilities.exec(`cd ${directory} && npx @angular/cli@${this.CLI_VERSION} ${command} ${optionsToCliString(options)}`);
+        await CPUtilities.exec(`cd ${directory} && npx --yes @angular/cli@${this.CLI_VERSION} ${command} ${optionsToCliString(options)}`);
     }
 
     /**

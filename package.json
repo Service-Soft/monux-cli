@@ -1,6 +1,6 @@
 {
     "name": "monux-cli",
-    "version": "2.5.7",
+    "version": "2.5.8",
     "license": "MIT",
     "main": "index.js",
     "engines": {
@@ -54,7 +54,7 @@
         "@angular/common": "^20.2.1",
         "@faker-js/faker": "^9.0.3",
         "@jest/globals": "^30.3.0",
-        "@nestjs/common": "^11.1.18",
+        "@nestjs/common": "^12.1.2",
         "@types/death": "^1.1.5",
         "@types/figlet": "^1.7.0",
         "@types/js-yaml": "^4.0.9",
