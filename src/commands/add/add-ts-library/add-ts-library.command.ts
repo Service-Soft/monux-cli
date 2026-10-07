@@ -86,7 +86,9 @@ export class AddTsLibraryCommand extends BaseAddCommand<TsLibraryConfiguration> 
     private async createProject(config: TsLibraryConfiguration): Promise<string> {
         // eslint-disable-next-line no-console
         console.log('Creates the library');
-        await CPUtilities.exec(`cd ${LIBS_DIRECTORY_NAME} && npm create vite@${this.VITE_VERSION} ${config.name} -- --template vanilla-ts`);
+        await CPUtilities.exec(
+            `cd ${LIBS_DIRECTORY_NAME} && npm create vite@${this.VITE_VERSION} ${config.name} --yes -- --template vanilla-ts`
+        );
         const libraryPath: string = getPath(LIBS_DIRECTORY_NAME, config.name);
         await FsUtilities.createFile(getPath(libraryPath, 'vite.config.ts'), [
             'import { defineConfig, PluginOption } from \'vite\';',

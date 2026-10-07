@@ -16,8 +16,10 @@ describe('NestUtilities', () => {
         await NestUtilities.runCommand(mockConstants.APPS_DIR, 'new api', {
             '--language': 'TS',
             '--package-manager': 'npm',
+            '--type': 'cjs',
             '--skip-git': true,
-            '--skip-install': true
+            '--skip-install': true,
+            '--no-observe': true
         });
 
         const dirExists: boolean = await FsUtilities.exists(getPath(mockConstants.APPS_DIR, 'api'));

@@ -3,13 +3,13 @@ import { AddLoopbackConfiguration } from '../commands/add/add-loopback';
 import { ENVIRONMENT_MODEL_TS_FILE_NAME } from '../constants';
 import { CPUtilities, FsUtilities } from '../encapsulation';
 import { DefaultEnvKeys, EnvUtilities, EnvValue } from '../env';
+import { NpmPackage, NpmUtilities } from '../npm';
 import { TsUtilities } from '../ts';
 import { generatePlaceholderPassword, getPath, optionsToCliString, Path, toKebabCase, toPascalCase } from '../utilities';
-import { LbDatabaseConfig } from './lb-database-config.model';
-import { NpmPackage, NpmUtilities } from '../npm';
 import { adminControllerContent } from './admin-controller.content';
 import { adminModelContent } from './admin-model.content';
 import { fullAdminModelContent } from './full-admin-model.content';
+import { LbDatabaseConfig } from './lb-database-config.model';
 import { newAdminModelContent } from './new-admin-model.content';
 
 /**
@@ -172,7 +172,9 @@ export abstract class LoopbackUtilities {
             // for the new command, extract the name
             command = command.split(' ')[1] as LoopbackCliCommands;
         }
-        await CPUtilities.exec(`cd ${directory} && npx @loopback/cli@${this.CLI_VERSION} ${command} ${optionsToCliString(options, ' ')}`);
+        await CPUtilities.exec(
+            `cd ${directory} && npx --yes @loopback/cli@${this.CLI_VERSION} ${command} ${optionsToCliString(options, ' ')}`
+        );
         if (command.startsWith('service')) {
             const servicePath: Path = getPath(directory, 'src', 'services', `${toKebabCase(command.split(' ')[1])}.service.ts`);
             await FsUtilities.replaceInFile(servicePath, '/* inject, */', '');

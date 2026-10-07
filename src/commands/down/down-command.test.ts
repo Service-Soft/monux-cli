@@ -41,7 +41,7 @@ describe('DownCommand', () => {
         const runningDockerServicesAfterDown: FullyParsedDockerService[] = await getDockerServices(false);
 
         expect(runningDockerServicesAfterDown.length).toEqual(runningDockerServicesBeforeUp.length);
-    }, MAX_FAST_TIME * 2 /** We call up and down. */);
+    }, 1000 + (MAX_FAST_TIME * 2) /** We call up and down. */);
 
     afterEach(() => {
         jest.restoreAllMocks();

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
+import { AddAngularLibraryCommand } from './add-angular-library.command';
 import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MockConstants, inquireMock } from '../../../__testing__';
 import { InquirerUtilities } from '../../../encapsulation';
 import { AddConfiguration, AddType } from '../models';
-import { AddAngularLibraryCommand } from './add-angular-library.command';
 
 const mockConstants: MockConstants = getMockConstants('add-angular-library-command');
 

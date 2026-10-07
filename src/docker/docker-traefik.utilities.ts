@@ -21,7 +21,7 @@ export const TRAEFIK_COMPRESSION_LABEL: string = 'traefik.http.middlewares.compr
 /**
  * The traefik docker image, with version.
  */
-export const TRAEFIK_DOCKER_IMAGE: string = 'traefik:v3.2';
+export const TRAEFIK_DOCKER_IMAGE: string = 'traefik:v3.6';
 
 /**
  * The base traefik commands.

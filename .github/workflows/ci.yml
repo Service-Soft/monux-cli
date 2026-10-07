@@ -20,10 +20,9 @@ jobs:
             - run: docker pull postgres
             - uses: actions/setup-node@v4
               with:
-                node-version: '20'
+                node-version: '24'
                 registry-url: 'https://registry.npmjs.org'
-            - run: npm i -g npm@latest
-            - run: npm i -g @angular/cli@20 zibri-cli @loopback/cli@7 @nestjs/cli@11 create-vite@6 create-storybook@9.1.20
+            - run: npm i -g @angular/cli@20 zibri-cli @loopback/cli@7 @nestjs/cli@12 create-vite@6 create-storybook@9.1.20
             - run: npm i
             - run: npm run build
             - run: npm run test
