@@ -3,3 +3,7 @@
     <router-outlet />
 </main>
 <ngx-footer [rows]="footerRows" [components]="footerComponents" />
+{{#tracking}}
+<!-- lets a visitor change what they allowed, as easily as they chose it -->
+<ngx-privacy-settings />
+{{/tracking}}

@@ -2,13 +2,22 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 
 import { AppComponent } from './app.component';
-import { routes } from './app.routes';
+import { pages } from './app.routes';
+{{#tracking}}
+import { provideTracking } from './tracking.provider';
+{{/tracking}}
 
 describe('AppComponent', () => {
     beforeEach(async () => {
         await TestBed.configureTestingModule({
             imports: [AppComponent],
-            providers: [provideRouter(routes)]
+            providers: [
+                // the pages, without asking for consent, which the tests of @service-soft/ngx-tracking cover
+                provideRouter(pages),
+{{#tracking}}
+                provideTracking()
+{{/tracking}}
+            ]
         }).compileComponents();
     });
 

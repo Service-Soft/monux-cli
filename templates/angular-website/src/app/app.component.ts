@@ -7,13 +7,23 @@ import { NavTitleComponent } from '@service-soft/ngx-navigation/nav-title';
 import { FooterComponent } from '@service-soft/ngx-navigation/footer';
 import { FooterRow, NavbarRow } from '@service-soft/ngx-navigation/navigation';
 import { NavbarComponent } from '@service-soft/ngx-navigation/navbar';
+{{#tracking}}
+import { PrivacySettingsComponent } from '@service-soft/ngx-tracking/privacy-settings';
+{{/tracking}}
 
 import { footerRows, navbarRows } from './navigation';
 
 @Component({
     selector: 'app-root',
     templateUrl: './app.component.html',
-    imports: [FooterComponent, NavbarComponent, RouterOutlet]
+    imports: [
+        FooterComponent,
+        NavbarComponent,
+{{#tracking}}
+        PrivacySettingsComponent,
+{{/tracking}}
+        RouterOutlet
+    ]
 })
 export class AppComponent {
     protected readonly navbarRows: NavbarRow[] = navbarRows;

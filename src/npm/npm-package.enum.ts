@@ -6,6 +6,7 @@ export enum NpmPackage {
     // the @service-soft libraries share the major of the Angular they are built for
     SERVICE_SOFT_UI = '@service-soft/ui@^22.0.0',
     SERVICE_SOFT_NGX_NAVIGATION = '@service-soft/ngx-navigation@^22.0.0',
+    SERVICE_SOFT_NGX_TRACKING = '@service-soft/ngx-tracking@^22.0.0',
     FONTAWESOME_SOLID_ICONS = '@fortawesome/free-solid-svg-icons@^7.3.1',
     TAILWIND_CLI = '@tailwindcss/cli@^4.3.3',
     // cuts the fonts of a website down to the characters it shows

@@ -47,6 +47,40 @@ describe('TemplateUtilities', () => {
             .rejects.toThrow('The template "angular-app" does not use the placeholders port');
     });
 
+    test('write keeps the sections that are on, and leaves out a file that is empty without its sections', async () => {
+        const template: Path = PathUtilities.resolve(templatesDirectory, 'angular-website');
+        await FsUtilities.createFile(PathUtilities.resolve(template, 'styles.css'), [
+            '@import "tailwindcss";',
+            '{{#tracking}}',
+            '@import "@service-soft/ngx-tracking";',
+            '{{/tracking}}',
+            '{{^tracking}}',
+            '/* no tracking */',
+            '{{/tracking}}'
+        ]);
+        await FsUtilities.createFile(PathUtilities.resolve(template, 'tracking.provider.ts'), ['{{#tracking}}', 'export const tracking = true;', '{{/tracking}}']);
+
+        await TemplateUtilities.write('angular-website', destination, {}, { tracking: false });
+
+        expect(await FsUtilities.readFile(PathUtilities.resolve(destination, 'styles.css'))).toEqual('@import "tailwindcss";\n/* no tracking */');
+        expect(await FsUtilities.exists(PathUtilities.resolve(destination, 'tracking.provider.ts'))).toBe(false);
+
+        await TemplateUtilities.write('angular-website', destination, {}, { tracking: true });
+        expect(await FsUtilities.readFile(PathUtilities.resolve(destination, 'styles.css')))
+            .toEqual('@import "tailwindcss";\n@import "@service-soft/ngx-tracking";');
+        expect(await FsUtilities.readFile(PathUtilities.resolve(destination, 'tracking.provider.ts'))).toEqual('export const tracking = true;');
+    });
+
+    test('write fails for a section that is not given, or not used', async () => {
+        const template: Path = PathUtilities.resolve(templatesDirectory, 'angular-website');
+        await FsUtilities.createFile(PathUtilities.resolve(template, 'styles.css'), ['{{#tracking}}', 'a', '{{/tracking}}']);
+
+        await expect(TemplateUtilities.write('angular-website', destination, {}))
+            .rejects.toThrow('The template "angular-website" uses the section "tracking", which was not given');
+        await expect(TemplateUtilities.write('angular-website', destination, {}, { tracking: true, pwa: false }))
+            .rejects.toThrow('The template "angular-website" does not have the sections pwa');
+    });
+
     test('write fails for a template that does not exist', async () => {
         await expect(TemplateUtilities.write('angular-ap', destination, {})).rejects.toThrow('The template "angular-ap" does not exist');
     });

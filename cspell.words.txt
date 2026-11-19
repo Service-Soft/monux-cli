@@ -34,3 +34,6 @@ autodocs
 claude
 postbuild
 prerendered
+llms
+applebot
+externalagent

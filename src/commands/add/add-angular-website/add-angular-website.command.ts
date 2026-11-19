@@ -2,7 +2,7 @@ import { AngularJson, AngularUtilities } from '../../../angular';
 import { ANGULAR_JSON_FILE_NAME, APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME } from '../../../constants';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, LogUtilities, Path, PathUtilities, QuestionsFor } from '../../../encapsulation';
-import { DefaultEnvKeys, EnvUtilities } from '../../../env';
+import { DefaultEnvKeys, EnvironmentVariableKey, EnvUtilities } from '../../../env';
 import { EslintUtilities } from '../../../eslint';
 import { NpmPackage, NpmUtilities } from '../../../npm';
 import { TemplateUtilities } from '../../../templates';
@@ -34,7 +34,41 @@ type AddAngularWebsiteConfiguration = AddConfiguration & {
     /**
      * The language the website is written in, such as "en" or "de".
      */
-    language: string
+    language: string,
+    /**
+     * The trackings the website asks its visitors to allow.
+     */
+    trackings: WebsiteTracking[],
+    /**
+     * Whether the robots.txt allows the crawlers that collect content to train AI models.
+     * Assistants that fetch a page to answer a question are always allowed.
+     */
+    aiTraining: boolean
+};
+
+/**
+ * A tracking of @service-soft/ngx-tracking a website can have, by the name of its section in the template.
+ */
+type WebsiteTracking = 'googleAnalytics' | 'googleTagManager' | 'metaPixel';
+
+/**
+ * What a tracking needs from the environment of the workspace.
+ */
+type WebsiteTrackingVariable = {
+    /**
+     * The end of the key of the variable, after the name of the website.
+     */
+    keySuffix: string,
+    /**
+     * What the developer replaces with their own id.
+     */
+    example: string
+};
+
+const TRACKING_VARIABLES: Record<WebsiteTracking, WebsiteTrackingVariable> = {
+    googleAnalytics: { keySuffix: 'google_analytics_id', example: 'G-XXXXXXXXXX' },
+    googleTagManager: { keySuffix: 'google_tag_manager_id', example: 'GTM-XXXXXXX' },
+    metaPixel: { keySuffix: 'meta_pixel_id', example: '0000000000000000' }
 };
 
 // what the title ends up in: typescript strings, html and the meta tags of the pages
@@ -69,15 +103,35 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
             type: 'input',
             name: 'title',
             message: 'Name of the website, as its titles show it',
-            validate: (v?: string) => v != undefined && TITLE_REGEX.test(v) ? true : 'The name needs to be without quotes, "<", ">", "{", "}" and "\\"',
+            validate: (v?: string) => v != undefined && TITLE_REGEX.test(v)
+                ? true
+                : 'The name needs to be without quotes, "<", ">", "{", "}" and "\\"',
             default: StringUtilities.toPascalCase(this.baseConfig.name)
         },
         language: {
             type: 'input',
             name: 'language',
             message: 'Language of the website',
-            validate: (v?: string) => v != undefined && LANGUAGE_REGEX.test(v) ? true : 'The language needs to be a code like "en" or "de-AT"',
+            validate: (v?: string) => v != undefined && LANGUAGE_REGEX.test(v)
+                ? true
+                : 'The language needs to be a code like "en" or "de-AT"',
             default: 'en'
+        },
+        trackings: {
+            type: 'checkbox',
+            name: 'trackings',
+            message: 'Trackings, asked for in a consent dialog',
+            choices: [
+                { name: 'Google Analytics', value: 'googleAnalytics' },
+                { name: 'Google Tag Manager', value: 'googleTagManager' },
+                { name: 'Meta Pixel', value: 'metaPixel' }
+            ]
+        },
+        aiTraining: {
+            type: 'confirm',
+            name: 'aiTraining',
+            message: 'Allow AI models to train on its content? Assistants that look a page up to answer may either way',
+            default: false
         }
     };
 
@@ -87,22 +141,35 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
 
         LogUtilities.step('Adding the pages, the navigation and what makes the website fast and findable');
         await this.cleanUp(root);
-        await TemplateUtilities.write('angular-website', root, {
-            name: config.name,
-            prefix: StringUtilities.toSnakeCase(config.name),
-            title: config.title,
-            language: config.language
-        });
-        await this.installDependencies(config.name);
+        await TemplateUtilities.write(
+            'angular-website',
+            root,
+            {
+                name: config.name,
+                prefix: StringUtilities.toSnakeCase(config.name),
+                title: config.title,
+                language: config.language
+            },
+            {
+                tracking: config.trackings.length > 0,
+                googleAnalytics: config.trackings.includes('googleAnalytics'),
+                googleTagManager: config.trackings.includes('googleTagManager'),
+                metaPixel: config.trackings.includes('metaPixel'),
+                aiTraining: config.aiTraining
+            }
+        );
+        await this.installDependencies(config);
         await this.updatePackageJson(config);
         await this.updateAngularJson(root, config.name);
 
         await this.addToCompose(root, config);
-        await this.setupEnvironment(root, config.name);
+        await this.addTrackingVariables(config);
+        await this.setupEnvironment(root, config);
 
         LogUtilities.step('Setting up eslint');
         await EslintUtilities.addLintScripts(root);
-        await EslintUtilities.addWords(['postbuild', 'prerendered']);
+        // the build step, the pages angular rendered, the file for AI assistants and the names of AI crawlers
+        await EslintUtilities.addWords(['postbuild', 'prerendered', 'llms', 'applebot', 'externalagent']);
         await EslintUtilities.fix(root);
         LogUtilities.success(`Added "${config.name}" in ${PathUtilities.getRelative(PathUtilities.resolve('.'), root)}`);
     }
@@ -138,14 +205,15 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
         ].map(f => FsUtilities.rm(PathUtilities.resolve(root, f))));
     }
 
-    private async installDependencies(name: string): Promise<void> {
+    private async installDependencies(config: AddAngularWebsiteConfiguration): Promise<void> {
         LogUtilities.step('Installing the libraries');
-        await NpmUtilities.install(name, [
+        await NpmUtilities.install(config.name, [
             NpmPackage.SERVICE_SOFT_UI,
             NpmPackage.SERVICE_SOFT_NGX_NAVIGATION,
-            NpmPackage.FONTAWESOME_SOLID_ICONS
+            NpmPackage.FONTAWESOME_SOLID_ICONS,
+            ...config.trackings.length ? [NpmPackage.SERVICE_SOFT_NGX_TRACKING] : []
         ]);
-        await NpmUtilities.install(name, [
+        await NpmUtilities.install(config.name, [
             NpmPackage.TAILWIND_CLI,
             NpmPackage.SUBSET_FONT,
             NpmPackage.ESLINT_PLUGIN_BETTER_TAILWINDCSS
@@ -203,11 +271,34 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
         await DockerUtilities.addAllowedHosts(config.name, config.subDomain);
     }
 
-    private async setupEnvironment(root: Path, name: string): Promise<void> {
+    private async addTrackingVariables(config: AddAngularWebsiteConfiguration): Promise<void> {
+        for (const tracking of config.trackings) {
+            const variable: WebsiteTrackingVariable = TRACKING_VARIABLES[tracking];
+            // public, as the website sends it to every visitor anyway
+            await EnvUtilities.addStaticVariable(
+                { key: this.resolveTrackingKey(config.name, tracking), required: true, type: 'string', value: variable.example },
+                true
+            );
+        }
+        if (config.trackings.length) {
+            LogUtilities.warning('Replace the example ids of the trackings in .env.public with your own');
+        }
+    }
+
+    private resolveTrackingKey(name: string, tracking: WebsiteTracking): EnvironmentVariableKey {
+        return `${StringUtilities.toSnakeCase(name)}_${TRACKING_VARIABLES[tracking].keySuffix}` as EnvironmentVariableKey;
+    }
+
+    private async setupEnvironment(root: Path, config: AddAngularWebsiteConfiguration): Promise<void> {
         await EnvUtilities.setupProjectEnvironment(root, false);
         const environmentModel: Path = PathUtilities.resolve(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
-        for (const key of [DefaultEnvKeys.ENV, DefaultEnvKeys.baseUrl(name)]) {
-            await EnvUtilities.addProjectVariableKey(name, environmentModel, key, false, PathUtilities.resolve('.'));
+        const keys: EnvironmentVariableKey[] = [
+            DefaultEnvKeys.ENV,
+            DefaultEnvKeys.baseUrl(config.name),
+            ...config.trackings.map(t => this.resolveTrackingKey(config.name, t))
+        ];
+        for (const key of keys) {
+            await EnvUtilities.addProjectVariableKey(config.name, environmentModel, key, false, PathUtilities.resolve('.'));
         }
     }
 }
