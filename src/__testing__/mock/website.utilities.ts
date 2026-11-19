@@ -5,6 +5,8 @@ import { Browser, chromium, Page } from 'playwright-core';
 import { CPUtilities, JsonUtilities, Path, PathUtilities } from '../../encapsulation';
 
 const LIGHTHOUSE_DEBUGGING_PORT: number = 9333;
+// a run takes about 20 seconds. One that takes this long is stuck, and fails the test rather than hanging it
+const LIGHTHOUSE_TIMEOUT_IN_MS: number = 120_000;
 
 /**
  * A built website, started for a test.
@@ -88,7 +90,7 @@ export abstract class WebsiteUtilities {
                 '--quiet',
                 '--output=json',
                 '--only-categories=performance,accessibility,seo'
-            ].join(' '));
+            ].join(' '), LIGHTHOUSE_TIMEOUT_IN_MS);
             const result: LighthouseResult = JsonUtilities.parse(output);
             return {
                 performance: result.categories.performance.score,

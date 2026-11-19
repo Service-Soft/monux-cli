@@ -1,4 +1,6 @@
-@import "tailwindcss";
+/* the classes of this folder, never of a build: the html of a prerendered page holds them escaped, which tailwind would
+   read as classes of their own. The libraries add their own sources with their imports */
+@import "tailwindcss" source(".");
 @import "@service-soft/ui";
 @import "@service-soft/ngx-navigation";
 {{#tracking}}
