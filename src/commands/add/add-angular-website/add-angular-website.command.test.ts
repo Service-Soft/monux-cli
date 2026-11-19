@@ -57,6 +57,8 @@ describe('AddAngularWebsiteCommand', () => {
             expect((await fetch(`${website.url}/unknown`)).status).toBe(404);
 
             expect(await WebsiteUtilities.findThirdPartyRequests(website.url)).toEqual([]);
+            // a new visitor sees the page first, and has to decide as soon as they do anything with it
+            expect(await WebsiteUtilities.resolveConsentDialog(website.url)).toEqual({ openOnLoad: false, openAfterInteraction: true });
             const rating: LighthouseRating = await WebsiteUtilities.resolveLighthouseRating(website.url);
             // the audits first, so a failure says what to fix
             expect(rating.failedAudits).toEqual([]);

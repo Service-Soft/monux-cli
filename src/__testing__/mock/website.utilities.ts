@@ -28,6 +28,20 @@ export type RunningWebsite = {
 export type LighthouseScores = Record<LighthouseCategory, number>;
 
 /**
+ * Whether the consent dialog of a page is open, when a new visitor opens it.
+ */
+export type ConsentDialogStates = {
+    /**
+     * Once the page loaded, before the visitor did anything.
+     */
+    openOnLoad: boolean,
+    /**
+     * After the visitor moved the mouse.
+     */
+    openAfterInteraction: boolean
+};
+
+/**
  * A category lighthouse rates a page in.
  */
 type LighthouseCategory = 'performance' | 'accessibility' | 'seo';
@@ -77,7 +91,19 @@ type LighthouseResultAudit = {
     // eslint-disable-next-line jsdoc/require-jsdoc
     score: number | null,
     // eslint-disable-next-line jsdoc/require-jsdoc
-    displayValue?: string
+    displayValue?: string,
+    /**
+     * What the audit found, such as the element of the largest contentful paint.
+     */
+    details?: LighthouseResultAuditDetails
+};
+
+/**
+ * The details of an audit of a lighthouse report, as far as a test reads them.
+ */
+type LighthouseResultAuditDetails = {
+    // eslint-disable-next-line jsdoc/require-jsdoc
+    items: { items?: { node?: { snippet?: string } }[] }[]
 };
 
 const LIGHTHOUSE_CATEGORIES: LighthouseCategory[] = ['performance', 'accessibility', 'seo'];
@@ -147,7 +173,8 @@ export abstract class WebsiteUtilities {
                 },
                 failedAudits: LIGHTHOUSE_CATEGORIES.flatMap(category => result.categories[category].auditRefs
                     .filter(ref => ref.weight > 0 && (result.audits[ref.id].score ?? 1) < 1)
-                    .map(ref => `${category}: ${ref.id} (${result.audits[ref.id].score}) ${result.audits[ref.id].displayValue ?? ''}`))
+                    .map(ref => `${category}: ${ref.id} (${result.audits[ref.id].score}) ${result.audits[ref.id].displayValue ?? ''}`
+                        + this.resolveAuditDetails(ref.id, result)))
             };
         }
         finally {
@@ -178,6 +205,44 @@ export abstract class WebsiteUtilities {
         finally {
             await browser.close();
         }
+    }
+
+    /**
+     * Resolves when a new visitor of the page at the given url is asked for their consent: whether the dialog is open
+     * once the page loaded, and whether it is open after they moved the mouse.
+     * @param url - The url of the page.
+     * @returns Whether the consent dialog is open before and after the first interaction.
+     */
+    static async resolveConsentDialog(url: string): Promise<ConsentDialogStates> {
+        const browser: Browser = await this.launchBrowser(undefined, []);
+        try {
+            const page: Page = await browser.newPage();
+            await page.goto(url, { waitUntil: 'networkidle' });
+            const openOnLoad: boolean = await page.locator('dialog[open]').count() > 0;
+            await page.mouse.move(100, 100);
+            const openAfterInteraction: boolean = await page.locator('dialog[open]').waitFor({ timeout: 10_000 })
+                .then(() => true)
+                .catch(() => false);
+            return { openOnLoad, openAfterInteraction };
+        }
+        finally {
+            await browser.close();
+        }
+    }
+
+    /**
+     * Resolves what a failing audit needs to be understood, such as the element that was painted last for the
+     * largest contentful paint.
+     * @param auditId - The id of the audit.
+     * @param result - The report of lighthouse.
+     * @returns What to append to the line of the audit, or an empty string.
+     */
+    private static resolveAuditDetails(auditId: string, result: LighthouseResult): string {
+        if (auditId !== 'largest-contentful-paint') {
+            return '';
+        }
+        const element: string | undefined = result.audits['largest-contentful-paint-element']?.details?.items[0]?.items?.[0]?.node?.snippet;
+        return element == undefined ? '' : `, the element: ${element}`;
     }
 
     /**
