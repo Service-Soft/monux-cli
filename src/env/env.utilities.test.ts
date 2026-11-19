@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, test } from '@jest/globals';
 
 import { fakeEnvVariable, FileMockUtilities, getMockConstants, MockConstants } from '../__testing__';
+import { AddType } from '../commands/add/models/add-type.enum';
 import { GLOBAL_ENVIRONMENT_MODEL_FILE_NAME } from '../constants';
 import { FsUtilities, PathUtilities, Path } from '../encapsulation';
 import { KeyValue } from '../types';
+import { WorkspaceUtilities } from '../workspace';
 import { DefaultEnvKeys } from './default-environment-keys';
 import { EnvUtilities, EnvValidationErrorMessage, EnvVariable } from './env.utilities';
+import { EnvironmentVariableKey } from './environment-variable-key.model';
 
 const mockConstants: MockConstants = getMockConstants('env-utilities');
 
@@ -262,6 +265,47 @@ describe('EnvUtilities', () => {
             '',
             'export const environment: Environment = {',
             '};'
+        ]);
+    });
+
+    test('the environment of a server project reads its values at runtime, from a .env next to it', async () => {
+        await WorkspaceUtilities.createConfig();
+        await WorkspaceUtilities.addProjectConfig('api', AddType.ZIBRI, PathUtilities.resolve('.'));
+        const apiPath: Path = PathUtilities.resolve(mockConstants.APPS_DIR, 'api');
+        await FsUtilities.createFile(PathUtilities.resolve(apiPath, 'package.json'), '{ "name": "api" }');
+        await EnvUtilities.setupProjectEnvironment(apiPath, true);
+        const dbPassword: EnvironmentVariableKey = DefaultEnvKeys.dbPassword('db', 'api');
+        const port: EnvironmentVariableKey = DefaultEnvKeys.port('api');
+        await EnvUtilities.addStaticVariable({ key: dbPassword, value: 'a#secret with spaces', required: true, type: 'string' }, false);
+        await EnvUtilities.addStaticVariable({ key: port, value: 3000, required: true, type: 'number' }, false);
+        await EnvUtilities.addStaticVariable({ key: DefaultEnvKeys.WEBSERVER_MAIL_HOST, value: undefined, required: false, type: 'string' }, false);
+
+        for (const key of [dbPassword, port, DefaultEnvKeys.WEBSERVER_MAIL_HOST, DefaultEnvKeys.ENV]) {
+            await EnvUtilities.addProjectVariableKey(
+                'api',
+                PathUtilities.resolve(apiPath, 'src', 'environment', 'environment.model.ts'),
+                key,
+                true,
+                PathUtilities.resolve('.')
+            );
+        }
+
+        const environment: string = await FsUtilities.readFile(PathUtilities.resolve(apiPath, 'src', 'environment', 'environment.ts'));
+        expect(environment).not.toContain('a#secret');
+        expect(environment).toContain([
+            'export const environment: Environment = {',
+            `    ${dbPassword}: readString('${dbPassword}'),`,
+            `    ${port}: readNumber('${port}'),`,
+            '    webserver_mail_host: readOptionalString(\'webserver_mail_host\'),',
+            '    env: readOneOf(\'env\', [\'dev\', \'local\', \'stage\', \'prod\'])',
+            '};'
+        ].join('\n'));
+        expect(environment).not.toContain('function readBoolean');
+
+        expect(await FsUtilities.readFileLines(PathUtilities.resolve(apiPath, '.env'))).toEqual([
+            `${dbPassword}='a#secret with spaces'`,
+            `${port}=3000`,
+            'env=dev'
         ]);
     });
 });

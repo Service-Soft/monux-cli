@@ -428,6 +428,26 @@ export abstract class DockerUtilities {
      * Adds a volume to the docker compose files.
      * @param volume - The volume to add.
      */
+    /**
+     * Tells an Angular server which hosts it answers, the ones traefik routes to it, in every compose file with traefik.
+     * Angular refuses a request for any other host, which keeps a forged host out of what the server renders.
+     * @param serviceName - The name of the service.
+     * @param subDomain - The sub domain of the service.
+     */
+    static async addAllowedHosts(serviceName: string, subDomain: string | undefined): Promise<void> {
+        for (const composeFileName of [LOCAL_DOCKER_COMPOSE_FILE_NAME, STAGE_DOCKER_COMPOSE_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME]) {
+            const composePath: Path = PathUtilities.resolve(composeFileName);
+            const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
+            const service: ComposeService | undefined = definition.services.find(s => s.name === serviceName);
+            if (service == undefined) {
+                throw new Error(`The service "${serviceName}" is not in ${composeFileName}`);
+            }
+            const hosts: string[] = DockerTraefikUtilities.resolveHosts(serviceName, composeFileName, subDomain);
+            service.environment = [...service.environment ?? [], { key: 'NG_ALLOWED_HOSTS', value: hosts.join(',') }];
+            await FsUtilities.updateFile(composePath, this.composeDefinitionToYaml(definition), 'replace');
+        }
+    }
+
     static async addVolumeToComposeFiles(volume: string): Promise<void> {
         await Promise.all(dockerComposeFileNames.map(d => this.addVolumeToCompose(volume, d)));
     }
@@ -473,6 +493,7 @@ export abstract class DockerUtilities {
             ...this.getServicePortsSection(service.ports),
             ...this.getServiceVolumesSection(service.volumes),
             ...this.getServiceEnvironmentSection(service.environment),
+            ...this.getServiceEnvFileSection(service.envFile),
             ...this.getServiceNetworksSection(service.networks),
             ...this.getServiceLabelsSection(service.labels)
         ].join('\n');
@@ -501,6 +522,10 @@ export abstract class DockerUtilities {
 
     private static getServiceEnvironmentSection(environment: ComposeServiceEnvironment | undefined): string[] {
         return !environment?.length ? [] : ['\t\tenvironment:', ...environment.map(e => `\t\t\t${e.key}: ${e.value}`)];
+    }
+
+    private static getServiceEnvFileSection(envFile: string[] | undefined): string[] {
+        return !envFile?.length ? [] : ['\t\tenv_file:', ...envFile.map(f => `\t\t\t- ${f}`)];
     }
 
     private static getServiceBuildSection(build: ComposeBuild | undefined): string[] {
@@ -553,6 +578,7 @@ export abstract class DockerUtilities {
                     build: this.parseBuild(serviceData.build),
                     networks: this.parseServiceNetworks(serviceData.networks),
                     environment: this.parseEnvironment(serviceData.environment),
+                    envFile: typeof serviceData.env_file === 'string' ? [serviceData.env_file] : serviceData.env_file,
                     ports: this.parsePorts(serviceData.ports),
                     labels: serviceData.labels
                 };

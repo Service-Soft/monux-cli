@@ -21,7 +21,7 @@ describe('AddAngularCommand', () => {
     test('should run', async () => {
         const baseConfig: AddConfiguration = { name: 'admin', type: AddType.ANGULAR };
         const command: AddAngularCommand = new AddAngularCommand(baseConfig);
-        await command.run();
+        await command.add();
         expect(true).toBe(true);
     }, MAX_ADD_TIME);
 

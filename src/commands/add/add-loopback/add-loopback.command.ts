@@ -85,7 +85,7 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
         }
     };
 
-    override async run(): Promise<void> {
+    protected override async run(): Promise<void> {
         const config: AddLoopbackConfiguration = await this.getConfig();
         const { dbComposeServiceName, databaseName, dbType } = await DbUtilities.configureDb(config.name, DbType.POSTGRES, PathUtilities.resolve('.'));
         if (dbType !== DbType.POSTGRES) {

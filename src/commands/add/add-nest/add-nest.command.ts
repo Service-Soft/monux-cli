@@ -89,7 +89,7 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
         }
     };
 
-    override async run(): Promise<void> {
+    protected override async run(): Promise<void> {
         const config: AddNestConfiguration = await this.getConfig();
         const { dbComposeServiceName, databaseName, dbType } = await DbUtilities.configureDb(config.name, undefined, PathUtilities.resolve('.'));
         const root: Path = await this.createProject(config);

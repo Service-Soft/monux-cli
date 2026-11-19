@@ -46,7 +46,9 @@ export type MockConstants = {
     readonly GLOBAL_ENV_MODEL: Path,
     readonly GITHUB_WORKFLOW_DIR: Path,
     readonly WORKSPACE_JSON: Path,
-    readonly BASE_TS_CONFIG_JSON: Path
+    readonly BASE_TS_CONFIG_JSON: Path,
+    readonly ROOT_ESLINT_CONFIG_MJS: Path,
+    readonly THEME_CSS: Path
 };
 
 export type FileMockConstants = OmitStrict<
@@ -110,7 +112,9 @@ export function getMockConstants(projectName: string): MockConstants {
         GLOBAL_ENV_MODEL: PathUtilities.resolve(PROJECT_DIR, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
         GITHUB_WORKFLOW_DIR: PathUtilities.resolve(PROJECT_DIR, '.github', 'workflows'),
         WORKSPACE_JSON: PathUtilities.resolve(PROJECT_DIR, WORKSPACE_FILE_NAME),
-        BASE_TS_CONFIG_JSON: PathUtilities.resolve(PROJECT_DIR, BASE_TS_CONFIG_FILE_NAME)
+        BASE_TS_CONFIG_JSON: PathUtilities.resolve(PROJECT_DIR, BASE_TS_CONFIG_FILE_NAME),
+        ROOT_ESLINT_CONFIG_MJS: PathUtilities.resolve(PROJECT_DIR, ESLINT_CONFIG_FILE_NAME),
+        THEME_CSS: PathUtilities.resolve(PROJECT_DIR, 'theme.css')
     } as const;
     return mockConstants;
 }

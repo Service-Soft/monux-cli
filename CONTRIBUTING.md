@@ -42,8 +42,10 @@ The tests generate real workspaces, so they need what a user of Monux needs:
 
 - Node 24 or newer
 - Docker with Docker Compose, running
-- The clis Monux runs, installed globally in the versions `.github/workflows/ci.yml` installs:
-  `npm i -g @angular/cli@20 zibri-cli @loopback/cli@7 @nestjs/cli@12 create-vite@6 create-storybook@9.1.20`
+- Chromium for the checks of the generated websites (Lighthouse and the requests a page makes):
+  `npx playwright-core install --with-deps chromium`
+
+The clis of the frameworks need no install: Monux runs them through `npx`, in the versions it pins.
 
 Then:
 

@@ -8,9 +8,11 @@ export type ParsedDockerComposeEnvironment = { [key: string]: string } | string[
 export type ParsedDockerComposeServiceNetwork = string[] | Record<string, unknown>;
 
 // eslint-disable-next-line jsdoc/require-jsdoc
-export type ParsedDockerComposeService = OmitStrict<ComposeService, 'volumes' | 'environment' | 'networks' | 'ports'> & {
+export type ParsedDockerComposeService = OmitStrict<ComposeService, 'volumes' | 'environment' | 'networks' | 'ports' | 'envFile'> & {
     // eslint-disable-next-line jsdoc/require-jsdoc
     volumes?: string[],
+    // eslint-disable-next-line jsdoc/require-jsdoc
+    env_file?: string[] | string,
     // eslint-disable-next-line jsdoc/require-jsdoc
     environment?: ParsedDockerComposeEnvironment,
     // eslint-disable-next-line jsdoc/require-jsdoc

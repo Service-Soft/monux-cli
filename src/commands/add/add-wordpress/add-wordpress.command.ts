@@ -29,7 +29,7 @@ export class AddWordpressCommand extends BaseAddCommand<AddWordpressConfiguratio
         }
     };
 
-    override async run(): Promise<void> {
+    protected override async run(): Promise<void> {
         const config: AddWordpressConfiguration = await this.getConfig();
         const { dbComposeServiceName, databaseName } = await DbUtilities.configureDb(config.name, DbType.MARIADB, PathUtilities.resolve('.'));
         await this.createProject(config, dbComposeServiceName, databaseName);

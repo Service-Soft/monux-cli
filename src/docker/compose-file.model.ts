@@ -57,6 +57,11 @@ export type ComposeService = {
      */
     environment?: ComposeServiceEnvironment,
     /**
+     * Files of environment variables to be used by the service, as "env_file" in the compose file.
+     * Relative to the root of the workspace.
+     */
+    envFile?: string[],
+    /**
      * The entrypoint to use by the service.
      */
     entrypoint?: string[],

@@ -1,0 +1,19 @@
+/* The look of every Angular project of this workspace: the design tokens of @service-soft/ui that differ from its
+   defaults. Every project imports this file after @service-soft/ui, so a change here changes all of them.
+   Every color is light-dark(<light mode>, <dark mode>), and every color comes with an on- color for what is drawn on it.
+   Keep their contrast at WCAG AA (4.5:1 for text) in both modes. The theme.css of @service-soft/ui lists every token. */
+@theme {
+    /* main actions and the current selection, also links and outlined buttons */
+    --color-primary: light-dark(#0e456f, #92c3f2);
+    --color-on-primary: light-dark(#ffffff, #0a304f);
+    /* actions and highlights that stand out less than primary */
+    --color-secondary: #00b4d8;
+    --color-on-secondary: #002732;
+    /* secondary as text and focus rings on a surface, where secondary itself is too light */
+    --color-secondary-text: light-dark(#006e88, #00b4d8);
+
+    /* the font of the operating system needs no download. To use your own, put it in the fonts folder of a project,
+       declare it with @font-face in that project's styles.css and name it first here */
+    --font-body: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --font-heading: var(--font-body);
+}

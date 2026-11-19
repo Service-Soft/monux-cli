@@ -3,6 +3,14 @@
  */
 export enum NpmPackage {
     TAILWIND = 'tailwindcss@3',
+    // the @service-soft libraries share the major of the Angular they are built for
+    SERVICE_SOFT_UI = '@service-soft/ui@^22.0.0',
+    SERVICE_SOFT_NGX_NAVIGATION = '@service-soft/ngx-navigation@^22.0.0',
+    FONTAWESOME_SOLID_ICONS = '@fortawesome/free-solid-svg-icons@^7.3.1',
+    TAILWIND_CLI = '@tailwindcss/cli@^4.3.3',
+    // cuts the fonts of a website down to the characters it shows
+    SUBSET_FONT = 'subset-font@^2.4.0',
+    ESLINT_PLUGIN_BETTER_TAILWINDCSS = 'eslint-plugin-better-tailwindcss@^4.9.1',
     NGX_PERSISTENCE_LOGGER = 'ngx-persistence-logger',
     NGX_MATERIAL_AUTH = 'ngx-material-auth',
     NGX_MATERIAL_CHANGE_SETS = 'ngx-material-change-sets',
@@ -11,7 +19,7 @@ export enum NpmPackage {
     NGX_MATERIAL_ENTITY = 'ngx-material-entity',
     NGX_PWA = 'ngx-pwa',
     TYPESCRIPT = 'typescript',
-    ESLINT_CONFIG_SERVICE_SOFT = 'eslint-config-service-soft',
+    SERVICE_SOFT_ESLINT_CONFIG = '@service-soft/eslint-config',
     ESLINT = 'eslint',
     POSTCSS = 'postcss',
     AUTOPREFIXER = 'autoprefixer',

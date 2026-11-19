@@ -72,7 +72,7 @@ export class AddAngularCommand extends BaseAddCommand<AddAngularConfiguration> {
         }
     };
 
-    override async run(): Promise<void> {
+    protected override async run(): Promise<void> {
         const config: AddAngularConfiguration = await this.getConfig();
         const root: Path = await this.createProject(config);
         await Promise.all([

@@ -86,6 +86,9 @@ export const GLOBAL_ENVIRONMENT_MODEL_FILE_NAME: string = 'global-environment.mo
  */
 export const ESLINT_CONFIG_FILE_NAME: string = 'eslint.config.mjs';
 
+// eslint-disable-next-line jsdoc/require-jsdoc
+export const CSPELL_WORDS_FILE_NAME: string = 'cspell.words.txt';
+
 /**
  * The name of the tailwind config file.
  */

@@ -18,7 +18,7 @@ describe('AddAngularLibraryCommand', () => {
     test('should run', async () => {
         const baseConfig: AddConfiguration = { name: 'ui', type: AddType.ANGULAR_LIBRARY };
         const command: AddAngularLibraryCommand = new AddAngularLibraryCommand(baseConfig);
-        await command.run();
+        await command.add();
         expect(true).toBe(true);
     }, MAX_ADD_TIME);
 

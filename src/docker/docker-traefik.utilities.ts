@@ -76,13 +76,52 @@ export abstract class DockerTraefikUtilities {
         }
     }
 
+    /**
+     * Resolves the hosts the service with the given name is reached under, as docker compose interpolates them.
+     * Without a sub domain, that is the root domain and its www.
+     * @param projectName - The name of the project.
+     * @param composeFileName - The compose file the hosts are for.
+     * @param subDomain - The sub domain of the service.
+     * @returns The hosts, empty for the dev compose file, which has no traefik.
+     */
+    static resolveHosts(projectName: string, composeFileName: DockerComposeFileName, subDomain: string | undefined): string[] {
+        const rootDomain: string | undefined = this.resolveRootDomain(composeFileName);
+        if (rootDomain == undefined) {
+            return [];
+        }
+        return subDomain
+            ? [`\${${DefaultEnvKeys.subDomain(projectName)}}.${rootDomain}`]
+            : [rootDomain, `www.${rootDomain}`];
+    }
+
+    private static resolveRootDomain(composeFileName: DockerComposeFileName): string | undefined {
+        switch (composeFileName) {
+            case DEV_DOCKER_COMPOSE_FILE_NAME: {
+                return undefined;
+            }
+            case LOCAL_DOCKER_COMPOSE_FILE_NAME: {
+                return 'localhost';
+            }
+            case STAGE_DOCKER_COMPOSE_FILE_NAME: {
+                return `\${${DefaultEnvKeys.STAGE_ROOT_DOMAIN}}`;
+            }
+            case PROD_DOCKER_COMPOSE_FILE_NAME: {
+                return `\${${DefaultEnvKeys.PROD_ROOT_DOMAIN}}`;
+            }
+        }
+    }
+
+    private static resolveHostRule(projectName: string, composeFileName: DockerComposeFileName, subDomain: string | undefined): string {
+        return this.resolveHosts(projectName, composeFileName, subDomain).map(h => `Host(\`${h}\`)`).join(' || ');
+    }
+
     private static getTraefikLabelsForStage(
         projectName: string,
         subDomain: string | undefined,
         port: number,
         traefikBasicAuth: boolean
     ): string[] {
-        let host: string = `Host(\`\${${DefaultEnvKeys.subDomain(projectName)}}.\${${DefaultEnvKeys.STAGE_ROOT_DOMAIN}}\`)`;
+        const host: string = this.resolveHostRule(projectName, STAGE_DOCKER_COMPOSE_FILE_NAME, subDomain);
         const labels: string[] = [];
         const middlewares: string[] = ['compression'];
         if (traefikBasicAuth) {
@@ -90,7 +129,6 @@ export abstract class DockerTraefikUtilities {
             middlewares.push('auth');
         }
         if (!subDomain) {
-            host = `Host(\`\${${DefaultEnvKeys.STAGE_ROOT_DOMAIN}}\`) || Host(\`www.\${${DefaultEnvKeys.STAGE_ROOT_DOMAIN}}\`)`;
             labels.push(
                 'traefik.http.middlewares.wwwredirect.redirectregex.regex=^https://www\.(.*)',
                 'traefik.http.middlewares.wwwredirect.redirectregex.replacement=https://$${1}'
@@ -114,11 +152,10 @@ export abstract class DockerTraefikUtilities {
         subDomain: string | undefined,
         port: number
     ): string[] {
-        let host: string = `Host(\`\${${DefaultEnvKeys.subDomain(projectName)}}.\${${DefaultEnvKeys.PROD_ROOT_DOMAIN}}\`)`;
+        const host: string = this.resolveHostRule(projectName, PROD_DOCKER_COMPOSE_FILE_NAME, subDomain);
         const labels: string[] = [];
         const middlewares: string[] = ['compression'];
         if (!subDomain) {
-            host = `Host(\`\${${DefaultEnvKeys.PROD_ROOT_DOMAIN}}\`) || Host(\`www.\${${DefaultEnvKeys.PROD_ROOT_DOMAIN}}\`)`;
             labels.push(
                 'traefik.http.middlewares.wwwredirect.redirectregex.regex=^https://www\.(.*)',
                 'traefik.http.middlewares.wwwredirect.redirectregex.replacement=https://$${1}'
@@ -138,11 +175,10 @@ export abstract class DockerTraefikUtilities {
     }
 
     private static getTraefikLabelsForLocal(projectName: string, subDomain: string | undefined, port: number): string[] {
-        let host: string = `Host(\`\${${DefaultEnvKeys.subDomain(projectName)}}.localhost\`)`;
+        const host: string = this.resolveHostRule(projectName, LOCAL_DOCKER_COMPOSE_FILE_NAME, subDomain);
         const labels: string[] = [];
         const middlewares: string[] = ['compression'];
         if (!subDomain) {
-            host = 'Host(`localhost`) || Host(`www.localhost`)';
             labels.push(
                 'traefik.http.middlewares.wwwredirect.redirectregex.regex=^http://www\.(.*)',
                 'traefik.http.middlewares.wwwredirect.redirectregex.replacement=http://$${1}'

@@ -1,14 +1,15 @@
-import { APPS_DIRECTORY_NAME, ENV_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, ESLINT_CONFIG_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, ROBOTS_FILE_NAME, TAILWIND_CONFIG_FILE_NAME } from '../../constants';
+import { APPS_DIRECTORY_NAME, ENV_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, ROBOTS_FILE_NAME } from '../../constants';
 import { DockerUtilities } from '../../docker';
 import { CPUtilities, FsUtilities, InquirerUtilities, ProcessUtilities, PathUtilities } from '../../encapsulation';
 import { EnvUtilities } from '../../env';
+import { EslintUtilities } from '../../eslint';
 import { GithubUtilities } from '../../github';
 import { NpmPackage, NpmUtilities } from '../../npm';
+import { TemplateUtilities } from '../../templates';
 import { TsConfigUtilities } from '../../tsconfig';
 import { WorkspaceConfig, WorkspaceUtilities } from '../../workspace';
 import { BaseCommand } from '../base-command.model';
 import { initConfigQuestions, InitConfiguration } from './init-configuration.model';
-import { tailwindConfigJsContent } from './tailwind-config-js.content';
 
 /**
  * Initializes a new Monux monorepo.
@@ -17,26 +18,20 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
     protected override async run(config: InitConfiguration): Promise<void> {
         await NpmUtilities.init('root', false);
 
-        await NpmUtilities.installInRoot([
-            NpmPackage.ESLINT_CONFIG_SERVICE_SOFT,
-            NpmPackage.ESLINT,
-            NpmPackage.TAILWIND,
-            NpmPackage.POSTCSS,
-            NpmPackage.AUTOPREFIXER
-        ], true);
+        // tailwind is a dependency of each project that uses it, the theme they share is a css file
+        await NpmUtilities.installInRoot([NpmPackage.SERVICE_SOFT_ESLINT_CONFIG, NpmPackage.ESLINT], true);
 
         await EnvUtilities.init(config.prodRootDomain, config.stageRootDomain, 'user', 'password');
 
         await Promise.all([
             WorkspaceUtilities.createConfig(),
             TsConfigUtilities.createBaseTsConfig(),
-            this.createEslintConfig(),
-            this.createCspellWords(),
+            EslintUtilities.setupRootEslint(),
             DockerUtilities.createComposeFiles(config.email),
             FsUtilities.mkdir(PathUtilities.resolve(APPS_DIRECTORY_NAME)),
             FsUtilities.mkdir(PathUtilities.resolve(LIBS_DIRECTORY_NAME)),
             this.createGitIgnore(),
-            this.createTailwindConfig(),
+            TemplateUtilities.write('workspace', PathUtilities.resolve('.'), {}),
             this.addNpmWorkspaces()
         ]);
 
@@ -96,24 +91,4 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
         ]);
     }
 
-    private async createCspellWords(): Promise<void> {
-        await FsUtilities.createFile(PathUtilities.resolve('cspell.words.txt'), '');
-    }
-
-    private async createEslintConfig(): Promise<void> {
-        await FsUtilities.createFile(PathUtilities.resolve(ESLINT_CONFIG_FILE_NAME), [
-            `import { configs } from '${NpmPackage.ESLINT_CONFIG_SERVICE_SOFT}';`,
-            '',
-            '// eslint-disable-next-line jsdoc/require-description',
-            '/** @type {import(\'eslint\').Linter.Config} */',
-            'export default [...configs , { ignores: [\'./global-environment.model.ts\'] }];'
-        ]);
-    }
-
-    private async createTailwindConfig(): Promise<void> {
-        await FsUtilities.createFile(
-            PathUtilities.resolve(TAILWIND_CONFIG_FILE_NAME),
-            tailwindConfigJsContent
-        );
-    }
 }

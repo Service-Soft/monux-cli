@@ -28,7 +28,7 @@ describe('RunCommand', () => {
     test('should run', async () => {
         const baseConfig: AddConfiguration = { name: 'api', type: AddType.NEST };
         const addNestCommand: AddNestCommand = new AddNestCommand(baseConfig);
-        await addNestCommand.run();
+        await addNestCommand.add();
 
         const command: RunCommand = new RunCommand();
         await command.start(['api', 'build']);

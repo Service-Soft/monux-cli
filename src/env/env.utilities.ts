@@ -1,3 +1,4 @@
+import { AddType } from '../commands/add/models/add-type.enum';
 import { DEV_DOCKER_COMPOSE_FILE_NAME, ENV_FILE_NAME, ENV_PUBLIC_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME, LOCAL_DOCKER_COMPOSE_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, STAGE_DOCKER_COMPOSE_FILE_NAME } from '../constants';
 import { DockerComposeFileName } from '../docker';
 import { FileLine, FsUtilities, JsonUtilities, PathUtilities, Path } from '../encapsulation';
@@ -6,6 +7,7 @@ import { KeyValue, OmitStrict } from '../types';
 import { WorkspaceProject, WorkspaceUtilities } from '../workspace';
 import { DefaultEnvKeys } from './default-environment-keys';
 import { EnvironmentVariableKey } from './environment-variable-key.model';
+import { RUNTIME_ENVIRONMENT_READERS, SERVER_PROJECT_TYPES } from './runtime-environment-readers';
 
 /**
  * The possible types an environment variable can have.
@@ -182,15 +184,92 @@ export abstract class EnvUtilities {
         rootDir: string
     ): Promise<void> {
         const variables: EnvVariable[] = await this.getEnvVariables(variableKeys, failOnMissingVariable, fileName, rootDir);
-        await FsUtilities.createFile(
-            PathUtilities.resolve(projectPath, 'src', 'environment', ENVIRONMENT_TS_FILE_NAME),
-            [
-                '/* eslint-disable cspell/spellchecker */',
-                'import { Environment } from \'./environment.model\';',
-                '',
-                `export const environment: Environment = {${variables.map(v => this.stringifyEnvKeyValue(v)).join(',')}\n};`
-            ]
-        );
+        const environmentTsPath: Path = PathUtilities.resolve(projectPath, 'src', 'environment', ENVIRONMENT_TS_FILE_NAME);
+        const type: AddType | undefined = await WorkspaceUtilities.findProjectType(PathUtilities.getName(projectPath), rootDir);
+        if (type == undefined || !SERVER_PROJECT_TYPES.includes(type)) {
+            await FsUtilities.createFile(
+                environmentTsPath,
+                [
+                    '/* eslint-disable cspell/spellchecker */',
+                    'import { Environment } from \'./environment.model\';',
+                    '',
+                    `export const environment: Environment = {${variables.map(v => this.stringifyEnvKeyValue(v)).join(',')}\n};`
+                ]
+            );
+            return;
+        }
+        // a server reads its values when it starts, so that no secret is compiled into its build or its image.
+        await FsUtilities.createFile(environmentTsPath, this.resolveRuntimeEnvironmentTs(variables));
+        await FsUtilities.rm(PathUtilities.resolve(projectPath, ENV_FILE_NAME));
+        await FsUtilities.createFile(PathUtilities.resolve(projectPath, ENV_FILE_NAME), this.resolveDotEnv(variables));
+    }
+
+    private static resolveRuntimeEnvironmentTs(variables: EnvVariable[]): string[] {
+        const readers: Map<string, string[]> = new Map();
+        const properties: string[] = variables.map(v => {
+            const reader: string = this.resolveRuntimeReader(v);
+            readers.set(reader, RUNTIME_ENVIRONMENT_READERS[reader]);
+            const values: string = v.key === DefaultEnvKeys.ENV ? ', [\'dev\', \'local\', \'stage\', \'prod\']' : '';
+            return `\t${v.key}: ${reader}('${v.key}'${values})`;
+        });
+        return [
+            'import { existsSync, readFileSync } from \'node:fs\';',
+            'import { parseEnv } from \'node:util\';',
+            '',
+            'import { Environment } from \'./environment.model\';',
+            '',
+            '// written by "mx prepare" next to the project, for the environment it was run for. A container gets the same',
+            '// values from docker compose instead, and the file is not part of its image.',
+            'if (existsSync(\'.env\')) {',
+            '\tfor (const [key, value] of Object.entries(parseEnv(readFileSync(\'.env\', \'utf8\')))) {',
+            '\t\t// a variable the environment already sets wins over the file',
+            '\t\tprocess.env[key] ??= value;',
+            '\t}',
+            '}',
+            '',
+            'export const environment: Environment = {',
+            properties.join(',\n'),
+            '};',
+            ...[...readers.values()].flatMap(lines => ['', ...lines])
+        ];
+    }
+
+    private static resolveRuntimeReader(variable: EnvVariable): string {
+        if (variable.key === DefaultEnvKeys.ENV) {
+            return 'readOneOf';
+        }
+        const optional: string = variable.required ? '' : 'Optional';
+        switch (variable.type) {
+            case 'string': {
+                return `read${optional}String`;
+            }
+            case 'number': {
+                return `read${optional}Number`;
+            }
+            case 'boolean': {
+                return `read${optional}Boolean`;
+            }
+        }
+    }
+
+    private static resolveDotEnv(variables: EnvVariable[]): string[] {
+        return variables
+            .filter(v => v.value != undefined)
+            .map(v => {
+                const value: string = String(v.value);
+                if (value.includes('\n')) {
+                    throw new Error(`The value of the environment variable "${v.key}" needs to be a single line.`);
+                }
+                // node and docker compose both read a value as it is, unless a "#" makes the rest of it a comment
+                // or spaces around it are trimmed. Single quotes keep those, and cannot themselves be escaped.
+                if (!/[\s#'"]/.test(value)) {
+                    return `${v.key}=${value}`;
+                }
+                if (value.includes('\'')) {
+                    throw new Error(`The value of the environment variable "${v.key}" needs to be without "'" when it holds "#" or spaces.`);
+                }
+                return `${v.key}='${value}'`;
+            });
     }
 
     private static stringifyEnvKeyValue(v: EnvVariable): string {
@@ -558,6 +637,19 @@ export abstract class EnvUtilities {
             });
         }
         return res;
+    }
+
+    /**
+     * Whether the workspace defines the static variable with the given key, such as one several projects share.
+     * @param key - The key of the variable.
+     * @returns True when it is defined in the global environment model.
+     */
+    static async hasStaticVariable(key: EnvironmentVariableKey): Promise<boolean> {
+        const definitions: OmitStrict<EnvVariable, 'value'>[] = await this.getVariableDefinitions(
+            PathUtilities.resolve(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
+            'StaticGlobalEnvironment = {'
+        );
+        return definitions.some(d => d.key === key);
     }
 
     /**

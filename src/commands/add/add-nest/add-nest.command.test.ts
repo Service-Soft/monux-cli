@@ -27,7 +27,7 @@ describe('AddNestCommand', () => {
     test('should run and add a new database', async () => {
         const baseConfig: AddConfiguration = { name: 'api', type: AddType.NEST };
         const command: AddNestCommand = new AddNestCommand(baseConfig);
-        await command.run();
+        await command.add();
         expect(true).toBe(true);
     }, MAX_ADD_TIME);
 

@@ -68,7 +68,9 @@
         "@types/js-yaml": "^4.0.9",
         "eslint": "^9.34.0",
         "jest": "^30.3.0",
+        "lighthouse": "^13.6.0",
         "ngx-material-navigation": "^20.2.2",
+        "playwright-core": "^1.65.1",
         "ts-jest": "^29.4.9"
     }
 }

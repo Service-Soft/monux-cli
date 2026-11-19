@@ -1,5 +1,6 @@
-import { InquirerUtilities, QuestionsFor } from '../../../encapsulation';
+import { InquirerUtilities, PathUtilities, QuestionsFor } from '../../../encapsulation';
 import { OmitStrict } from '../../../types';
+import { WorkspaceUtilities } from '../../../workspace';
 import { AddConfiguration } from './add-configuration.model';
 
 /**
@@ -12,9 +13,18 @@ export abstract class BaseAddCommand<ConfigurationType extends AddConfiguration 
     constructor(protected readonly baseConfig: AddConfiguration) {}
 
     /**
+     * Adds the project to the workspace.
+     */
+    async add(): Promise<void> {
+        // first, as the type of the project decides how its environment is generated while it is added.
+        await WorkspaceUtilities.addProjectConfig(this.baseConfig.name, this.baseConfig.type, PathUtilities.resolve('.'));
+        await this.run();
+    }
+
+    /**
      * Generates the project.
      */
-    abstract run(): Promise<void>;
+    protected abstract run(): Promise<void>;
 
     /**
      * Gets the complete configuration.

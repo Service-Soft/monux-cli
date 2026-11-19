@@ -18,7 +18,7 @@ describe('AddTsLibraryCommand', () => {
     test('should run', async () => {
         const baseConfig: AddConfiguration = { name: 'shared', type: AddType.TS_LIBRARY };
         const command: AddTsLibraryCommand = new AddTsLibraryCommand(baseConfig);
-        await command.run();
+        await command.add();
         expect(true).toBe(true);
     }, MAX_ADD_TIME);
 

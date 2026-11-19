@@ -17,7 +17,7 @@ describe('EslintUtilities', () => {
         await EslintUtilities.setupProjectEslint(mockConstants.ANGULAR_APP_DIR, true);
         const lines: string[] = await FsUtilities.readFileLines(mockConstants.ANGULAR_ESLINT_CONFIG_MJS);
         expect(lines).toEqual([
-            'import { cspellOptions } from \'eslint-config-service-soft\';',
+            'import { cspellOptions } from \'@service-soft/eslint-config\';',
             'import baseConfig from \'../../eslint.config.mjs\';',
             '',
             '// eslint-disable-next-line jsdoc/require-description',

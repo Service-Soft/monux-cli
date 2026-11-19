@@ -130,7 +130,8 @@ imports and variables *your* change orphaned; leave pre-existing dead code alone
 
 # Node and third-party packages
 
-**Only `src/encapsulation/` imports Node's built-ins and third-party packages.** That includes their types: a wrapper
+**Only `src/encapsulation/` imports Node's built-ins and third-party packages**, apart from the tools only the tests
+use, like playwright, which the helpers in `src/__testing__/` import. That includes their types: a wrapper
 re-exports what the rest of the code needs, such as `Dirent`. `FsUtilities` is the file system, `PathUtilities` builds
 paths, `CPUtilities` runs processes, `ProcessUtilities` ends Monux, `InquirerUtilities` asks questions, `LogUtilities`
 writes output and `YamlUtilities` reads and writes yaml. The tests replace exactly these boundaries, so code that goes

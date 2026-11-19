@@ -1,4 +1,4 @@
-
+import { AddType } from '../commands/add/models/add-type.enum';
 import { APPS_DIRECTORY_NAME, LIBS_DIRECTORY_NAME, WORKSPACE_FILE_NAME } from '../constants';
 import { CPUtilities, Dirent, FsUtilities, JsonUtilities, PathUtilities, Path } from '../encapsulation';
 import { WorkspaceConfig } from './workspace-config.model';
@@ -32,8 +32,32 @@ export abstract class WorkspaceUtilities {
     static async createConfig(): Promise<void> {
         const cwd: string = CPUtilities['cwd'] ?? process.cwd();
         const currentDirectory: string = cwd.substring(cwd.lastIndexOf('/') + 1);
-        const data: WorkspaceConfig = { isWorkspace: true, name: currentDirectory };
+        const data: WorkspaceConfig = { isWorkspace: true, name: currentDirectory, projects: {} };
         await FsUtilities.createFile(PathUtilities.resolve(WORKSPACE_FILE_NAME), JsonUtilities.stringify(data));
+    }
+
+    /**
+     * Records a project that is being added to the workspace, so later commands know what type of project it is.
+     * @param name - The name of the project.
+     * @param type - The type of project it is added as.
+     * @param rootDir - The directory of the Monux monorepo.
+     */
+    static async addProjectConfig(name: string, type: AddType, rootDir: string): Promise<void> {
+        const configPath: Path = PathUtilities.resolve(rootDir, WORKSPACE_FILE_NAME);
+        const config: WorkspaceConfig = await this.getConfigOrFail(configPath);
+        const updated: WorkspaceConfig = { ...config, projects: { ...config.projects, [name]: { type } } };
+        await FsUtilities.updateFile(configPath, JsonUtilities.stringify(updated), 'replace');
+    }
+
+    /**
+     * Finds the type the project with the given name was added as.
+     * @param name - The name of the project.
+     * @param rootDir - The directory of the Monux monorepo.
+     * @returns The type, or undefined for a project that was added by hand or before Monux recorded it.
+     */
+    static async findProjectType(name: string, rootDir: string): Promise<AddType | undefined> {
+        const config: WorkspaceConfig | undefined = await this.getConfig(PathUtilities.resolve(rootDir, WORKSPACE_FILE_NAME));
+        return config?.projects?.[name]?.type;
     }
 
     /**
@@ -51,11 +75,12 @@ export abstract class WorkspaceUtilities {
 
     /**
      * Gets the workspace configuration.
+     * @param workspaceFilePath - The path of the mx workspace file. Can be used when not running in the context of a workspace.
      * @returns The workspace config.
      * @throws When no workspace config was found.
      */
-    static async getConfigOrFail(): Promise<WorkspaceConfig> {
-        const res: WorkspaceConfig | undefined = await this.getConfig();
+    static async getConfigOrFail(workspaceFilePath?: Path): Promise<WorkspaceConfig> {
+        const res: WorkspaceConfig | undefined = await this.getConfig(workspaceFilePath);
         if (res == undefined) {
             throw new Error('current directory is not a workspace');
         }

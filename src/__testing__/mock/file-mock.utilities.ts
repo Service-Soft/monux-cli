@@ -2,6 +2,8 @@
 import { AngularJson } from '../../angular';
 import { CPUtilities, FsUtilities, JsonUtilities, PathUtilities } from '../../encapsulation';
 import { EnvUtilities } from '../../env';
+import { EslintUtilities } from '../../eslint';
+import { TemplateUtilities } from '../../templates';
 import { TsConfigUtilities } from '../../tsconfig';
 import { WorkspaceUtilities } from '../../workspace';
 import { MockConstants, FileMockConstants, DirMockConstants } from './constants';
@@ -9,6 +11,8 @@ import { MockConstants, FileMockConstants, DirMockConstants } from './constants'
 export const defaultFilesToMock: (keyof FileMockConstants)[] = [
     'WORKSPACE_JSON',
     'BASE_TS_CONFIG_JSON',
+    'ROOT_ESLINT_CONFIG_MJS',
+    'THEME_CSS',
     'ENV',
     'ENV_PUBLIC',
     'GLOBAL_ENV_MODEL',
@@ -54,7 +58,9 @@ export abstract class FileMockUtilities {
         ENV_PUBLIC: this.createEnvPublic,
         GLOBAL_ENV_MODEL: this.createGlobalEnvModel,
         WORKSPACE_JSON: WorkspaceUtilities.createConfig,
-        BASE_TS_CONFIG_JSON: TsConfigUtilities.createBaseTsConfig
+        BASE_TS_CONFIG_JSON: TsConfigUtilities.createBaseTsConfig,
+        ROOT_ESLINT_CONFIG_MJS: EslintUtilities.setupRootEslint,
+        THEME_CSS: async () => await TemplateUtilities.write('workspace', PathUtilities.resolve('.'), {})
     };
 
     static async setup(
@@ -158,7 +164,7 @@ export abstract class FileMockUtilities {
             '    "devDependencies": {',
             '        "autoprefixer": "^10.4.21",',
             '        "eslint": "^9.25.1",',
-            '        "eslint-config-service-soft": "^2.0.8",',
+            '        "@service-soft/eslint-config": "^2.2.0",',
             '        "postcss": "^8.5.3",',
             '        "tailwindcss": "^4.1.4"',
             '    },',

@@ -52,7 +52,7 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
         }
     };
 
-    override async run(): Promise<void> {
+    protected override async run(): Promise<void> {
         const config: AddAngularLibraryConfiguration = await this.getConfig();
         const result: CreateResult = await this.createProject(config);
         await EslintUtilities.setupProjectEslint(result.root, false);

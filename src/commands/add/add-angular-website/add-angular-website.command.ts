@@ -1,15 +1,12 @@
-import { ModuleResolutionKind } from 'typescript';
-
-import { AngularUtilities, NavElementTypes } from '../../../angular';
-import { ANGULAR_APP_COMPONENT_FILE_NAME, ANGULAR_JSON_FILE_NAME, APPS_DIRECTORY_NAME, BASE_TS_CONFIG_FILE_NAME, DOCKER_FILE_NAME, GIT_IGNORE_FILE_NAME } from '../../../constants';
+import { AngularJson, AngularUtilities } from '../../../angular';
+import { ANGULAR_JSON_FILE_NAME, APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME } from '../../../constants';
 import { DockerUtilities } from '../../../docker';
-import { FsUtilities, JsonUtilities, QuestionsFor, PathUtilities, Path, LogUtilities } from '../../../encapsulation';
+import { FsUtilities, LogUtilities, Path, PathUtilities, QuestionsFor } from '../../../encapsulation';
 import { DefaultEnvKeys, EnvUtilities } from '../../../env';
 import { EslintUtilities } from '../../../eslint';
-import { NpmUtilities } from '../../../npm';
-import { TailwindUtilities } from '../../../tailwind';
-import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
-import { OmitStrict } from '../../../types';
+import { NpmPackage, NpmUtilities } from '../../../npm';
+import { TemplateUtilities } from '../../../templates';
+import { DeepPartial, OmitStrict } from '../../../types';
 import { StringUtilities } from '../../../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
 import { BaseAddCommand } from '../models';
@@ -20,7 +17,7 @@ import { AddConfiguration } from '../models/add-configuration.model';
  */
 type AddAngularWebsiteConfiguration = AddConfiguration & {
     /**
-     * The port that should be used by the application.
+     * The port the website is served on during development.
      * @default 4200
      */
     port: number,
@@ -31,14 +28,24 @@ type AddAngularWebsiteConfiguration = AddConfiguration & {
      */
     subDomain?: string,
     /**
-     * Suffix for the html title (eg. "| My Company").
+     * The name of the website, as its pages show it in their titles.
      */
-    titleSuffix: string,
+    title: string,
     /**
-     * Whether or not to setup tracking with ngx-material-tracking.
+     * The language the website is written in, such as "en" or "de".
      */
-    addTracking: boolean
+    language: string
 };
+
+// what the title ends up in: typescript strings, html and the meta tags of the pages
+const TITLE_REGEX: RegExp = /^[^"'<>\\{}`]+$/;
+const LANGUAGE_REGEX: RegExp = /^[a-z]{2}(-[A-Z]{2})?$/;
+
+// how much a page downloads before it is shown, raw, see the goals of the website. Angular, its router and hydration
+// are about 370kB of it, the libraries and the pages the rest. The build fails beyond, so that a heavy dependency added
+// to the first load does not go unnoticed. How fast the page is, is measured by lighthouse, not by this
+const INITIAL_BUDGET_WARNING: string = '450kB';
+const INITIAL_BUDGET_ERROR: string = '550kB';
 
 /**
  * Command that handles adding an angular website to the monorepo.
@@ -49,58 +56,143 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
         port: {
             type: 'number',
             name: 'port',
-            message: 'port',
+            message: 'Port',
             validate: (v?: number) => !!v,
             default: 4200
         },
         subDomain: {
             type: 'input',
             name: 'subDomain',
-            message: 'sub domain'
+            message: 'Sub domain'
         },
-        titleSuffix: {
+        title: {
             type: 'input',
-            name: 'titleSuffix',
-            message: 'title suffix (eg. "| My Company")',
-            validate: (v?: string) => !!v,
-            default: `| ${StringUtilities.toPascalCase(this.baseConfig.name)}`
+            name: 'title',
+            message: 'Name of the website, as its titles show it',
+            validate: (v?: string) => v != undefined && TITLE_REGEX.test(v) ? true : 'The name needs to be without quotes, "<", ">", "{", "}" and "\\"',
+            default: StringUtilities.toPascalCase(this.baseConfig.name)
         },
-        addTracking: {
-            type: 'select',
-            name: 'addTracking',
-            message: 'Add tracking?',
-            choices: [{ value: true, name: 'Yes' }, { value: false, name: 'No' }],
-            default: true
+        language: {
+            type: 'input',
+            name: 'language',
+            message: 'Language of the website',
+            validate: (v?: string) => v != undefined && LANGUAGE_REGEX.test(v) ? true : 'The language needs to be a code like "en" or "de-AT"',
+            default: 'en'
         }
     };
 
-    override async run(): Promise<void> {
+    protected override async run(): Promise<void> {
         const config: AddAngularWebsiteConfiguration = await this.getConfig();
         const root: Path = await this.createProject(config);
 
-        const prodRootDomain: string = await EnvUtilities.getEnvVariable(
-            DefaultEnvKeys.PROD_ROOT_DOMAIN,
-            'dev.docker-compose.yaml',
-            PathUtilities.resolve('.')
+        LogUtilities.step('Adding the pages, the navigation and what makes the website fast and findable');
+        await this.cleanUp(root);
+        await TemplateUtilities.write('angular-website', root, {
+            name: config.name,
+            prefix: StringUtilities.toSnakeCase(config.name),
+            title: config.title,
+            language: config.language
+        });
+        await this.installDependencies(config.name);
+        await this.updatePackageJson(config);
+        await this.updateAngularJson(root, config.name);
+
+        await this.addToCompose(root, config);
+        await this.setupEnvironment(root, config.name);
+
+        LogUtilities.step('Setting up eslint');
+        await EslintUtilities.addLintScripts(root);
+        await EslintUtilities.addWords(['postbuild', 'prerendered']);
+        await EslintUtilities.fix(root);
+        LogUtilities.success(`Added "${config.name}" in ${PathUtilities.getRelative(PathUtilities.resolve('.'), root)}`);
+    }
+
+    private async createProject(config: AddAngularWebsiteConfiguration): Promise<Path> {
+        LogUtilities.step('Creating the Angular project');
+        await AngularUtilities.runCommand(
+            PathUtilities.resolve(APPS_DIRECTORY_NAME),
+            `new ${config.name}`,
+            {
+                '--skip-git': true,
+                '--style': 'tailwind',
+                '--ssr': true,
+                '--zoneless': true,
+                '--ai-config': 'none',
+                '--file-name-style-guide': '2016',
+                '--defaults': true
+            }
         );
-        const domain: string = config.subDomain ? `${config.subDomain}.${prodRootDomain}` : prodRootDomain;
+        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, PathUtilities.resolve('.'));
+        return project.path;
+    }
 
-        await AngularUtilities.addSitemapAndRobots(root, config.name, domain);
+    private async cleanUp(root: Path): Promise<void> {
+        // what the workspace has once for every project, or what the template replaces
+        await Promise.all([
+            '.vscode',
+            '.editorconfig',
+            '.gitignore',
+            '.prettierrc',
+            'README.md',
+            'src/app/app.component.css'
+        ].map(f => FsUtilities.rm(PathUtilities.resolve(root, f))));
+    }
 
-        await this.cleanUp(root, config.name);
-        await this.setupTsConfig(root, config.name);
-        await this.createDockerfile(root, config);
-        await AngularUtilities.setupNavigation(root, config.name);
-        await EslintUtilities.setupProjectEslint(root, true);
-        await this.setupTailwind(root);
+    private async installDependencies(name: string): Promise<void> {
+        LogUtilities.step('Installing the libraries');
+        await NpmUtilities.install(name, [
+            NpmPackage.SERVICE_SOFT_UI,
+            NpmPackage.SERVICE_SOFT_NGX_NAVIGATION,
+            NpmPackage.FONTAWESOME_SOLID_ICONS
+        ]);
+        await NpmUtilities.install(name, [
+            NpmPackage.TAILWIND_CLI,
+            NpmPackage.SUBSET_FONT,
+            NpmPackage.ESLINT_PLUGIN_BETTER_TAILWINDCSS
+        ], true);
+    }
+
+    private async updatePackageJson(config: AddAngularWebsiteConfiguration): Promise<void> {
+        await NpmUtilities.updatePackageJson(config.name, {
+            scripts: {
+                start: `ng serve --port ${config.port}`,
+                build: 'ng build && node scripts/postbuild.mjs',
+                test: 'ng test --watch=false'
+            }
+        });
+    }
+
+    private async updateAngularJson(root: Path, name: string): Promise<void> {
+        const update: DeepPartial<AngularJson> = {
+            projects: {
+                [name]: {
+                    architect: {
+                        build: {
+                            configurations: {
+                                production: {
+                                    budgets: [
+                                        { type: 'initial', maximumWarning: INITIAL_BUDGET_WARNING, maximumError: INITIAL_BUDGET_ERROR },
+                                        { type: 'anyComponentStyle', maximumWarning: '2kB', maximumError: '4kB' }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        await AngularUtilities.updateAngularJson(PathUtilities.resolve(root, ANGULAR_JSON_FILE_NAME), update);
+    }
+
+    private async addToCompose(root: Path, config: AddAngularWebsiteConfiguration): Promise<void> {
+        const projectDirectory: string = PathUtilities.getRelative(PathUtilities.resolve('.'), root);
         await DockerUtilities.addServiceToCompose(
             {
                 name: config.name,
                 build: {
-                    dockerfile: `./${root}/${DOCKER_FILE_NAME}`,
+                    dockerfile: `./${projectDirectory}/${DOCKER_FILE_NAME}`,
                     context: '.'
-                },
-                volumes: [`/${config.name}`]
+                }
             },
             4000,
             config.port,
@@ -108,193 +200,14 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
             true,
             config.subDomain
         );
-        await AngularUtilities.updateAngularJson(
-            PathUtilities.resolve(root, ANGULAR_JSON_FILE_NAME),
-            { $schema: '../../node_modules/@angular/cli/lib/config/schema.json' }
-        );
-        await AngularUtilities.setupBaseStyles(root);
+        await DockerUtilities.addAllowedHosts(config.name, config.subDomain);
+    }
+
+    private async setupEnvironment(root: Path, name: string): Promise<void> {
         await EnvUtilities.setupProjectEnvironment(root, false);
-        await this.createDefaultPages(root, config.titleSuffix, domain);
-        if (config.addTracking) {
-            await AngularUtilities.setupTracking(config.name, root);
+        const environmentModel: Path = PathUtilities.resolve(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
+        for (const key of [DefaultEnvKeys.ENV, DefaultEnvKeys.baseUrl(name)]) {
+            await EnvUtilities.addProjectVariableKey(name, environmentModel, key, false, PathUtilities.resolve('.'));
         }
-        await NpmUtilities.updatePackageJson(config.name, { scripts: { start: `ng serve --port ${config.port}` }, prettier: undefined });
-        const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, PathUtilities.resolve('.'));
-        await EnvUtilities.buildEnvironmentFileForApp(app, true, 'dev.docker-compose.yaml', PathUtilities.resolve('.'));
-    }
-
-    private async createDefaultPages(root: Path, titleSuffix: string, domain: string): Promise<void> {
-        await AngularUtilities.generatePage(root, 'Home', {
-            addTo: 'navbar',
-            rowIndex: 0,
-            element: {
-                type: NavElementTypes.TITLE_WITH_INTERNAL_LINK,
-                id: 'home-navbar',
-                title: 'Home',
-                link: {
-                    route: {
-                        path: '',
-                        title: `Home ${titleSuffix}`,
-                        // @ts-ignore
-                        // eslint-disable-next-line typescript/no-unsafe-return, typescript/no-unsafe-member-access
-                        loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent)
-                    }
-                }
-            }
-        }, domain);
-        await AngularUtilities.generatePage(root, 'Imprint', {
-            addTo: 'footer',
-            rowIndex: 0,
-            element: {
-                id: 'imprint-footer',
-                type: NavElementTypes.INTERNAL_LINK,
-                name: 'Imprint',
-                route: {
-                    path: 'imprint',
-                    title: `Imprint ${titleSuffix}`,
-                    // @ts-ignore
-                    // eslint-disable-next-line typescript/no-unsafe-return, typescript/no-unsafe-member-access
-                    loadComponent: () => import('./pages/imprint/imprint.component').then(m => m.ImprintComponent)
-                }
-            }
-        }, domain);
-        await AngularUtilities.generatePage(root, 'Privacy', {
-            addTo: 'footer',
-            rowIndex: 0,
-            element: {
-                type: NavElementTypes.INTERNAL_LINK,
-                id: 'privacy-footer',
-                name: 'Privacy',
-                route: {
-                    path: 'privacy',
-                    title: `Privacy ${titleSuffix}`,
-                    // @ts-ignore
-                    // eslint-disable-next-line typescript/no-unsafe-return, typescript/no-unsafe-member-access
-                    loadComponent: () => import('./pages/privacy/privacy.component').then(m => m.PrivacyComponent)
-                }
-            }
-        }, domain);
-    }
-
-    private async setupTailwind(root: string): Promise<void> {
-        await TailwindUtilities.setupProjectTailwind(root);
-        await FsUtilities.updateFile(PathUtilities.resolve(root, 'src', 'styles.css'), [
-            '@tailwind base;',
-            '@tailwind components;',
-            '@tailwind utilities;'
-        ], 'append');
-    }
-
-    private async createDockerfile(root: string, config: AddAngularWebsiteConfiguration): Promise<void> {
-        await FsUtilities.createFile(
-            PathUtilities.resolve(root, DOCKER_FILE_NAME),
-            [
-                'FROM node:20 AS build',
-                '# Set to a non-root built-in user `node`',
-                'USER node',
-                'RUN mkdir -p /home/node/root',
-                'COPY --chown=node . /home/node/root',
-                'WORKDIR /home/node/root',
-                'RUN npm install',
-                `RUN npm run build --workspace=${APPS_DIRECTORY_NAME}/${config.name} --omit=dev`,
-                '',
-                'FROM node:20',
-                'WORKDIR /usr/app',
-                `COPY --from=build /home/node/root/${APPS_DIRECTORY_NAME}/${config.name}/dist/${config.name} ./`,
-                'CMD node server/server.mjs'
-            ]
-        );
-    }
-
-    private async setupTsConfig(root: string, projectName: string): Promise<void> {
-        LogUtilities.step('Setting up the tsconfig');
-        await TsConfigUtilities.updateTsConfig(
-            projectName,
-            {
-                extends: `../../${BASE_TS_CONFIG_FILE_NAME}`,
-                compilerOptions: {
-                    moduleResolution: 'bundler' as unknown as ModuleResolutionKind,
-                    isolatedModules: false
-                }
-            }
-        );
-
-        const eslintTsconfig: TsConfig = {
-            compilerOptions: {
-                outDir: './out-tsc/eslint',
-                types: ['jasmine', 'node']
-            },
-            extends: `../../${BASE_TS_CONFIG_FILE_NAME}`,
-            files: [
-                'src/main.ts',
-                'src/main.server.ts',
-                'src/server.ts'
-            ],
-            include: [
-                'src/**/*.spec.ts',
-                'src/**/*.d.ts'
-            ]
-        };
-        await FsUtilities.createFile(PathUtilities.resolve(root, 'tsconfig.eslint.json'), JsonUtilities.stringify(eslintTsconfig));
-    }
-
-    private async cleanUp(root: string, name: string): Promise<void> {
-        LogUtilities.step('Cleaning up');
-        await FsUtilities.replaceInFile(
-            PathUtilities.resolve(root, 'src', 'app', ANGULAR_APP_COMPONENT_FILE_NAME),
-            `protected readonly title = signal('${name}');`,
-            '  constructor() {}'
-        );
-        await FsUtilities.replaceInFile(
-            PathUtilities.resolve(root, 'src', 'app', ANGULAR_APP_COMPONENT_FILE_NAME),
-            'Component, signal',
-            'Component'
-        );
-        await FsUtilities.rm(PathUtilities.resolve(root, '.vscode'));
-        await FsUtilities.rm(PathUtilities.resolve(root, '.editorconfig'));
-        await FsUtilities.rm(PathUtilities.resolve(root, GIT_IGNORE_FILE_NAME));
-        await FsUtilities.rm(PathUtilities.resolve(root, 'src', 'app', 'app.spec.ts'));
-    }
-
-    private async createProject(config: AddAngularWebsiteConfiguration): Promise<Path> {
-        LogUtilities.step('Creating the website');
-        await AngularUtilities.runCommand(
-            PathUtilities.resolve(APPS_DIRECTORY_NAME),
-            `new ${config.name}`,
-            { '--skip-git': true, '--style': 'css', '--inline-style': true, '--ssr': true, '--ai-config': 'none', '--zoneless': false }
-        );
-        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, PathUtilities.resolve('.'));
-        await AngularUtilities.updateAngularJson(
-            PathUtilities.resolve(newProject.path, ANGULAR_JSON_FILE_NAME),
-            {
-                projects: {
-                    [newProject.name]: {
-                        schematics: {
-                            '@schematics/angular:component': {
-                                style: 'css',
-                                type: 'component'
-                            },
-                            '@schematics/angular:service': {
-                                type: 'service'
-                            },
-                            '@schematics/angular:pipe': {
-                                typeSeparator: '.'
-                            },
-                            '@schematics/angular:guard': {
-                                typeSeparator: '.'
-                            }
-                        }
-                    }
-                }
-            }
-        );
-        await FsUtilities.updateFile(PathUtilities.resolve(newProject.path, 'src', 'app', 'app.html'), '', 'replace');
-        await AngularUtilities.addProvider(newProject.path, 'provideHttpClient(withInterceptorsFromDi(), withFetch())', [
-            // eslint-disable-next-line sonar/no-duplicate-string
-            { defaultImport: false, element: 'provideHttpClient', path: '@angular/common/http' },
-            { defaultImport: false, element: 'withInterceptorsFromDi', path: '@angular/common/http' },
-            { defaultImport: false, element: 'withFetch', path: '@angular/common/http' }
-        ]);
-        return newProject.path;
     }
 }

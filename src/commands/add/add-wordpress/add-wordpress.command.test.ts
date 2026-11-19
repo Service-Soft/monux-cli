@@ -23,7 +23,7 @@ describe('AddWordpressCommand', () => {
     test('should run', async () => {
         const baseConfig: AddConfiguration = { name: 'wordpress', type: AddType.WORDPRESS };
         const command: AddWordpressCommand = new AddWordpressCommand(baseConfig);
-        await command.run();
+        await command.add();
         expect(true).toBe(true);
     }, MAX_ADD_TIME);
 

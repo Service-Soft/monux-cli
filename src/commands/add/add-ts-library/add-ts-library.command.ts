@@ -36,7 +36,7 @@ export class AddTsLibraryCommand extends BaseAddCommand<TsLibraryConfiguration> 
         }
     };
 
-    override async run(): Promise<void> {
+    protected override async run(): Promise<void> {
         const config: TsLibraryConfiguration = await this.getConfig();
         const root: string = await this.createProject(config);
 

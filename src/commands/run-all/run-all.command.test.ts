@@ -18,9 +18,9 @@ describe('RunAllCommand', () => {
 
     test('should run', async () => {
         const addCommand1: AddTsLibraryCommand = new AddTsLibraryCommand({ name: 'shared', type: AddType.TS_LIBRARY });
-        await addCommand1.run();
+        await addCommand1.add();
         const addCommand2: AddTsLibraryCommand = new AddTsLibraryCommand({ name: 'shared2', type: AddType.TS_LIBRARY });
-        await addCommand2.run();
+        await addCommand2.add();
 
         const command: RunAllCommand = new RunAllCommand();
         await command.start(['ra', 'build']);

@@ -335,7 +335,7 @@ describe('AngularUtilities', () => {
         await AngularUtilities.setupPwa(mockConstants.ANGULAR_APP_DIR, mockConstants.ANGULAR_APP_NAME);
 
         expect(cpExecSyncMock).toHaveBeenCalledTimes(1);
-        expect(cpExecSyncMock).toHaveBeenCalledWith(`cd ${mockConstants.ANGULAR_APP_DIR} && npx --yes @angular/cli@20 add @angular/pwa@20 --skip-confirmation`);
+        expect(cpExecSyncMock).toHaveBeenCalledWith(`cd ${mockConstants.ANGULAR_APP_DIR} && npx --yes @angular/cli@22.3.0 add @angular/pwa@22.3.0 --skip-confirmation`);
         expect(npmInstallMock).toHaveBeenCalledTimes(1);
         expect(npmInstallMock).toHaveBeenCalledWith(mockConstants.ANGULAR_APP_NAME, [NpmPackage.NGX_PWA]);
 

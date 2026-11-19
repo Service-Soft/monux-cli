@@ -26,7 +26,7 @@ describe('GeneratePageCommand', () => {
     test('should run', async () => {
         const baseConfig: AddConfiguration = { name: 'website', type: AddType.ANGULAR_WEBSITE };
         const addWebsiteCommand: AddAngularWebsiteCommand = new AddAngularWebsiteCommand(baseConfig);
-        await addWebsiteCommand.run();
+        await addWebsiteCommand.add();
 
         const command: GeneratePageCommand = new GeneratePageCommand();
         await command.start(['gp']);

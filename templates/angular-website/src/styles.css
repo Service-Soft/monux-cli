@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@import "@service-soft/ui";
+@import "@service-soft/ngx-navigation";
+/* the look of every project of the workspace */
+@import "../../../theme.css";
+@import "./fonts.css";

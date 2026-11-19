@@ -53,7 +53,7 @@ type NewOptions = {
     /**
      * Which stylesheets to use.
      */
-    '--style'?: 'css',
+    '--style'?: 'css' | 'tailwind',
     /**
      * Whether or not to use ssr.
      */
@@ -69,7 +69,15 @@ type NewOptions = {
     /**
      * Whether or not to use zoneless change detection.
      */
-    '--zoneless': false
+    '--zoneless': boolean,
+    /**
+     * How generated files are named. 2016 names a component "app.component.ts", like the @service-soft libraries do.
+     */
+    '--file-name-style-guide'?: '2016',
+    /**
+     * Whether every option that is not given takes its default, instead of being asked for.
+     */
+    '--defaults'?: boolean
 };
 
 /**
@@ -110,7 +118,7 @@ type AngularCliOptions<T extends AngularCliCommands>
  */
 export abstract class AngularUtilities {
 
-    private static readonly CLI_VERSION: number = 20;
+    private static readonly CLI_VERSION: string = '22.3.0';
 
     /**
      * Sets up logging.
