@@ -6,6 +6,7 @@ export const serverRoutes: ServerRoute[] = [
     { path: '', renderMode: RenderMode.Prerender },
     { path: 'imprint', renderMode: RenderMode.Prerender },
     { path: 'privacy', renderMode: RenderMode.Prerender },
+    // mx generate-page adds the pages it generates above this line
     // an unknown url answers 404, which tells search engines there is no such page
     { path: '**', renderMode: RenderMode.Server, status: 404 }
 ];

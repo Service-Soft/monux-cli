@@ -27,6 +27,7 @@ export const routes: Routes = NavigationUtilities.resolveRoutes({
             } satisfies SeoRouteData,
             loadComponent: async () => (await import('./pages/home/home.component')).HomeComponent
         },
+        // mx generate-page adds the pages without a link in the navbar or the footer above this line
         { path: '**', title: 'Page not found | {{=title}}', component: NotFoundComponent }
     ]
 });

@@ -3,11 +3,12 @@ import { FooterRow, NavbarRow } from '@service-soft/ngx-navigation/navigation';
 import { SeoRouteData } from './seo.provider';
 
 // what the website shows in its navbar and its footer. A link with a whole route also adds that route to the router,
-// see app.routes.ts. "mx generate-page" adds the pages it generates here
+// see app.routes.ts. "mx generate-page" adds the pages it generates above the comments that say so
 export const navbarRows: NavbarRow[] = [
     {
         elements: [
             { type: 'title', title: '{{=title}}', link: { route: '' }, collapse: 'never' }
+            // mx generate-page adds the links of the navbar above this line
         ]
     }
 ];
@@ -38,6 +39,7 @@ export const footerRows: FooterRow[] = [
                     loadComponent: async () => (await import('./pages/privacy/privacy.component')).PrivacyComponent
                 }
             }
+            // mx generate-page adds the links of the footer above this line
         ]
     }
 ];
