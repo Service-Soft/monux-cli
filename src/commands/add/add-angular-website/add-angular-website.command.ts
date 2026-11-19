@@ -108,6 +108,15 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
                 : 'The name needs to be without quotes, "<", ">", "{", "}" and "\\"',
             default: StringUtilities.toPascalCase(this.baseConfig.name)
         },
+        // TODO: localization, set up by mx, for the website and the Angular app alike. What it takes:
+        // - mx add asks for the languages (the first one the source language) instead of one, and a later command adds one
+        // - Angular's i18n, a build per language below /<code>/, which is where the <ngx-language-switcher> of
+        //   @service-soft/ngx-navigation links to by default; LOCALE_ID per build, the texts of the templates marked for it
+        //   and extracted into src/locale, and the labels of the @service-soft libraries translated by their providers
+        // - the server: / redirects to the language of Accept-Language, every language is prerendered
+        // - search engines and AI assistants: <link rel="alternate" hreflang> on every page, the alternates in the
+        //   sitemap, a llms.txt that lists every language, structured data with inLanguage per page
+        // - the generator test builds two languages and checks the alternates and the redirect
         language: {
             type: 'input',
             name: 'language',

@@ -25,15 +25,62 @@ export type RunningWebsite = {
 /**
  * The scores of the categories lighthouse rates a page in, from 0 to 1.
  */
-export type LighthouseScores = Record<'performance' | 'accessibility' | 'seo', number>;
+export type LighthouseScores = Record<LighthouseCategory, number>;
+
+/**
+ * A category lighthouse rates a page in.
+ */
+type LighthouseCategory = 'performance' | 'accessibility' | 'seo';
+
+/**
+ * How lighthouse rated a page.
+ */
+export type LighthouseRating = {
+    /**
+     * The scores of the categories.
+     */
+    scores: LighthouseScores,
+    /**
+     * The audits that cost the page points, as "category: audit (score) what it measured", so a failing test says why.
+     */
+    failedAudits: string[]
+};
 
 /**
  * What lighthouse writes as json, as far as a test reads it.
  */
 type LighthouseResult = {
-    // eslint-disable-next-line jsdoc/require-jsdoc
-    categories: Record<keyof LighthouseScores, { score: number }>
+    /**
+     * The categories, with their score and the audits it is made of.
+     */
+    categories: Record<LighthouseCategory, LighthouseResultCategory>,
+    /**
+     * Every audit, by its id.
+     */
+    audits: Record<string, LighthouseResultAudit>
 };
+
+/**
+ * A category of a lighthouse report.
+ */
+type LighthouseResultCategory = {
+    // eslint-disable-next-line jsdoc/require-jsdoc
+    score: number,
+    // eslint-disable-next-line jsdoc/require-jsdoc
+    auditRefs: { id: string, weight: number }[]
+};
+
+/**
+ * An audit of a lighthouse report.
+ */
+type LighthouseResultAudit = {
+    // eslint-disable-next-line jsdoc/require-jsdoc
+    score: number | null,
+    // eslint-disable-next-line jsdoc/require-jsdoc
+    displayValue?: string
+};
+
+const LIGHTHOUSE_CATEGORIES: LighthouseCategory[] = ['performance', 'accessibility', 'seo'];
 
 /**
  * Starts and measures the websites the tests generate, the way a visitor and a search engine get them.
@@ -72,9 +119,9 @@ export abstract class WebsiteUtilities {
     /**
      * Rates the page at the given url with lighthouse, on a throttled phone.
      * @param url - The url of the page.
-     * @returns The scores of the page.
+     * @returns The scores of the page, and the audits that cost it points.
      */
-    static async resolveLighthouseScores(url: string): Promise<LighthouseScores> {
+    static async resolveLighthouseRating(url: string): Promise<LighthouseRating> {
         // the cli of Monux's own lighthouse, as lighthouse is an es module, which the tests of Monux cannot import. It
         // connects to the chromium playwright starts, which starts where the launcher of lighthouse does not find a port
         const lighthouse: Path = PathUtilities.resolve(__dirname, '..', '..', '..', 'node_modules', '.bin', 'lighthouse');
@@ -93,9 +140,14 @@ export abstract class WebsiteUtilities {
             ].join(' '), LIGHTHOUSE_TIMEOUT_IN_MS);
             const result: LighthouseResult = JsonUtilities.parse(output);
             return {
-                performance: result.categories.performance.score,
-                accessibility: result.categories.accessibility.score,
-                seo: result.categories.seo.score
+                scores: {
+                    performance: result.categories.performance.score,
+                    accessibility: result.categories.accessibility.score,
+                    seo: result.categories.seo.score
+                },
+                failedAudits: LIGHTHOUSE_CATEGORIES.flatMap(category => result.categories[category].auditRefs
+                    .filter(ref => ref.weight > 0 && (result.audits[ref.id].score ?? 1) < 1)
+                    .map(ref => `${category}: ${ref.id} (${result.audits[ref.id].score}) ${result.audits[ref.id].displayValue ?? ''}`))
             };
         }
         finally {

@@ -4,12 +4,15 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { brotliCompressSync, constants as zlibConstants, gzipSync } from 'node:zlib';
 
 import subsetFont from 'subset-font';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const browser = join(root, 'dist', '{{=name}}', 'browser');
 const require = createRequire(import.meta.url);
+// what a browser downloads as text. Fonts and images are compressed by their format already
+const COMPRESSED_EXTENSIONS = ['.html', '.js', '.css', '.svg', '.txt', '.xml', '.json'];
 
 /**
  * The paths of the files below the given directory.
@@ -61,5 +64,20 @@ async function subsetFonts() {
     }
 }
 
+/**
+ * Compresses every file a browser downloads as text, once and as small as it gets, with brotli and with gzip for the
+ * browsers without it. The server sends the one the browser takes, so nothing is compressed while a visitor waits.
+ */
+function compressFiles() {
+    for (const file of findFiles(browser).filter(f => COMPRESSED_EXTENSIONS.includes(extname(f)))) {
+        const content = readFileSync(file);
+        const brotliParams = { [zlibConstants.BROTLI_PARAM_QUALITY]: zlibConstants.BROTLI_MAX_QUALITY };
+        writeFileSync(`${file}.br`, brotliCompressSync(content, { params: brotliParams }));
+        writeFileSync(`${file}.gz`, gzipSync(content, { level: zlibConstants.Z_BEST_COMPRESSION }));
+    }
+}
+
 generateCss();
 await subsetFonts();
+// last, as it compresses what the steps before wrote
+compressFiles();

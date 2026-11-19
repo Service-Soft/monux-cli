@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import { FileMockUtilities, GeneratedProjectUtilities, getMockConstants, inquireMock, LighthouseScores, MAX_ADD_TIME, MockConstants, RunningWebsite, WebsiteUtilities } from '../../../__testing__';
+import { FileMockUtilities, GeneratedProjectUtilities, getMockConstants, inquireMock, LighthouseRating, MAX_ADD_TIME, MockConstants, RunningWebsite, WebsiteUtilities } from '../../../__testing__';
 import { FsUtilities, InquirerUtilities, Path, PathUtilities } from '../../../encapsulation';
 import { AddConfiguration, AddType } from '../models';
 import { AddAngularWebsiteCommand } from './add-angular-website.command';
@@ -47,7 +47,8 @@ describe('AddAngularWebsiteCommand', () => {
         expect(home).toContain('<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Shop"');
 
         // the goals of the website, measured on the build its docker image runs
-        const website: RunningWebsite = await WebsiteUtilities.start(websitePath, 'website', 4310);
+        // on the port of development, which the canonical urls of a build for development name
+        const website: RunningWebsite = await WebsiteUtilities.start(websitePath, 'website', 4200);
         try {
             const sitemap: string = await (await fetch(`${website.url}/sitemap.xml`)).text();
             expect(sitemap).toContain('<url><loc>http://localhost:4200/imprint</loc></url>');
@@ -56,8 +57,10 @@ describe('AddAngularWebsiteCommand', () => {
             expect((await fetch(`${website.url}/unknown`)).status).toBe(404);
 
             expect(await WebsiteUtilities.findThirdPartyRequests(website.url)).toEqual([]);
-            const scores: LighthouseScores = await WebsiteUtilities.resolveLighthouseScores(website.url);
-            expect(scores).toEqual({ performance: 1, accessibility: 1, seo: 1 });
+            const rating: LighthouseRating = await WebsiteUtilities.resolveLighthouseRating(website.url);
+            // the audits first, so a failure says what to fix
+            expect(rating.failedAudits).toEqual([]);
+            expect(rating.scores).toEqual({ performance: 1, accessibility: 1, seo: 1 });
         }
         finally {
             website.stop();
