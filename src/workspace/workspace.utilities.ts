@@ -1,9 +1,7 @@
-import { Dirent } from 'fs';
 
 import { APPS_DIRECTORY_NAME, LIBS_DIRECTORY_NAME, WORKSPACE_FILE_NAME } from '../constants';
-import { CPUtilities, FsUtilities, JsonUtilities } from '../encapsulation';
+import { CPUtilities, Dirent, FsUtilities, JsonUtilities, PathUtilities, Path } from '../encapsulation';
 import { WorkspaceConfig } from './workspace-config.model';
-import { getPath, Path } from '../utilities';
 
 /**
  * Definition for a single project inside the apps or libs dir.
@@ -35,7 +33,7 @@ export abstract class WorkspaceUtilities {
         const cwd: string = CPUtilities['cwd'] ?? process.cwd();
         const currentDirectory: string = cwd.substring(cwd.lastIndexOf('/') + 1);
         const data: WorkspaceConfig = { isWorkspace: true, name: currentDirectory };
-        await FsUtilities.createFile(getPath(WORKSPACE_FILE_NAME), JsonUtilities.stringify(data));
+        await FsUtilities.createFile(PathUtilities.resolve(WORKSPACE_FILE_NAME), JsonUtilities.stringify(data));
     }
 
     /**
@@ -43,7 +41,7 @@ export abstract class WorkspaceUtilities {
      * @param workspaceFilePath - The path of the mx workspace file. Can be used when not running in the context of a workspace.
      * @returns The found config or undefined.
      */
-    static async getConfig(workspaceFilePath: Path = getPath(WORKSPACE_FILE_NAME)): Promise<WorkspaceConfig | undefined> {
+    static async getConfig(workspaceFilePath: Path = PathUtilities.resolve(WORKSPACE_FILE_NAME)): Promise<WorkspaceConfig | undefined> {
         if (!await FsUtilities.exists(workspaceFilePath)) {
             return;
         }
@@ -114,24 +112,24 @@ export abstract class WorkspaceUtilities {
     }
 
     private static async getApps(rootDir: string): Promise<WorkspaceProject[]> {
-        const dirs: Dirent[] = (await FsUtilities.readdir(getPath(rootDir, APPS_DIRECTORY_NAME))).filter(d => d.isDirectory());
+        const dirs: Dirent[] = (await FsUtilities.readdir(PathUtilities.resolve(rootDir, APPS_DIRECTORY_NAME))).filter(d => d.isDirectory());
         return dirs.map(d => {
             const res: WorkspaceProject = {
                 name: d.name,
                 npmWorkspaceString: `${APPS_DIRECTORY_NAME}/${d.name}`,
-                path: getPath(d.parentPath, d.name)
+                path: PathUtilities.resolve(d.parentPath, d.name)
             };
             return res;
         });
     }
 
     private static async getLibs(rootDir: string): Promise<WorkspaceProject[]> {
-        const dirs: Dirent[] = (await FsUtilities.readdir(getPath(rootDir, LIBS_DIRECTORY_NAME))).filter(d => d.isDirectory());
+        const dirs: Dirent[] = (await FsUtilities.readdir(PathUtilities.resolve(rootDir, LIBS_DIRECTORY_NAME))).filter(d => d.isDirectory());
         return dirs.map(d => {
             const res: WorkspaceProject = {
                 name: d.name,
                 npmWorkspaceString: `${LIBS_DIRECTORY_NAME}/${d.name}`,
-                path: getPath(d.parentPath, d.name)
+                path: PathUtilities.resolve(d.parentPath, d.name)
             };
             return res;
         });

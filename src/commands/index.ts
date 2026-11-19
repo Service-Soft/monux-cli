@@ -9,5 +9,5 @@ export * from './down';
 export * from './prepare';
 export * from './generate-page';
 export * from './run-all';
-export * from './is-command.function';
+export * from './command.utilities';
 export * from './list';

@@ -1,8 +1,8 @@
 import { ROBOTS_FILE_NAME, SITEMAP_FILE_NAME } from '../constants';
 import { DockerComposeFileName } from '../docker';
-import { FsUtilities } from '../encapsulation';
+import { FsUtilities, PathUtilities, Path } from '../encapsulation';
 import { DefaultEnvKeys, EnvUtilities, EnvValue } from '../env';
-import { filterAsync, getPath, Path } from '../utilities';
+import { filterAsync } from '../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../workspace';
 
 /**
@@ -18,7 +18,7 @@ export abstract class RobotsUtilities {
     static async createRobotsTxtFiles(fileName: DockerComposeFileName, rootDir: string): Promise<void> {
         // Only projects that have a sitemap file get a robots.txt file.
         const apps: WorkspaceProject[] = await filterAsync(await WorkspaceUtilities.getProjects('apps', rootDir), async a => {
-            const sitemapPath: Path = getPath(a.path, 'src', SITEMAP_FILE_NAME);
+            const sitemapPath: Path = PathUtilities.resolve(a.path, 'src', SITEMAP_FILE_NAME);
             return await FsUtilities.exists(sitemapPath);
         });
         await Promise.all(apps.map(async a => {
@@ -39,7 +39,7 @@ export abstract class RobotsUtilities {
         domain: string | undefined,
         rootDir: string
     ): Promise<void> {
-        const robotsTxtPath: Path = getPath(app.path, 'src', ROBOTS_FILE_NAME);
+        const robotsTxtPath: Path = PathUtilities.resolve(app.path, 'src', ROBOTS_FILE_NAME);
         await FsUtilities.rm(robotsTxtPath);
 
         const env: EnvValue = await EnvUtilities.getEnvVariable(DefaultEnvKeys.ENV, fileName, rootDir);

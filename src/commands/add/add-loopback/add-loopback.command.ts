@@ -1,9 +1,7 @@
-import { loopbackViteContent } from './loopback-vite.content';
-import { loopbackWebpackContent } from './loopback-webpack.content';
 import { APPS_DIRECTORY_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, GIT_IGNORE_FILE_NAME, TS_CONFIG_FILE_NAME, WEBPACK_CONFIG, BASE_TS_CONFIG_FILE_NAME, VITE_CONFIG } from '../../../constants';
 import { DbType, DbUtilities } from '../../../db';
 import { DockerUtilities } from '../../../docker';
-import { FsUtilities, QuestionsFor } from '../../../encapsulation';
+import { FsUtilities, QuestionsFor, PathUtilities, Path, LogUtilities } from '../../../encapsulation';
 import { DefaultEnvKeys, EnvUtilities } from '../../../env';
 import { EslintUtilities } from '../../../eslint';
 import { LbDatabaseConfig, LoopbackUtilities } from '../../../loopback';
@@ -11,10 +9,12 @@ import { NpmPackage, NpmUtilities } from '../../../npm';
 import { TsUtilities } from '../../../ts';
 import { TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
-import { getPath, Path, toKebabCase, toPascalCase } from '../../../utilities';
+import { StringUtilities } from '../../../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
 import { BaseAddCommand } from '../models';
 import { AddConfiguration } from '../models/add-configuration.model';
+import { loopbackViteContent } from './loopback-vite.content';
+import { loopbackWebpackContent } from './loopback-webpack.content';
 
 /**
  * Configuration for adding a new loopback api.
@@ -67,7 +67,7 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
             name: 'defaultUserEmail',
             message: 'Email of the default user',
             validate: (v?: string) => !!v,
-            default: async () => (await FsUtilities.readFile(getPath(PROD_DOCKER_COMPOSE_FILE_NAME)))
+            default: async () => (await FsUtilities.readFile(PathUtilities.resolve(PROD_DOCKER_COMPOSE_FILE_NAME)))
                 .split('.acme.email=')[1]
                 .split('\n')[0]
         },
@@ -75,7 +75,7 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
             type: 'input',
             name: 'defaultUserPassword',
             message: 'Password of the default user',
-            validate: (v?: string) => v != undefined && v.length >= 12 ? true : 'Password must be at least 12 characters strong'
+            validate: (v?: string) => v != undefined && v.length >= 12 ? true : 'The password needs to be at least 12 characters long'
         },
         frontendName: {
             type: 'input',
@@ -87,7 +87,7 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
 
     override async run(): Promise<void> {
         const config: AddLoopbackConfiguration = await this.getConfig();
-        const { dbComposeServiceName, databaseName, dbType } = await DbUtilities.configureDb(config.name, DbType.POSTGRES, getPath('.'));
+        const { dbComposeServiceName, databaseName, dbType } = await DbUtilities.configureDb(config.name, DbType.POSTGRES, PathUtilities.resolve('.'));
         if (dbType !== DbType.POSTGRES) {
             throw new Error('Error adding the app: Currently loopback only supports postgres as its database.');
         }
@@ -133,12 +133,12 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
         await LoopbackUtilities.setupChangeSets(root, config.name, databaseName);
         await LoopbackUtilities.setupMigrations(root, config.name);
 
-        const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
-        await EnvUtilities.buildEnvironmentFileForApp(app, false, 'dev.docker-compose.yaml', getPath('.'));
+        const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, PathUtilities.resolve('.'));
+        await EnvUtilities.buildEnvironmentFileForApp(app, false, 'dev.docker-compose.yaml', PathUtilities.resolve('.'));
     }
 
     private async setupVite(root: Path, projectName: string): Promise<void> {
-        await FsUtilities.createFile(getPath(root, VITE_CONFIG), loopbackViteContent);
+        await FsUtilities.createFile(PathUtilities.resolve(root, VITE_CONFIG), loopbackViteContent);
         await NpmUtilities.install(projectName, [NpmPackage.VITE, NpmPackage.VITE_TS_CONFIG_PATHS], true);
         await NpmUtilities.updatePackageJson(projectName, {
             scripts: {
@@ -148,7 +148,7 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
     }
 
     private async setupWebpack(root: Path, projectName: string): Promise<void> {
-        await FsUtilities.createFile(getPath(root, WEBPACK_CONFIG), loopbackWebpackContent);
+        await FsUtilities.createFile(PathUtilities.resolve(root, WEBPACK_CONFIG), loopbackWebpackContent);
         await NpmUtilities.install(projectName, [NpmPackage.WEBPACK, NpmPackage.WEBPACK_CLI], true);
         await NpmUtilities.updatePackageJson(projectName, {
             scripts: {
@@ -159,7 +159,7 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
 
     private async updateDockerFile(root: string, config: AddLoopbackConfiguration): Promise<void> {
         await FsUtilities.updateFile(
-            getPath(root, DOCKER_FILE_NAME),
+            PathUtilities.resolve(root, DOCKER_FILE_NAME),
             [
                 'FROM node:20 AS build',
                 '# Set to a non-root built-in user `node`',
@@ -181,7 +181,7 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
     }
 
     private async updateIndexTs(root: string, port: number): Promise<void> {
-        const indexPath: Path = getPath(root, 'src', 'index.ts');
+        const indexPath: Path = PathUtilities.resolve(root, 'src', 'index.ts');
         await FsUtilities.replaceInFile(indexPath, '  console.log(`Try ${url}/ping`);\n', '');
         await FsUtilities.replaceInFile(
             indexPath,
@@ -198,14 +198,14 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
     }
 
     private async updateOpenApiSpec(root: string, port: number): Promise<void> {
-        const openApiPath: Path = getPath(root, 'src', 'openapi-spec.ts');
+        const openApiPath: Path = PathUtilities.resolve(root, 'src', 'openapi-spec.ts');
         await FsUtilities.replaceInFile(openApiPath, 'env.PORT', 'env[\'PORT\']');
         await FsUtilities.replaceInFile(openApiPath, 'env.HOST', 'env[\'HOST\']');
         await FsUtilities.replaceInFile(openApiPath, '?? 3000', `?? ${port}`);
     }
 
     private async updateApplicationTs(root: string, dbName: string): Promise<void> {
-        const applicationPath: Path = getPath(root, 'src', 'application.ts');
+        const applicationPath: Path = PathUtilities.resolve(root, 'src', 'application.ts');
         await FsUtilities.replaceInFile(
             applicationPath,
             'BootMixin(RestApplication)',
@@ -214,7 +214,7 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
         await TsUtilities.addToConstructorBody(
             applicationPath,
             // eslint-disable-next-line stylistic/max-len
-            `this.dataSource(${toPascalCase(dbName)}DataSource, 'db'); // "db" is the key under wich the datasource is registered in teh external components`
+            `this.dataSource(${StringUtilities.toPascalCase(dbName)}DataSource, 'db'); // "db" is the key under wich the datasource is registered in teh external components`
         );
         await TsUtilities.addImportStatements(
             applicationPath,
@@ -245,7 +245,7 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
         await NpmUtilities.install(projectName, [NpmPackage.LOOPBACK_CONNECTOR_POSTGRES]);
         await LoopbackUtilities.runCommand(root, `datasource ${databaseName}`, { '--config': lbDatabaseConfig, '--yes': true });
 
-        const dataSourcePath: Path = getPath(root, 'src', 'datasources', `${toKebabCase(databaseName)}.datasource.ts`);
+        const dataSourcePath: Path = PathUtilities.resolve(root, 'src', 'datasources', `${StringUtilities.toKebabCase(databaseName)}.datasource.ts`);
         await TsUtilities.addImportStatements(
             dataSourcePath,
             [{ defaultImport: false, element: 'environment', path: '../environment/environment' }]
@@ -281,32 +281,32 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
             `  constructor(\n    @inject('datasources.config.${databaseName}', {optional: true})\n    dsConfig: object = config,\n  ) {\n    super(dsConfig);\n  }`,
             '    constructor() {\n        super(config);\n    }'
         );
-        const environmentModel: Path = getPath(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
+        const environmentModel: Path = PathUtilities.resolve(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
 
         await EnvUtilities.addProjectVariableKey(
             projectName,
             environmentModel,
             DefaultEnvKeys.dbPassword(dbServiceName, databaseName),
             true,
-            getPath('.')
+            PathUtilities.resolve('.')
         );
         await EnvUtilities.addProjectVariableKey(
             projectName,
             environmentModel,
             DefaultEnvKeys.dbUser(dbServiceName, databaseName),
             true,
-            getPath('.')
+            PathUtilities.resolve('.')
         );
         await EnvUtilities.addProjectVariableKey(projectName,
             environmentModel,
             DefaultEnvKeys.dbName(dbServiceName, databaseName),
             true,
-            getPath('.'));
-        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, DefaultEnvKeys.dbHost(dbServiceName), true, getPath('.'));
+            PathUtilities.resolve('.'));
+        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, DefaultEnvKeys.dbHost(dbServiceName), true, PathUtilities.resolve('.'));
     }
 
     private async createProject(config: AddLoopbackConfiguration): Promise<Path> {
-        await LoopbackUtilities.runCommand(getPath(APPS_DIRECTORY_NAME), `new ${config.name}`, {
+        await LoopbackUtilities.runCommand(PathUtilities.resolve(APPS_DIRECTORY_NAME), `new ${config.name}`, {
             '--yes': true,
             '--config': {
                 docker: true,
@@ -317,24 +317,24 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
                 vscode: false
             }
         });
-        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
+        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, PathUtilities.resolve('.'));
         await Promise.all([
-            FsUtilities.rm(getPath(newProject.path, 'src', '__tests__')),
-            FsUtilities.rm(getPath(newProject.path, GIT_IGNORE_FILE_NAME)),
-            FsUtilities.rm(getPath(newProject.path, 'DEVELOPING.md')),
-            FsUtilities.rm(getPath(newProject.path, 'src', 'controllers', 'ping.controller.ts')),
-            FsUtilities.updateFile(getPath(newProject.path, 'src', 'controllers', 'index.ts'), '', 'replace')
+            FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', '__tests__')),
+            FsUtilities.rm(PathUtilities.resolve(newProject.path, GIT_IGNORE_FILE_NAME)),
+            FsUtilities.rm(PathUtilities.resolve(newProject.path, 'DEVELOPING.md')),
+            FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'controllers', 'ping.controller.ts')),
+            FsUtilities.updateFile(PathUtilities.resolve(newProject.path, 'src', 'controllers', 'index.ts'), '', 'replace')
         ]);
-        const indexTs: Path = getPath(newProject.path, 'src', 'index.ts');
+        const indexTs: Path = PathUtilities.resolve(newProject.path, 'src', 'index.ts');
         await FsUtilities.replaceInFile(
             indexTs,
             'async function main(options: ApplicationConfig = {})',
-            `async function main(options: ApplicationConfig = {}): Promise<${toPascalCase(config.name)}Application>`
+            `async function main(options: ApplicationConfig = {}): Promise<${StringUtilities.toPascalCase(config.name)}Application>`
         );
         await FsUtilities.replaceInFile(
             indexTs,
             'const app = new ',
-            `const app: ${toPascalCase(config.name)}Application = new `
+            `const app: ${StringUtilities.toPascalCase(config.name)}Application = new `
         );
         await FsUtilities.replaceInFile(
             indexTs,
@@ -355,8 +355,7 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
     }
 
     private async setupTsConfig(projectName: string): Promise<void> {
-        // eslint-disable-next-line no-console
-        console.log('sets up tsconfig');
+        LogUtilities.step('Setting up the tsconfig');
         await TsConfigUtilities.updateTsConfig(
             projectName,
             {

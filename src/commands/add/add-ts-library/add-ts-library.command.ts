@@ -1,11 +1,9 @@
-
 import { BASE_TS_CONFIG_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME } from '../../../constants';
-import { CPUtilities, FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
+import { CPUtilities, FsUtilities, JsonUtilities, QuestionsFor, PathUtilities, LogUtilities } from '../../../encapsulation';
 import { EslintUtilities } from '../../../eslint';
 import { NpmPackage, NpmUtilities } from '../../../npm';
 import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
-import { getPath } from '../../../utilities';
 import { WorkspaceConfig, WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
 import { AddConfiguration, BaseAddCommand } from '../models';
 
@@ -45,22 +43,22 @@ export class AddTsLibraryCommand extends BaseAddCommand<TsLibraryConfiguration> 
         await Promise.all([
             EslintUtilities.setupProjectEslint(root, false),
             this.setupTsConfig(config, root),
-            FsUtilities.rm(getPath(root, GIT_IGNORE_FILE_NAME)),
-            FsUtilities.rm(getPath(root, 'index.html')),
-            FsUtilities.rm(getPath(root, 'public')),
-            FsUtilities.rm(getPath(root, 'src', 'counter.ts')),
-            FsUtilities.rm(getPath(root, 'src', 'style.css')),
-            FsUtilities.rm(getPath(root, 'src', 'typescript.svg')),
-            FsUtilities.rm(getPath(root, 'src', 'main.ts'))
+            FsUtilities.rm(PathUtilities.resolve(root, GIT_IGNORE_FILE_NAME)),
+            FsUtilities.rm(PathUtilities.resolve(root, 'index.html')),
+            FsUtilities.rm(PathUtilities.resolve(root, 'public')),
+            FsUtilities.rm(PathUtilities.resolve(root, 'src', 'counter.ts')),
+            FsUtilities.rm(PathUtilities.resolve(root, 'src', 'style.css')),
+            FsUtilities.rm(PathUtilities.resolve(root, 'src', 'typescript.svg')),
+            FsUtilities.rm(PathUtilities.resolve(root, 'src', 'main.ts'))
         ]);
 
-        await FsUtilities.createFile(getPath(root, 'src', 'index.ts'), '');
+        await FsUtilities.createFile(PathUtilities.resolve(root, 'src', 'index.ts'), '');
         await NpmUtilities.run(config.name, 'build', false);
         await this.installInProjects(config);
     }
 
     private async installInProjects(config: TsLibraryConfiguration): Promise<void> {
-        const projects: WorkspaceProject[] = await WorkspaceUtilities.getProjects('apps', getPath('.'));
+        const projects: WorkspaceProject[] = await WorkspaceUtilities.getProjects('apps', PathUtilities.resolve('.'));
         const npmPackage: string = `${config.scope}/${config.name}`;
         await Promise.all(projects.map((p) => NpmUtilities.install(p.name, [npmPackage as NpmPackage])));
     }
@@ -80,17 +78,16 @@ export class AddTsLibraryCommand extends BaseAddCommand<TsLibraryConfiguration> 
             extends: `../../${BASE_TS_CONFIG_FILE_NAME}`,
             include: ['src/**/*.ts', 'vite.config.ts']
         };
-        await FsUtilities.createFile(getPath(root, 'tsconfig.eslint.json'), JsonUtilities.stringify(eslintTsconfig));
+        await FsUtilities.createFile(PathUtilities.resolve(root, 'tsconfig.eslint.json'), JsonUtilities.stringify(eslintTsconfig));
     }
 
     private async createProject(config: TsLibraryConfiguration): Promise<string> {
-        // eslint-disable-next-line no-console
-        console.log('Creates the library');
+        LogUtilities.step('Creating the library');
         await CPUtilities.exec(
             `cd ${LIBS_DIRECTORY_NAME} && npm create vite@${this.VITE_VERSION} ${config.name} --yes -- --template vanilla-ts`
         );
-        const libraryPath: string = getPath(LIBS_DIRECTORY_NAME, config.name);
-        await FsUtilities.createFile(getPath(libraryPath, 'vite.config.ts'), [
+        const libraryPath: string = PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name);
+        await FsUtilities.createFile(PathUtilities.resolve(libraryPath, 'vite.config.ts'), [
             'import { defineConfig, PluginOption } from \'vite\';',
             'import path from \'path\';',
             `import dts from '${NpmPackage.VITE_PLUGIN_DTS}';`,
@@ -111,7 +108,7 @@ export class AddTsLibraryCommand extends BaseAddCommand<TsLibraryConfiguration> 
             '});'
         ]);
         await NpmUtilities.install(config.name, [NpmPackage.VITE_PLUGIN_DTS, NpmPackage.VUE_LANGUAGE_CORE], true);
-        // const originalPackageJson: PackageJson = await FsUtilities.parseFileAs(getPath(libraryPath, PACKAGE_JSON_FILE_NAME));
+        // const originalPackageJson: PackageJson = await FsUtilities.parseFileAs(PathUtilities.resolve(libraryPath, PACKAGE_JSON_FILE_NAME));
         await NpmUtilities.updatePackageJson(
             config.name,
             {

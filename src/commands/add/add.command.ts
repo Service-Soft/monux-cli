@@ -1,14 +1,14 @@
+import { InquirerUtilities } from '../../encapsulation';
+import { BaseCommand } from '../base-command.model';
 import { AddAngularCommand } from './add-angular';
 import { AddAngularLibraryCommand } from './add-angular-library';
 import { AddAngularWebsiteCommand } from './add-angular-website';
 import { AddLoopbackCommand } from './add-loopback';
+import { AddNestCommand } from './add-nest';
 import { AddTsLibraryCommand } from './add-ts-library';
 import { AddWordpressCommand } from './add-wordpress';
-import { AddConfiguration, addConfigurationQuestions, AddType } from './models';
-import { InquirerUtilities } from '../../encapsulation';
-import { BaseCommand } from '../base-command.model';
-import { AddNestCommand } from './add-nest';
 import { AddZibriCommand } from './add-zibri';
+import { AddConfiguration, addConfigurationQuestions, AddType } from './models';
 
 /**
  * Adds a new project to the current monorepo.

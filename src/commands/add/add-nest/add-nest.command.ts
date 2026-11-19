@@ -1,10 +1,9 @@
-
 import { Type } from '@nestjs/common';
 
 import { APPS_DIRECTORY_NAME, BASE_TS_CONFIG_FILE_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ESLINT_CONFIG_FILE_NAME, NEST_CLI_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, WEBPACK_CONFIG } from '../../../constants';
 import { DbType, DbUtilities, defaultPortForDbType } from '../../../db';
 import { DockerUtilities } from '../../../docker';
-import { FsUtilities, QuestionsFor } from '../../../encapsulation';
+import { FsUtilities, QuestionsFor, PathUtilities, Path, LogUtilities } from '../../../encapsulation';
 import { DefaultEnvKeys, EnvUtilities } from '../../../env';
 import { EslintUtilities } from '../../../eslint';
 import { NestUtilities } from '../../../nest';
@@ -12,7 +11,6 @@ import { NpmPackage, NpmUtilities } from '../../../npm';
 import { TsUtilities } from '../../../ts';
 import { TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
-import { getPath, Path } from '../../../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
 import { AddConfiguration, BaseAddCommand } from '../models';
 
@@ -73,7 +71,7 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
             name: 'defaultUserEmail',
             message: 'Email of the default user',
             validate: (v?: string) => !!v,
-            default: async () => (await FsUtilities.readFile(getPath(PROD_DOCKER_COMPOSE_FILE_NAME)))
+            default: async () => (await FsUtilities.readFile(PathUtilities.resolve(PROD_DOCKER_COMPOSE_FILE_NAME)))
                 .split('.acme.email=')[1]
                 .split('\n')[0]
         },
@@ -81,7 +79,7 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
             type: 'input',
             name: 'defaultUserPassword',
             message: 'Password of the default user',
-            validate: (v?: string) => v != undefined && v.length >= 12 ? true : 'Password must be at least 12 characters strong'
+            validate: (v?: string) => v != undefined && v.length >= 12 ? true : 'The password needs to be at least 12 characters long'
         },
         frontendName: {
             type: 'input',
@@ -93,17 +91,17 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
 
     override async run(): Promise<void> {
         const config: AddNestConfiguration = await this.getConfig();
-        const { dbComposeServiceName, databaseName, dbType } = await DbUtilities.configureDb(config.name, undefined, getPath('.'));
+        const { dbComposeServiceName, databaseName, dbType } = await DbUtilities.configureDb(config.name, undefined, PathUtilities.resolve('.'));
         const root: Path = await this.createProject(config);
         await EnvUtilities.setupProjectEnvironment(root, false);
         await this.createNestDatasource(dbComposeServiceName, databaseName, dbType, root, config.name);
         await this.updateMainTs(root, config.port);
 
         await Promise.all([
-            FsUtilities.rm(getPath(root, '.prettierrc')),
-            FsUtilities.rm(getPath(root, 'src', 'app.controller.ts')),
-            FsUtilities.rm(getPath(root, 'src', 'app.controller.spec.ts')),
-            FsUtilities.rm(getPath(root, 'src', 'app.service.ts')),
+            FsUtilities.rm(PathUtilities.resolve(root, '.prettierrc')),
+            FsUtilities.rm(PathUtilities.resolve(root, 'src', 'app.controller.ts')),
+            FsUtilities.rm(PathUtilities.resolve(root, 'src', 'app.controller.spec.ts')),
+            FsUtilities.rm(PathUtilities.resolve(root, 'src', 'app.service.ts')),
             EslintUtilities.setupProjectEslint(root, true, 'tsconfig.json'),
             this.setupTsConfig(config.name),
             this.updatePackageJson(config.name),
@@ -141,7 +139,7 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
 
     private async createWebpackConfig(root: Path): Promise<void> {
         await FsUtilities.createFile(
-            getPath(root, WEBPACK_CONFIG),
+            PathUtilities.resolve(root, WEBPACK_CONFIG),
             [
                 '/* eslint-disable jsdoc/require-param-description */',
                 '/* eslint-disable jsdoc/require-returns-description */',
@@ -171,7 +169,7 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
     }
 
     private async setupSwagger(root: Path, name: string): Promise<void> {
-        const mainPath: Path = getPath(root, 'src', 'main.ts');
+        const mainPath: Path = PathUtilities.resolve(root, 'src', 'main.ts');
         await TsUtilities.addBelowImports(
             mainPath,
             [
@@ -210,7 +208,7 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
 
     private async updateNestCliJson(root: Path): Promise<void> {
         await NestUtilities.updateNestCliJson(
-            getPath(root, NEST_CLI_FILE_NAME),
+            PathUtilities.resolve(root, NEST_CLI_FILE_NAME),
             {
                 compilerOptions: {
                     builder: 'webpack'
@@ -220,10 +218,9 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
     }
 
     private async createProject(config: AddNestConfiguration): Promise<Path> {
-        // eslint-disable-next-line no-console
-        console.log('Creates the base app');
+        LogUtilities.step('Creating the project');
         await NestUtilities.runCommand(
-            getPath(APPS_DIRECTORY_NAME),
+            PathUtilities.resolve(APPS_DIRECTORY_NAME),
             `new ${config.name}`,
             {
                 '--skip-git': true,
@@ -234,29 +231,28 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
                 '--no-observe': true
             }
         );
-        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
+        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, PathUtilities.resolve('.'));
 
-        await FsUtilities.mkdir(getPath(newProject.path, 'src', 'modules'));
-        await FsUtilities.mkdir(getPath(newProject.path, 'src', 'utilities'));
-        await FsUtilities.mkdir(getPath(newProject.path, 'src', 'decorators'));
-        await FsUtilities.mkdir(getPath(newProject.path, 'src', 'guards'));
-        await FsUtilities.mkdir(getPath(newProject.path, 'src', 'migrations'));
-        await FsUtilities.mkdir(getPath(newProject.path, 'src', 'assets'));
+        await FsUtilities.mkdir(PathUtilities.resolve(newProject.path, 'src', 'modules'));
+        await FsUtilities.mkdir(PathUtilities.resolve(newProject.path, 'src', 'utilities'));
+        await FsUtilities.mkdir(PathUtilities.resolve(newProject.path, 'src', 'decorators'));
+        await FsUtilities.mkdir(PathUtilities.resolve(newProject.path, 'src', 'guards'));
+        await FsUtilities.mkdir(PathUtilities.resolve(newProject.path, 'src', 'migrations'));
+        await FsUtilities.mkdir(PathUtilities.resolve(newProject.path, 'src', 'assets'));
 
-        const appModuleTs: Path = getPath(newProject.path, 'src', 'app.module.ts');
+        const appModuleTs: Path = PathUtilities.resolve(newProject.path, 'src', 'app.module.ts');
         await FsUtilities.replaceInFile(appModuleTs, '\nimport { AppController } from \'./app.controller\';', '');
         await FsUtilities.replaceInFile(appModuleTs, '\nimport { AppService } from \'./app.service\';', '');
         await FsUtilities.replaceInFile(appModuleTs, 'AppService', '');
         await FsUtilities.replaceInFile(appModuleTs, 'AppController', '');
 
-        await FsUtilities.rm(getPath(newProject.path, ESLINT_CONFIG_FILE_NAME));
+        await FsUtilities.rm(PathUtilities.resolve(newProject.path, ESLINT_CONFIG_FILE_NAME));
 
         return newProject.path;
     }
 
     private async setupTsConfig(projectName: string): Promise<void> {
-        // eslint-disable-next-line no-console
-        console.log('sets up tsconfig');
+        LogUtilities.step('Setting up the tsconfig');
         await TsConfigUtilities.updateTsConfig(
             projectName,
             {
@@ -276,8 +272,8 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
             }
         );
 
-        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName, getPath('.'));
-        const tsConfigPath: Path = getPath(project.path, 'tsconfig.build.json');
+        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName, PathUtilities.resolve('.'));
+        const tsConfigPath: Path = PathUtilities.resolve(project.path, 'tsconfig.build.json');
         await TsConfigUtilities.update(tsConfigPath, {
             compilerOptions: { rootDir: undefined }
         });
@@ -311,7 +307,7 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
     }
 
     private async updateMainTs(root: Path, port: number): Promise<void> {
-        const mainPath: Path = getPath(root, 'src', 'main.ts');
+        const mainPath: Path = PathUtilities.resolve(root, 'src', 'main.ts');
         await FsUtilities.replaceInFile(mainPath, 'env.PORT', 'env[\'PORT\']');
         await FsUtilities.replaceInFile(mainPath, '?? 3000', `?? ${port}`);
         await FsUtilities.replaceInFile(mainPath, 'async function bootstrap() {', 'async function bootstrap(): Promise<void> {');
@@ -350,7 +346,7 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
 
     private async createDockerfile(root: string, config: AddNestConfiguration): Promise<void> {
         await FsUtilities.createFile(
-            getPath(root, DOCKER_FILE_NAME),
+            PathUtilities.resolve(root, DOCKER_FILE_NAME),
             [
                 'FROM node:20 AS build',
                 '# Set to a non-root built-in user `node`',
@@ -382,7 +378,7 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
         const DB_PASSWORD_PLACEHOLDER: string = 'DB_PASSWORD_PLACEHOLDER';
         const DB_DATABASE_PLACEHOLDER: string = 'DB_DATABASE_PLACEHOLDER';
 
-        const appModuleTs: Path = getPath(root, 'src', 'app.module.ts');
+        const appModuleTs: Path = PathUtilities.resolve(root, 'src', 'app.module.ts');
         await NestUtilities.addModuleImports(
             appModuleTs,
             [
@@ -430,26 +426,26 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
             `environment.${DefaultEnvKeys.dbName(dbServiceName, databaseName)}`
         );
 
-        const environmentModel: Path = getPath(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
+        const environmentModel: Path = PathUtilities.resolve(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
         await EnvUtilities.addProjectVariableKey(
             projectName,
             environmentModel,
             DefaultEnvKeys.dbPassword(dbServiceName, databaseName),
             true,
-            getPath('.')
+            PathUtilities.resolve('.')
         );
         await EnvUtilities.addProjectVariableKey(
             projectName,
             environmentModel,
             DefaultEnvKeys.dbUser(dbServiceName, databaseName),
             true,
-            getPath('.')
+            PathUtilities.resolve('.')
         );
         await EnvUtilities.addProjectVariableKey(projectName,
             environmentModel,
             DefaultEnvKeys.dbName(dbServiceName, databaseName),
             true,
-            getPath('.'));
-        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, DefaultEnvKeys.dbHost(dbServiceName), true, getPath('.'));
+            PathUtilities.resolve('.'));
+        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, DefaultEnvKeys.dbHost(dbServiceName), true, PathUtilities.resolve('.'));
     }
 }

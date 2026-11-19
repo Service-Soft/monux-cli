@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, test } from '@jest/globals';
 
 import { FileMockUtilities, getMockConstants, MAX_INSTANT_TIME, MockConstants } from '../__testing__';
 import { FsUtilities, PathUtilities } from '../encapsulation';
-
 import { WorkspaceConfig } from './workspace-config.model';
 import { WorkspaceProject, WorkspaceUtilities } from './workspace.utilities';
 

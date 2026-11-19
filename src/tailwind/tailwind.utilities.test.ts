@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, test } from '@jest/globals';
 import { FileMockUtilities, getMockConstants, MockConstants } from '../__testing__';
 import { TAILWIND_CONFIG_FILE_NAME } from '../constants';
 import { FsUtilities, PathUtilities } from '../encapsulation';
-
 import { TailwindUtilities } from './tailwind.utilities';
 
 const mockConstants: MockConstants = getMockConstants('tailwind-utilities');

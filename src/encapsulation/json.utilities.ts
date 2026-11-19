@@ -102,10 +102,7 @@ export abstract class JsonUtilities {
 
         // Format lines: remove the calculated indentation from each line (except the first)
         const formattedLines: string[] = lines.map((line, index) => {
-            if (index === 0) {
-                return line;
-            }
-            return ' '.repeat(currentIndent) + line.slice(indentToRemove);
+            return index === 0 ? line : ' '.repeat(currentIndent) + line.slice(indentToRemove);
         });
 
         return formattedLines.join('\n');
@@ -131,10 +128,7 @@ export abstract class JsonUtilities {
                 return this.functionToTsString(value, currentIndent);
             }
             case 'object': {
-                if (Array.isArray(value)) {
-                    return this.arrayToTsString(value, currentIndent);
-                }
-                return this.objectToTsString(value, currentIndent);
+                return Array.isArray(value) ? this.arrayToTsString(value, currentIndent) : this.objectToTsString(value, currentIndent);
             }
             case 'boolean':
             case 'number':
@@ -305,11 +299,7 @@ export abstract class JsonUtilities {
         const modulePath: string | undefined = funcString.match(/require\(["'`](.*)["'`]\)/)?.[1];
         const component: string | undefined = funcString.match(/m => m\.(\w+)/)?.[1];
 
-        if (!modulePath || !component) {
-            return this.formatFunctionBody(funcString, currentIndent);
-        }
-
-        return `() => import('${modulePath}').then(m => m.${component})`;
+        return !modulePath || !component ? this.formatFunctionBody(funcString, currentIndent) : `() => import('${modulePath}').then(m => m.${component})`;
     }
 
     private static stringToTsString(value: string): string {

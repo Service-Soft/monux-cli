@@ -1,15 +1,14 @@
-import { Dirent } from 'fs';
 
 import { DATABASES_DIRECTORY_NAME, DEV_DOCKER_COMPOSE_FILE_NAME, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME } from '../constants';
 import { ComposeService, DockerComposeFileName, DockerUtilities } from '../docker';
-import { FsUtilities, InquirerUtilities, JsonUtilities, QuestionsFor } from '../encapsulation';
+import { CryptoUtilities, Dirent, FsUtilities, InquirerUtilities, JsonUtilities, PathUtilities, Path, QuestionsFor } from '../encapsulation';
 import { DefaultEnvKeys, EnvironmentVariableKey, EnvUtilities } from '../env';
-import { generatePlaceholderPassword, getPath, Path, toKebabCase, toSnakeCase } from '../utilities';
+import { OmitStrict } from '../types';
+import { StringUtilities } from '../utilities';
 import { DbType } from './db-type.enum';
 import { dbTypeQuestion } from './db-type.question';
 import { MariaDbConfig, mariaDbConfigQuestions } from './maria-db.questions';
 import { PostgresDbConfig, postgresDbConfigQuestions } from './postgres-db.questions';
-import { OmitStrict } from '../types';
 
 /**
  * Configuration for selecting a database.
@@ -70,7 +69,7 @@ export abstract class DbUtilities {
         for (const db of dbs) {
             const configs: DbInitConfig[] = await this.getInitConfigsForDb(db.name, rootDir);
             for (let i: number = 0; i < configs.length; i++) {
-                const initFileSql: Path = getPath(rootDir, DATABASES_DIRECTORY_NAME, toKebabCase(db.name), 'init', `${i}.sql`);
+                const initFileSql: Path = PathUtilities.resolve(rootDir, DATABASES_DIRECTORY_NAME, StringUtilities.toKebabCase(db.name), 'init', `${i}.sql`);
                 await FsUtilities.rm(initFileSql);
                 await this.createInitFile(configs[i], initFileSql, fileName, rootDir);
             }
@@ -130,8 +129,8 @@ export abstract class DbUtilities {
     }
 
     private static async getInitConfigsForDb(db: string, rootDir: string): Promise<DbInitConfig[]> {
-        const dbFolder: Dirent[] = await FsUtilities.readdir(getPath(rootDir, DATABASES_DIRECTORY_NAME, toKebabCase(db)));
-        const configFilePaths: Path[] = dbFolder.filter(e => e.name.endsWith('.json')).map(e => getPath(e.parentPath, e.name));
+        const dbFolder: Dirent[] = await FsUtilities.readdir(PathUtilities.resolve(rootDir, DATABASES_DIRECTORY_NAME, StringUtilities.toKebabCase(db)));
+        const configFilePaths: Path[] = dbFolder.filter(e => e.name.endsWith('.json')).map(e => PathUtilities.resolve(e.parentPath, e.name));
         return await Promise.all(configFilePaths.map(async p => await FsUtilities.parseFileAs(p)));
     }
 
@@ -163,8 +162,8 @@ export abstract class DbUtilities {
 
         if (baseDbConfig.dbComposeServiceName !== 'NEW') {
             const type: DbType = await this.getDbTypeForService(baseDbConfig.dbComposeServiceName, rootDir);
-            const user: string = `${toSnakeCase(baseDbConfig.databaseName)}_user`;
-            const password: string = generatePlaceholderPassword();
+            const user: string = `${StringUtilities.toSnakeCase(baseDbConfig.databaseName)}_user`;
+            const password: string = CryptoUtilities.generatePassword();
             await EnvUtilities.addStaticVariable({
                 key: DefaultEnvKeys.dbPassword(baseDbConfig.dbComposeServiceName, baseDbConfig.databaseName),
                 value: password,
@@ -246,13 +245,13 @@ export abstract class DbUtilities {
     }
 
     private static async addDbInitConfig(dbComposeServiceName: string, data: DbInitConfig): Promise<void> {
-        const dbFolder: string = getPath(DATABASES_DIRECTORY_NAME, toKebabCase(dbComposeServiceName));
-        await FsUtilities.mkdir(getPath(dbFolder, 'init'));
+        const dbFolder: string = PathUtilities.resolve(DATABASES_DIRECTORY_NAME, StringUtilities.toKebabCase(dbComposeServiceName));
+        await FsUtilities.mkdir(PathUtilities.resolve(dbFolder, 'init'));
 
         let created: boolean = false;
         let i: number = 0;
         while (!created) {
-            const configFile: Path = getPath(dbFolder, `${i}.json`);
+            const configFile: Path = PathUtilities.resolve(dbFolder, `${i}.json`);
             if (await FsUtilities.exists(configFile)) {
                 i++;
                 continue;
@@ -268,16 +267,16 @@ export abstract class DbUtilities {
     }
 
     private static async createMariaDbDatabase(dbServiceName: string, databaseName: string): Promise<void> {
-        const user: string = `${toSnakeCase(databaseName)}_user`;
-        const password: string = generatePlaceholderPassword();
-        const rootPassword: string = generatePlaceholderPassword();
+        const user: string = `${StringUtilities.toSnakeCase(databaseName)}_user`;
+        const password: string = CryptoUtilities.generatePassword();
+        const rootPassword: string = CryptoUtilities.generatePassword();
 
         const serviceDefinition: ComposeService = {
             name: dbServiceName,
             image: `mariadb:${this.MARIADB_VERSION}`,
             volumes: [
-                `${toKebabCase(dbServiceName)}-data:/var/lib/mysql`,
-                `./${DATABASES_DIRECTORY_NAME}/${toKebabCase(dbServiceName)}/init:/docker-entrypoint-initdb.d`
+                `${StringUtilities.toKebabCase(dbServiceName)}-data:/var/lib/mysql`,
+                `./${DATABASES_DIRECTORY_NAME}/${StringUtilities.toKebabCase(dbServiceName)}/init:/docker-entrypoint-initdb.d`
             ],
             environment: [
                 {
@@ -287,7 +286,7 @@ export abstract class DbUtilities {
             ]
         };
         await DockerUtilities.addServiceToCompose(serviceDefinition, 3306, 3306, false, false, undefined);
-        await DockerUtilities.addVolumeToComposeFiles(`${toKebabCase(dbServiceName)}-data`);
+        await DockerUtilities.addVolumeToComposeFiles(`${StringUtilities.toKebabCase(dbServiceName)}-data`);
         await DockerUtilities.addServiceToCompose(
             {
                 ...serviceDefinition,
@@ -345,23 +344,23 @@ export abstract class DbUtilities {
         });
 
         await FsUtilities.replaceInFile(
-            getPath(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
+            PathUtilities.resolve(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
             'DB_SERVICE_NAME_PLACEHOLDER',
             dbServiceName
         );
     }
 
     private static async createPostgresDatabase(dbServiceName: string, databaseName: string): Promise<void> {
-        const user: string = `${toSnakeCase(databaseName)}_user`;
-        const password: string = generatePlaceholderPassword();
-        const rootPassword: string = generatePlaceholderPassword();
+        const user: string = `${StringUtilities.toSnakeCase(databaseName)}_user`;
+        const password: string = CryptoUtilities.generatePassword();
+        const rootPassword: string = CryptoUtilities.generatePassword();
 
         const serviceDefinition: ComposeService = {
             name: dbServiceName,
             image: `postgres:${this.POSTGRES_VERSION}`,
             volumes: [
-                `${toKebabCase(dbServiceName)}-data:/var/lib/postgresql/data`,
-                `./${DATABASES_DIRECTORY_NAME}/${toKebabCase(dbServiceName)}/init:/docker-entrypoint-initdb.d`
+                `${StringUtilities.toKebabCase(dbServiceName)}-data:/var/lib/postgresql/data`,
+                `./${DATABASES_DIRECTORY_NAME}/${StringUtilities.toKebabCase(dbServiceName)}/init:/docker-entrypoint-initdb.d`
             ],
             environment: [
                 {
@@ -371,7 +370,7 @@ export abstract class DbUtilities {
             ]
         };
         await DockerUtilities.addServiceToCompose(serviceDefinition, 5432, 5432, false, false);
-        await DockerUtilities.addVolumeToComposeFiles(`${toKebabCase(dbServiceName)}-data`);
+        await DockerUtilities.addVolumeToComposeFiles(`${StringUtilities.toKebabCase(dbServiceName)}-data`);
         await DockerUtilities.addServiceToCompose(
             {
                 ...serviceDefinition,
@@ -428,16 +427,13 @@ export abstract class DbUtilities {
             }
         });
         await FsUtilities.replaceInFile(
-            getPath(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
+            PathUtilities.resolve(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
             'DB_SERVICE_NAME_PLACEHOLDER',
             dbServiceName
         );
     }
 
     private static isDatabaseService(service: ComposeService): boolean {
-        if (!service.image) {
-            return false;
-        }
-        return !(Object.values(DbType).find(t => !!service.image && service.image.startsWith(t)) == undefined);
+        return !service.image ? false : !(Object.values(DbType).find(t => !!service.image && service.image.startsWith(t)) == undefined);
     }
 }

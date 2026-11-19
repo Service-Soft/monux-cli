@@ -1,13 +1,12 @@
 /* eslint-disable jsdoc/require-jsdoc */
-import { PrepareConfig, prepareConfigQuestions } from './prepare-config.model';
 import { DbUtilities } from '../../db';
 import { DockerComposeFileName } from '../../docker';
-import { InquirerUtilities } from '../../encapsulation';
+import { InquirerUtilities, ProcessUtilities, PathUtilities } from '../../encapsulation';
 import { EnvUtilities, EnvValidationErrorMessage } from '../../env';
 import { RobotsUtilities } from '../../robots';
 import { KeyValue } from '../../types';
-import { exitWithError, getPath } from '../../utilities';
 import { BaseCommand } from '../base-command.model';
+import { PrepareConfig, prepareConfigQuestions } from './prepare-config.model';
 
 export class PrepareCommand extends BaseCommand<PrepareConfig> {
     protected override readonly insideWorkspace: boolean = true;
@@ -23,15 +22,15 @@ export class PrepareCommand extends BaseCommand<PrepareConfig> {
 
         return {
             fileName,
-            rootDir: getPath('.')
+            rootDir: PathUtilities.resolve('.')
         };
     }
 
     private async buildEnv(fileName: DockerComposeFileName, rootDir: string): Promise<void> {
         const validationErrors: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(rootDir);
         if (validationErrors.length) {
-            await exitWithError(
-                'Error when validating the .env file:\n'
+            await ProcessUtilities.exitWithError(
+                'The environment is not valid:\n'
                 + validationErrors.map(e => `\t${e.key}: ${e.value}`).join('\n')
             );
         }

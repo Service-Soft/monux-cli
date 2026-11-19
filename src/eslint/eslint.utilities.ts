@@ -1,8 +1,6 @@
-
 import { ESLINT_CONFIG_FILE_NAME, PACKAGE_JSON_FILE_NAME } from '../constants';
-import { FsUtilities } from '../encapsulation';
+import { FsUtilities, PathUtilities } from '../encapsulation';
 import { NpmPackage, NpmUtilities } from '../npm';
-import { getPath } from '../utilities';
 
 /**
  * Utilities for eslint.
@@ -21,7 +19,7 @@ export abstract class EslintUtilities {
     ): Promise<void> {
         const baseEslintConfigPath: string = '../../eslint.config.mjs';
         await NpmUtilities.updatePackageJsonFile(
-            getPath(root, PACKAGE_JSON_FILE_NAME),
+            PathUtilities.resolve(root, PACKAGE_JSON_FILE_NAME),
             {
                 scripts: {
                     lint: 'eslint . --max-warnings 0',
@@ -30,7 +28,7 @@ export abstract class EslintUtilities {
             }
         );
         await FsUtilities.createFile(
-            getPath(root, ESLINT_CONFIG_FILE_NAME),
+            PathUtilities.resolve(root, ESLINT_CONFIG_FILE_NAME),
             [
                 `import { cspellOptions } from '${NpmPackage.ESLINT_CONFIG_SERVICE_SOFT}';`,
                 `import baseConfig from '${baseEslintConfigPath}';`,

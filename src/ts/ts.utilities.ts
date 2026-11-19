@@ -1,5 +1,4 @@
-import { FileLine, FsUtilities, JsonUtilities } from '../encapsulation';
-import { Path } from '../utilities';
+import { FileLine, FsUtilities, JsonUtilities, Path } from '../encapsulation';
 import { TsImportDefinition } from './ts-import-definition.model';
 
 /**
@@ -289,9 +288,6 @@ export abstract class TsUtilities {
         if (imp.defaultImport) {
             return existingImport.replace('{', `${imp.element}, {`);
         }
-        if (existingImport.includes('{')) {
-            return existingImport.replace('import {', `import { ${imp.element},`);
-        }
-        return existingImport.replace('import ', `import { ${imp.element} }, `);
+        return existingImport.includes('{') ? existingImport.replace('import {', `import { ${imp.element},`) : existingImport.replace('import ', `import { ${imp.element} }, `);
     }
 }

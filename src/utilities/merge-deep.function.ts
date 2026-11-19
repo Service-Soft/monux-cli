@@ -28,5 +28,5 @@ export function mergeDeep<T>(
                 : sourceValue as T[keyof T];
         }
     }
-    return target as T;
+    return target;
 }

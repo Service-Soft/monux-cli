@@ -1,12 +1,9 @@
-import path from 'path';
-
 import { CLI_BASE_COMMAND } from '../../constants';
-import { DockerLabel, FullyParsedDockerService, isDockerComposeFileName } from '../../docker';
-import { getDockerServices } from '../../docker/get-docker-services.function';
-import { ChalkUtilities, CliTable, CliTableUtilities } from '../../encapsulation';
+import { DockerLabel, DockerUtilities, FullyParsedDockerService, isDockerComposeFileName } from '../../docker';
+import { ChalkUtilities, CliTable, CliTableUtilities, LogUtilities, PathUtilities } from '../../encapsulation';
+import { EnvValue, envValueForDockerComposeFileName } from '../../env';
 import { BaseCommand } from '../base-command.model';
 import { DockerServiceStatus } from './docker-service-status.model';
-import { EnvValue, envValueForDockerComposeFileName } from '../../env';
 
 /**
  * Lists the docker services grouped by their monorepo.
@@ -17,25 +14,23 @@ export class ListCommand extends BaseCommand {
     }
 
     protected override async run(): Promise<void> {
-        const services: FullyParsedDockerService[] = await getDockerServices(this.all);
+        const services: FullyParsedDockerService[] = await DockerUtilities.findServices(this.all);
         if (!services.length) {
-        // eslint-disable-next-line no-console
-            console.log('No running services found.');
+            LogUtilities.text(this.all ? 'No services found.' : 'No running services found.');
             if (!this.all) {
-            // eslint-disable-next-line no-console, sonar/no-nested-template-literals
-                console.log(`You can call ${ChalkUtilities.secondary(`${CLI_BASE_COMMAND} la`)} to also see stopped services.`);
+                // eslint-disable-next-line sonar/no-nested-template-literals
+                LogUtilities.text(`Run ${ChalkUtilities.exampleUsage(`${CLI_BASE_COMMAND} la`)} to also see stopped services.`);
             }
-            // eslint-disable-next-line no-console
-            console.log();
+            LogUtilities.newLine();
         }
         const grouped: Record<string, FullyParsedDockerService[]> = this.groupByMonorepo(services);
 
         for (const key in grouped) {
-            const services: FullyParsedDockerService[] = grouped[key];
+            const servicesOfMonorepo: FullyParsedDockerService[] = grouped[key];
             const data: CliTable = {
                 title: key,
                 headers: ['Name', 'Type', 'Status', 'environment'],
-                rows: services.map(s => {
+                rows: servicesOfMonorepo.map(s => {
                     const { label, color } = this.getStatus(s);
                     return [
                         this.getName(s, color),
@@ -55,10 +50,9 @@ export class ListCommand extends BaseCommand {
             const exitCode: string = s.Status.split('Exited (')[1].split(')')[0];
             const time: string = s.Status.split(') ')[1];
 
-            if (exitCode === '0') {
-                return { label: `Stopped (${time})`, color: undefined };
-            }
-            return { label: ChalkUtilities.error(`Crashed (${time}) with ${exitCode}`), color: 'error' };
+            return exitCode === '0'
+                ? { label: `Stopped (${time})`, color: undefined }
+                : { label: ChalkUtilities.error(`Crashed (${time}) with ${exitCode}`), color: 'error' };
         }
 
         if (s.Status.startsWith('Up')) {
@@ -99,11 +93,10 @@ export class ListCommand extends BaseCommand {
                 }
             }
         }
-        const fileName: string = path.basename(dockerFile);
+        const fileName: string = PathUtilities.getName(dockerFile);
         const res: EnvValue | '-' = isDockerComposeFileName(fileName) ? envValueForDockerComposeFileName[fileName] : '-';
         if (res === '-') {
-            // eslint-disable-next-line no-console
-            console.error(ChalkUtilities.error('Could not determine environment for the docker compose file', fileName));
+            LogUtilities.warning(`Could not determine the environment of the docker compose file "${fileName}"`);
         }
 
         switch (color) {

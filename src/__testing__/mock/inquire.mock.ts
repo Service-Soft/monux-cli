@@ -1,5 +1,5 @@
 /* eslint-disable jsdoc/require-jsdoc */
-import { Question } from 'inquirer';
+import { Question } from '../../encapsulation';
 
 // eslint-disable-next-line typescript/no-explicit-any
 export function inquireMock(answers: Record<string, unknown>): (question: Question) => Promise<any> {

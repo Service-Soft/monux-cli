@@ -1,7 +1,7 @@
-import { exitWithError } from '../utilities';
+import { ProcessUtilities } from '../encapsulation';
 import { WorkspaceConfig, WorkspaceUtilities } from '../workspace';
 
-const TOO_MANY_ARGUMENTS_ERROR_MESSAGE: string = 'Error parsing the command: Too many arguments.';
+const TOO_MANY_ARGUMENTS_ERROR_MESSAGE: string = 'The command was given too many arguments.';
 
 /**
  * Contains configuration shared by every cli command of Monux.
@@ -61,7 +61,7 @@ export abstract class BaseCommand<Input extends object = {}> {
         const config: WorkspaceConfig | undefined = await WorkspaceUtilities.getConfig();
         // eslint-disable-next-line typescript/strict-boolean-expressions
         if (!config?.isWorkspace) {
-            await exitWithError('This command can only be run inside a workspace');
+            await ProcessUtilities.exitWithError('This command needs to be run inside a workspace.');
         }
     }
 
@@ -74,7 +74,7 @@ export abstract class BaseCommand<Input extends object = {}> {
             return;
         }
         if (args.length > this.maxLength) {
-            await exitWithError(TOO_MANY_ARGUMENTS_ERROR_MESSAGE);
+            await ProcessUtilities.exitWithError(TOO_MANY_ARGUMENTS_ERROR_MESSAGE);
         }
     }
 }

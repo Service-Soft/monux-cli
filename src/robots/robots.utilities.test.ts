@@ -4,7 +4,6 @@ import { FileMockUtilities, getMockConstants, MockConstants } from '../__testing
 import { APPS_DIRECTORY_NAME, ROBOTS_FILE_NAME } from '../constants';
 import { FsUtilities, PathUtilities } from '../encapsulation';
 import { DefaultEnvKeys, EnvUtilities, EnvValue } from '../env';
-
 import { RobotsUtilities } from './robots.utilities';
 
 const mockConstants: MockConstants = getMockConstants('robots-utilities');

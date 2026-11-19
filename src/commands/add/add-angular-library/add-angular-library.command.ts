@@ -1,20 +1,20 @@
-import { buttonComponentHtmlContent } from './button-component-html.content';
-import { buttonComponentTsContent } from './button-component-ts.content';
-import { buttonStoriesTsContent } from './button-stories-ts.content';
-import { storybookMainTsContent } from './storybook-main-ts.content';
 import { AngularUtilities } from '../../../angular';
 import { ANGULAR_JSON_FILE_NAME, BASE_TS_CONFIG_FILE_NAME, ESLINT_CONFIG_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, PACKAGE_JSON_FILE_NAME } from '../../../constants';
-import { FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
+import { FsUtilities, JsonUtilities, QuestionsFor, PathUtilities, Path, LogUtilities } from '../../../encapsulation';
 import { EslintUtilities } from '../../../eslint';
 import { NpmUtilities, PackageJson } from '../../../npm';
 import { StorybookUtilities } from '../../../storybook';
 import { TailwindUtilities } from '../../../tailwind';
 import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
-import { getPath, mergeDeep, Path } from '../../../utilities';
+import { mergeDeep } from '../../../utilities';
 import { WorkspaceConfig, WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
 import { BaseAddCommand } from '../models';
 import { AddConfiguration } from '../models/add-configuration.model';
+import { buttonComponentHtmlContent } from './button-component-html.content';
+import { buttonComponentTsContent } from './button-component-ts.content';
+import { buttonStoriesTsContent } from './button-stories-ts.content';
+import { storybookMainTsContent } from './storybook-main-ts.content';
 
 /**
  * Configuration for adding a new angular library.
@@ -57,19 +57,19 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
         const result: CreateResult = await this.createProject(config);
         await EslintUtilities.setupProjectEslint(result.root, false);
         await Promise.all([
-            FsUtilities.rm(getPath(result.root, '.vscode')),
-            FsUtilities.rm(getPath(result.root, '.editorconfig')),
-            FsUtilities.rm(getPath(result.root, GIT_IGNORE_FILE_NAME)),
-            FsUtilities.rm(getPath(result.root, 'src', 'lib')),
+            FsUtilities.rm(PathUtilities.resolve(result.root, '.vscode')),
+            FsUtilities.rm(PathUtilities.resolve(result.root, '.editorconfig')),
+            FsUtilities.rm(PathUtilities.resolve(result.root, GIT_IGNORE_FILE_NAME)),
+            FsUtilities.rm(PathUtilities.resolve(result.root, 'src', 'lib')),
             this.updateNgPackageJson(result.root),
             this.updateAngularJson(result.root, config.name),
             this.setupTsConfig(result.root, config),
             this.updatePackageJson(result, config.name),
             this.setupTailwind(result.root)
         ]);
-        await FsUtilities.rm(getPath(result.root, 'projects'));
+        await FsUtilities.rm(PathUtilities.resolve(result.root, 'projects'));
         await FsUtilities.replaceInFile(
-            getPath(result.root, ESLINT_CONFIG_FILE_NAME),
+            PathUtilities.resolve(result.root, ESLINT_CONFIG_FILE_NAME),
             '    ...baseConfig,',
             [
                 '    ...baseConfig,',
@@ -85,7 +85,7 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
 
     private async setupTailwind(root: string): Promise<void> {
         await TailwindUtilities.setupProjectTailwind(root);
-        await FsUtilities.createFile(getPath(root, 'src', 'styles.css'), [
+        await FsUtilities.createFile(PathUtilities.resolve(root, 'src', 'styles.css'), [
             '@tailwind base;',
             '@tailwind components;',
             '@tailwind utilities;'
@@ -102,59 +102,56 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
     }
 
     private async createProject(config: AddAngularLibraryConfiguration): Promise<CreateResult> {
-        // eslint-disable-next-line no-console
-        console.log('Creates a temporary angular workspace');
+        LogUtilities.step('Creating a temporary Angular workspace');
         await AngularUtilities.runCommand(
-            getPath(LIBS_DIRECTORY_NAME),
+            PathUtilities.resolve(LIBS_DIRECTORY_NAME),
             `new ${config.name}`,
             { '--no-create-application': true, '--ai-config': 'none', '--zoneless': false }
         );
-        // eslint-disable-next-line no-console
-        console.log('Creates the base library');
+        LogUtilities.step('Creating the library');
         await AngularUtilities.runCommand(
-            getPath(LIBS_DIRECTORY_NAME, config.name),
+            PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name),
             `generate library ${config.name}`,
             {}
         );
 
-        // eslint-disable-next-line no-console
-        console.log('Sets up the storybook');
-        await StorybookUtilities.setup(getPath(LIBS_DIRECTORY_NAME, config.name));
+        LogUtilities.step('Setting up Storybook');
+        await StorybookUtilities.setup(PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name));
 
         const oldPackageJson: PackageJson = await FsUtilities.parseFileAs(
-            getPath(LIBS_DIRECTORY_NAME, config.name, 'projects', config.name, PACKAGE_JSON_FILE_NAME)
+            PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name, 'projects', config.name, PACKAGE_JSON_FILE_NAME)
         );
 
         await FsUtilities.moveDirectoryContent(
-            getPath(LIBS_DIRECTORY_NAME, config.name, 'projects', config.name),
-            getPath(LIBS_DIRECTORY_NAME, config.name),
+            PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name, 'projects', config.name),
+            PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name),
             [PACKAGE_JSON_FILE_NAME]
         );
         await FsUtilities.replaceAllInFile(
-            getPath(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME),
+            PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME),
             `projects/${config.name}/`,
             ''
         );
         await FsUtilities.replaceAllInFile(
-            getPath(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME),
+            PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME),
             '"-d",',
             ''
         );
         await FsUtilities.replaceAllInFile(
-            getPath(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME),
+            PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME),
             `"projects/${config.name}"`,
             ''
         );
         await FsUtilities.replaceAllInFile(
-            getPath(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME),
+            PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME),
             '"json",',
             '"json"'
         );
-        await FsUtilities.replaceInFile(getPath(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME), '"root": ,', '"root": "./",');
+        await FsUtilities.replaceInFile(PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME), '"root": ,', '"root": "./",');
 
-        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
+        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, PathUtilities.resolve('.'));
         await AngularUtilities.updateAngularJson(
-            getPath(newProject.path, ANGULAR_JSON_FILE_NAME),
+            PathUtilities.resolve(newProject.path, ANGULAR_JSON_FILE_NAME),
             {
                 projects: {
                     [newProject.name]: {
@@ -179,7 +176,7 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
         );
 
         await FsUtilities.updateFile(
-            getPath(newProject.path, '.storybook', 'main.ts'),
+            PathUtilities.resolve(newProject.path, '.storybook', 'main.ts'),
             storybookMainTsContent,
             'replace'
         );
@@ -192,44 +189,43 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
     }
 
     private async createDefaultFiles(newProject: WorkspaceProject): Promise<void> {
-        await FsUtilities.updateFile(getPath(newProject.path, 'src', 'public-api.ts'), 'export * from \'./stories\';', 'replace');
+        await FsUtilities.updateFile(PathUtilities.resolve(newProject.path, 'src', 'public-api.ts'), 'export * from \'./stories\';', 'replace');
         await FsUtilities.createFile(
-            getPath(newProject.path, 'src', 'stories', 'index.ts'),
+            PathUtilities.resolve(newProject.path, 'src', 'stories', 'index.ts'),
             'export * from \'./button/button.component\';'
         );
         await FsUtilities.createFile(
-            getPath(newProject.path, 'src', 'stories', 'button', 'button.component.ts'),
+            PathUtilities.resolve(newProject.path, 'src', 'stories', 'button', 'button.component.ts'),
             buttonComponentTsContent
         );
         await FsUtilities.createFile(
-            getPath(newProject.path, 'src', 'stories', 'button', 'button.component.html'),
+            PathUtilities.resolve(newProject.path, 'src', 'stories', 'button', 'button.component.html'),
             buttonComponentHtmlContent
         );
         await FsUtilities.createFile(
-            getPath(newProject.path, 'src', 'stories', 'button', 'button.stories.ts'),
+            PathUtilities.resolve(newProject.path, 'src', 'stories', 'button', 'button.stories.ts'),
             buttonStoriesTsContent
         );
     }
 
     private async cleanup(newProject: WorkspaceProject): Promise<void> {
-        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', '.eslintrc.json'));
-        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'button.component.ts'));
-        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'button.css'));
-        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'button.stories.ts'));
-        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'header.component.ts'));
-        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'header.css'));
-        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'header.stories.ts'));
-        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'page.component.ts'));
-        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'page.css'));
-        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'page.stories.ts'));
-        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'user.ts'));
-        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'Configure.mdx'));
-        await FsUtilities.rm(getPath(newProject.path, 'src', 'stories', 'assets'));
+        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', '.eslintrc.json'));
+        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'button.component.ts'));
+        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'button.css'));
+        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'button.stories.ts'));
+        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'header.component.ts'));
+        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'header.css'));
+        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'header.stories.ts'));
+        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'page.component.ts'));
+        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'page.css'));
+        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'page.stories.ts'));
+        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'user.ts'));
+        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'Configure.mdx'));
+        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'assets'));
     }
 
     private async setupTsConfig(root: Path, config: AddAngularLibraryConfiguration): Promise<void> {
-        // eslint-disable-next-line no-console
-        console.log('sets up tsconfig');
+        LogUtilities.step('Setting up the tsconfig');
 
         await Promise.all([
             TsConfigUtilities.updateTsConfig(config.name, { extends: `../../${BASE_TS_CONFIG_FILE_NAME}` }),
@@ -251,7 +247,7 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
     }
 
     private async updateTsConfigLib(root: Path): Promise<void> {
-        const tsconfigPath: Path = getPath(root, 'tsconfig.lib.json');
+        const tsconfigPath: Path = PathUtilities.resolve(root, 'tsconfig.lib.json');
         const oldConfig: TsConfig = await FsUtilities.parseFileAs(tsconfigPath);
         const config: TsConfig = mergeDeep(oldConfig, {
             extends: './tsconfig.json',
@@ -263,7 +259,7 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
     }
 
     private async updateTsConfigSpec(root: string): Promise<void> {
-        const tsconfigPath: Path = getPath(root, 'tsconfig.spec.json');
+        const tsconfigPath: Path = PathUtilities.resolve(root, 'tsconfig.spec.json');
         const oldConfig: TsConfig = await FsUtilities.parseFileAs(tsconfigPath);
         const config: TsConfig = mergeDeep(oldConfig, {
             extends: './tsconfig.json',
@@ -289,11 +285,11 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
                 '.storybook/*.ts'
             ]
         };
-        await FsUtilities.createFile(getPath(root, 'tsconfig.eslint.json'), JsonUtilities.stringify(eslintTsconfig));
+        await FsUtilities.createFile(PathUtilities.resolve(root, 'tsconfig.eslint.json'), JsonUtilities.stringify(eslintTsconfig));
     }
 
     private async updateNgPackageJson(root: string): Promise<void> {
-        await AngularUtilities.updateNgPackageJson(getPath(root, 'ng-package.json'), {
+        await AngularUtilities.updateNgPackageJson(PathUtilities.resolve(root, 'ng-package.json'), {
             $schema: './node_modules/ng-packagr/ng-package.schema.json',
             dest: './dist/ui',
             lib: {
@@ -303,7 +299,7 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
     }
 
     private async updateAngularJson(root: string, projectName: string): Promise<void> {
-        await AngularUtilities.updateAngularJson(getPath(root, ANGULAR_JSON_FILE_NAME), {
+        await AngularUtilities.updateAngularJson(PathUtilities.resolve(root, ANGULAR_JSON_FILE_NAME), {
             $schema: '../../node_modules/@angular/cli/lib/config/schema.json',
             newProjectRoot: './',
             projects: {

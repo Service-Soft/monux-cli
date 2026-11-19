@@ -1,10 +1,8 @@
-
 import { DEV_DOCKER_COMPOSE_FILE_NAME, ENV_FILE_NAME, ENV_PUBLIC_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME, LOCAL_DOCKER_COMPOSE_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, STAGE_DOCKER_COMPOSE_FILE_NAME } from '../constants';
 import { DockerComposeFileName } from '../docker';
-import { FileLine, FsUtilities, JsonUtilities } from '../encapsulation';
+import { FileLine, FsUtilities, JsonUtilities, PathUtilities, Path } from '../encapsulation';
 import { ParseObjectResult, TsUtilities } from '../ts';
 import { KeyValue, OmitStrict } from '../types';
-import { getPath, Path } from '../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../workspace';
 import { DefaultEnvKeys } from './default-environment-keys';
 import { EnvironmentVariableKey } from './environment-variable-key.model';
@@ -98,12 +96,12 @@ export abstract class EnvUtilities {
         fileName: DockerComposeFileName,
         rootDir: string
     ): Promise<void> {
-        const environmentFolder: string = getPath(app.path, 'src', 'environment');
+        const environmentFolder: string = PathUtilities.resolve(app.path, 'src', 'environment');
         const variableKeys: EnvironmentVariableKey[] = await this.getProjectVariableKeys(
-            getPath(environmentFolder, ENVIRONMENT_MODEL_TS_FILE_NAME)
+            PathUtilities.resolve(environmentFolder, ENVIRONMENT_MODEL_TS_FILE_NAME)
         );
 
-        await FsUtilities.rm(getPath(environmentFolder, ENVIRONMENT_TS_FILE_NAME));
+        await FsUtilities.rm(PathUtilities.resolve(environmentFolder, ENVIRONMENT_TS_FILE_NAME));
         await this.createProjectEnvironmentFile(app.path, variableKeys, failOnMissingVariable, fileName, rootDir);
     }
 
@@ -156,7 +154,7 @@ export abstract class EnvUtilities {
      */
     static async setupProjectEnvironment(projectPath: string, disableCommentRule: boolean): Promise<void> {
         await FsUtilities.createFile(
-            getPath(projectPath, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
+            PathUtilities.resolve(projectPath, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
             [
                 // eslint-disable-next-line stylistic/max-len
                 (disableCommentRule ? '/* eslint-disable jsdoc/require-jsdoc */\n' : '') + 'import { GlobalEnvironment } from \'../../../../global-environment.model\';',
@@ -185,7 +183,7 @@ export abstract class EnvUtilities {
     ): Promise<void> {
         const variables: EnvVariable[] = await this.getEnvVariables(variableKeys, failOnMissingVariable, fileName, rootDir);
         await FsUtilities.createFile(
-            getPath(projectPath, 'src', 'environment', ENVIRONMENT_TS_FILE_NAME),
+            PathUtilities.resolve(projectPath, 'src', 'environment', ENVIRONMENT_TS_FILE_NAME),
             [
                 '/* eslint-disable cspell/spellchecker */',
                 'import { Environment } from \'./environment.model\';',
@@ -239,12 +237,12 @@ export abstract class EnvUtilities {
         }
 
         const staticVariableDefinitions: OmitStrict<EnvVariable, 'value'>[] = await this.getVariableDefinitions(
-            getPath(rootDir, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
+            PathUtilities.resolve(rootDir, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
             // eslint-disable-next-line sonar/no-duplicate-string
             'StaticGlobalEnvironment = {'
         );
         const calculatedVariableDefinitions: OmitStrict<EnvVariable, 'value'>[] = await this.getVariableDefinitions(
-            getPath(rootDir, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
+            PathUtilities.resolve(rootDir, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
             // eslint-disable-next-line sonar/no-duplicate-string
             'CalculatedGlobalEnvironment = {'
         );
@@ -276,7 +274,7 @@ export abstract class EnvUtilities {
         const staticVariableObject: Record<string, EnvValue> = staticVariables.reduce((p, c) => p = { ...p, [c.key]: c.value }, {});
 
         const calculatedVariableDefinitions: OmitStrict<EnvVariable, 'value'>[] = await this.getVariableDefinitions(
-            getPath(rootDir, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
+            PathUtilities.resolve(rootDir, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
             'CalculatedGlobalEnvironment = {'
         );
 
@@ -285,7 +283,7 @@ export abstract class EnvUtilities {
                 string,
                 (env: Record<string, EnvValue>, fileName: DockerComposeFileName) => EnvValue
             >
-        > = await TsUtilities.getObjectStartingWith(getPath(rootDir, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME), '> = {');
+        > = await TsUtilities.getObjectStartingWith(PathUtilities.resolve(rootDir, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME), '> = {');
 
         const res: EnvVariable[] = [];
         for (const key in definition.result) {
@@ -330,11 +328,11 @@ export abstract class EnvUtilities {
         rootDir: string
     ): Promise<EnvVariable[]> {
         const lines: string[] = [
-            ...await FsUtilities.readFileLines(getPath(rootDir, ENV_FILE_NAME)),
-            ...await FsUtilities.readFileLines(getPath(rootDir, ENV_PUBLIC_FILE_NAME))
+            ...await FsUtilities.readFileLines(PathUtilities.resolve(rootDir, ENV_FILE_NAME)),
+            ...await FsUtilities.readFileLines(PathUtilities.resolve(rootDir, ENV_PUBLIC_FILE_NAME))
         ];
         const staticVariableDefinitions: OmitStrict<EnvVariable, 'value'>[] = await this.getVariableDefinitions(
-            getPath(rootDir, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
+            PathUtilities.resolve(rootDir, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
             'StaticGlobalEnvironment = {'
         );
         const res: EnvVariable[] = [];
@@ -404,7 +402,7 @@ export abstract class EnvUtilities {
 
     private static async createGlobalEnvironmentModel(): Promise<void> {
         await FsUtilities.createFile(
-            getPath(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
+            PathUtilities.resolve(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
             [
                 '/**',
                 '* Defines all static environment variables that need to be set in the .env-file.',
@@ -470,11 +468,11 @@ export abstract class EnvUtilities {
         basicAuthUser: string,
         basicAuthPassword: string
     ): Promise<void> {
-        await FsUtilities.createFile(getPath(ENV_FILE_NAME), [
+        await FsUtilities.createFile(PathUtilities.resolve(ENV_FILE_NAME), [
             `${DefaultEnvKeys.BASIC_AUTH_USER}=${basicAuthUser}`,
             `${DefaultEnvKeys.BASIC_AUTH_PASSWORD}=${basicAuthPassword}`
         ]);
-        await FsUtilities.createFile(getPath(ENV_PUBLIC_FILE_NAME), [
+        await FsUtilities.createFile(PathUtilities.resolve(ENV_PUBLIC_FILE_NAME), [
             `${DefaultEnvKeys.PROD_ROOT_DOMAIN}=${prodRootDomain}`,
             `${DefaultEnvKeys.STAGE_ROOT_DOMAIN}=${stageRootDomain}`
         ]);
@@ -486,7 +484,7 @@ export abstract class EnvUtilities {
      * @returns An array of error messages mapped to the keys that caused them.
      */
     static async validate(rootDir: string): Promise<KeyValue<EnvValidationErrorMessage>[]> {
-        if (!await FsUtilities.exists(getPath(rootDir, ENV_FILE_NAME))) {
+        if (!await FsUtilities.exists(PathUtilities.resolve(rootDir, ENV_FILE_NAME))) {
             return [
                 {
                     key: ENV_FILE_NAME,
@@ -494,7 +492,7 @@ export abstract class EnvUtilities {
                 }
             ];
         }
-        if (!await FsUtilities.exists(getPath(rootDir, ENV_PUBLIC_FILE_NAME))) {
+        if (!await FsUtilities.exists(PathUtilities.resolve(rootDir, ENV_PUBLIC_FILE_NAME))) {
             return [
                 {
                     key: ENV_PUBLIC_FILE_NAME,
@@ -506,7 +504,7 @@ export abstract class EnvUtilities {
         const envValues: EnvVariable[] = await this.getStaticEnvVariables(undefined, true, rootDir);
 
         const staticVariableDefinitions: OmitStrict<EnvVariable, 'value'>[] = await this.getVariableDefinitions(
-            getPath(rootDir, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
+            PathUtilities.resolve(rootDir, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
             'StaticGlobalEnvironment = {'
         );
 
@@ -568,8 +566,8 @@ export abstract class EnvUtilities {
      * @param isPublic - Whether or not the variable should be public (checked into git).
      */
     static async addStaticVariable(variable: EnvVariable, isPublic: boolean): Promise<void> {
-        const environmentFilePath: Path = getPath(ENV_FILE_NAME);
-        const publicEnvironmentFilePath: Path = getPath(ENV_PUBLIC_FILE_NAME);
+        const environmentFilePath: Path = PathUtilities.resolve(ENV_FILE_NAME);
+        const publicEnvironmentFilePath: Path = PathUtilities.resolve(ENV_PUBLIC_FILE_NAME);
         if ((await FsUtilities.readFile(environmentFilePath)).includes(`${variable.key}=`)) {
             throw new Error(`The variable ${variable.key} has already been set.`);
         }
@@ -583,7 +581,7 @@ export abstract class EnvUtilities {
             'append'
         );
 
-        const environmentModelFilePath: Path = getPath(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
+        const environmentModelFilePath: Path = PathUtilities.resolve(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
 
         const lines: string[] = await FsUtilities.readFileLines(environmentModelFilePath);
         const firstLine: FileLine = await FsUtilities.findLineWithContent(lines, 'StaticGlobalEnvironment = {');
@@ -616,7 +614,7 @@ export abstract class EnvUtilities {
      * @param variable - The variable to add.
      */
     static async addCalculatedVariable(variable: CalculatedEnvVariable): Promise<void> {
-        const environmentModelFilePath: Path = getPath(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
+        const environmentModelFilePath: Path = PathUtilities.resolve(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
         if ((await FsUtilities.readFile(environmentModelFilePath)).includes(`${variable.key}: `)) {
             throw new Error(`The variable ${variable.key} has already been set.`);
         }

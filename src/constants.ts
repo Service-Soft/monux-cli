@@ -1,5 +1,5 @@
 import { Command } from './commands/command.enum';
-import { ChalkUtilities } from './encapsulation';
+import { ChalkUtilities } from './encapsulation/chalk.utilities';
 
 /**
  * The base command of the cli.
@@ -169,6 +169,6 @@ export const VITE_CONFIG: string = 'vite.config.ts';
 /**
  * The message to notify the user of the help command.
  */
-export const MORE_INFORMATION_MESSAGE: string = `run ${ChalkUtilities.secondary(
+export const MORE_INFORMATION_MESSAGE: string = `Run ${ChalkUtilities.secondary(
     `${CLI_BASE_COMMAND} ${Command.HELP}`
 )} for more information.`;

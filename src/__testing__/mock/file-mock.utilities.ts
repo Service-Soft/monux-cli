@@ -1,11 +1,10 @@
 /* eslint-disable jsdoc/require-jsdoc */
-import { MockConstants, FileMockConstants, DirMockConstants } from './constants';
 import { AngularJson } from '../../angular';
-import { CPUtilities, FsUtilities, JsonUtilities } from '../../encapsulation';
+import { CPUtilities, FsUtilities, JsonUtilities, PathUtilities } from '../../encapsulation';
 import { EnvUtilities } from '../../env';
 import { TsConfigUtilities } from '../../tsconfig';
-import { getPath } from '../../utilities';
 import { WorkspaceUtilities } from '../../workspace';
+import { MockConstants, FileMockConstants, DirMockConstants } from './constants';
 
 export const defaultFilesToMock: (keyof FileMockConstants)[] = [
     'WORKSPACE_JSON',
@@ -72,7 +71,7 @@ export abstract class FileMockUtilities {
 
     private static async mockFolders(foldersToMock: (keyof DirMockConstants)[], mockConstants: MockConstants): Promise<void> {
         for (const entry of foldersToMock) {
-            await FsUtilities.mkdir(mockConstants[entry], true, false);
+            await FsUtilities.mkdir(mockConstants[entry], true);
         }
     }
 
@@ -97,14 +96,14 @@ export abstract class FileMockUtilities {
         content: string | string[] | undefined
     ): Promise<void> {
         if (hasContentOverride) {
-            await FsUtilities.createFile(getPath(mockConstants[entry]), content ?? '', true, false);
+            await FsUtilities.createFile(PathUtilities.resolve(mockConstants[entry]), content ?? '', true);
             return;
         }
         await this.mockMethodForFile[entry](mockConstants, entry);
     }
 
     private static async createEmptyFile(mockConstants: MockConstants, entry: keyof MockConstants): Promise<void> {
-        await FsUtilities.createFile(getPath(mockConstants[entry]), '', true, false);
+        await FsUtilities.createFile(PathUtilities.resolve(mockConstants[entry]), '', true);
     }
 
     private static async createAngularJson(mockConstants: MockConstants): Promise<void> {
@@ -140,7 +139,7 @@ export abstract class FileMockUtilities {
     }
 
     private static async createAngularPackageJson(mockConstants: MockConstants): Promise<void> {
-        await FsUtilities.createFile(mockConstants.ANGULAR_PACKAGE_JSON, '{}', true, false);
+        await FsUtilities.createFile(mockConstants.ANGULAR_PACKAGE_JSON, '{}', true);
     }
 
     private static async createRootPackageJson(mockConstants: MockConstants): Promise<void> {
@@ -168,7 +167,7 @@ export abstract class FileMockUtilities {
             '        "libs/*"',
             '    ]',
             '}'
-        ], true, false);
+        ], true);
     }
 
     private static async createAppComponentTsFile(mockConstants: MockConstants): Promise<void> {
@@ -184,7 +183,7 @@ export abstract class FileMockUtilities {
             '\tstyleUrl: \'./app.css\'',
             '})',
             'export class AppComponent {}'
-        ], true, false);
+        ], true);
     }
 
     private static async createAppRoutesTs(mockConstants: MockConstants): Promise<void> {
@@ -192,7 +191,7 @@ export abstract class FileMockUtilities {
             'import { Routes } from \'@angular/router\';',
             '',
             'export const routes: Routes = [];'
-        ], true, false);
+        ], true);
     }
 
     private static async createAppRoutesServerTs(mockConstants: MockConstants): Promise<void> {
@@ -205,7 +204,7 @@ export abstract class FileMockUtilities {
             '\t\trenderMode: RenderMode.Prerender',
             '\t}',
             '];'
-        ], true, false);
+        ], true);
     }
 
     private static async createAppConfig(mockConstants: MockConstants): Promise<void> {
@@ -223,7 +222,7 @@ export abstract class FileMockUtilities {
             '\t\tprovideClientHydration(withEventReplay())',
             '\t]',
             '};'
-        ], true, false);
+        ], true);
     }
 
     private static async createAppConfigServer(mockConstants: MockConstants): Promise<void> {
@@ -239,7 +238,7 @@ export abstract class FileMockUtilities {
             '};',
             '',
             'export const config: ApplicationConfig = mergeApplicationConfig(appConfig, serverConfig);'
-        ], true, false);
+        ], true);
     }
 
     private static async createGlobalEnvModel(): Promise<void> {

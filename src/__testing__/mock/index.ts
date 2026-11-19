@@ -9,3 +9,4 @@ export * from './fake-calculated-env-variable.function';
 export * from './inquire.mock';
 export * from './create-mail-service.mock';
 export * from './create-admin-files.mock';
+export * from './generated-project.utilities';

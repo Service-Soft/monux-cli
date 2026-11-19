@@ -1,8 +1,7 @@
-import { FsUtilities } from '../../encapsulation';
-import { Path, getPath } from '../../utilities';
+import { FsUtilities, Path, PathUtilities } from '../../encapsulation';
 
 // eslint-disable-next-line jsdoc/require-jsdoc
 export async function createMailServiceMock(root: string): Promise<void> {
-    const servicePath: Path = getPath(root, 'src', 'services', 'mail.service.ts');
+    const servicePath: Path = PathUtilities.resolve(root, 'src', 'services', 'mail.service.ts');
     await FsUtilities.createFile(servicePath, []);
 }

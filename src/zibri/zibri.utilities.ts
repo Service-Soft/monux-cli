@@ -1,5 +1,5 @@
-import { CPUtilities } from '../encapsulation';
-import { optionsToCliString, Path } from '../utilities';
+import { CPUtilities, Path } from '../encapsulation';
+import { optionsToCliString } from '../utilities';
 
 /**
  * The `zi new {}` command.

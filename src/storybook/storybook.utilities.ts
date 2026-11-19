@@ -1,5 +1,4 @@
-import { CPUtilities } from '../encapsulation';
-import { Path } from '../utilities';
+import { CPUtilities, Path } from '../encapsulation';
 
 /**
  * Handles functionality around storybook.

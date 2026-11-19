@@ -4,7 +4,6 @@ import { fakeEnvVariable, FileMockUtilities, getMockConstants, MockConstants } f
 import { GLOBAL_ENVIRONMENT_MODEL_FILE_NAME } from '../constants';
 import { FsUtilities, PathUtilities, Path } from '../encapsulation';
 import { KeyValue } from '../types';
-
 import { DefaultEnvKeys } from './default-environment-keys';
 import { EnvUtilities, EnvValidationErrorMessage, EnvVariable } from './env.utilities';
 

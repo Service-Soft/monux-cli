@@ -1,5 +1,4 @@
-import { QuestionsFor } from '../../encapsulation';
-import { getPath } from '../../utilities';
+import { QuestionsFor, PathUtilities } from '../../encapsulation';
 import { WorkspaceUtilities } from '../../workspace';
 
 /**
@@ -32,7 +31,7 @@ export const generatePageConfigurationQuestions: QuestionsFor<GeneratePageConfig
         message: 'Project',
         name: 'projectName',
         type: 'select',
-        choices: async () => (await WorkspaceUtilities.getProjects('apps', getPath('.'))).map(a => a.name)
+        choices: async () => (await WorkspaceUtilities.getProjects('apps', PathUtilities.resolve('.'))).map(a => a.name)
     },
     pageName: {
         message: 'Page name',

@@ -1,7 +1,6 @@
-import { AddType } from './add-type.enum';
-import { QuestionsFor } from '../../../encapsulation';
-import { getPath } from '../../../utilities';
+import { QuestionsFor, PathUtilities } from '../../../encapsulation';
 import { WorkspaceUtilities } from '../../../workspace';
+import { AddType } from './add-type.enum';
 
 /**
  * BaseConfiguration for the add cli command.
@@ -31,6 +30,6 @@ export const addConfigurationQuestions: QuestionsFor<AddConfiguration> = {
         type: 'input',
         name: 'name',
         message: 'name',
-        validate: async (input?: string) => input != undefined && await WorkspaceUtilities.findProject(input, getPath('.')) == undefined
+        validate: async (input?: string) => input != undefined && await WorkspaceUtilities.findProject(input, PathUtilities.resolve('.')) == undefined
     }
 };

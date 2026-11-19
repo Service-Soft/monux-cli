@@ -4,7 +4,7 @@
     "license": "MIT",
     "main": "index.js",
     "engines": {
-        "node": ">=20"
+        "node": ">=24"
     },
     "repository": {
         "url": "https://github.com/Service-Soft/monux-cli"
@@ -32,9 +32,16 @@
     "bin": {
         "mx": "dist/index.js"
     },
+    "files": [
+        "dist",
+        "templates",
+        "!dist/**/*.test.*",
+        "!dist/__testing__",
+        "!dist/jest.setup.*"
+    ],
     "scripts": {
         "start": "npm run build && cd sandbox && node ../dist/index.js",
-        "build": "tsc",
+        "build": "rm -rf dist && tsc",
         "clear": "rm -rf sandbox && mkdir sandbox && npm run start i",
         "test": "jest --runInBand",
         "lint": "eslint . --max-warnings=0",
@@ -55,11 +62,11 @@
         "@faker-js/faker": "^9.0.3",
         "@jest/globals": "^30.3.0",
         "@nestjs/common": "^12.1.2",
+        "@service-soft/eslint-config": "^2.2.0",
         "@types/death": "^1.1.5",
         "@types/figlet": "^1.7.0",
         "@types/js-yaml": "^4.0.9",
         "eslint": "^9.34.0",
-        "eslint-config-service-soft": "^2.1.6",
         "jest": "^30.3.0",
         "ngx-material-navigation": "^20.2.2",
         "ts-jest": "^29.4.9"

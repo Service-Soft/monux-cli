@@ -1,9 +1,9 @@
 import type { ModuleMetadata } from '@nestjs/common';
 
-import { CPUtilities, FsUtilities, JsonUtilities } from '../encapsulation';
+import { CPUtilities, FsUtilities, JsonUtilities, Path } from '../encapsulation';
 import { TsUtilities } from '../ts';
 import { DeepPartial } from '../types';
-import { mergeDeep, optionsToCliString, Path } from '../utilities';
+import { mergeDeep, optionsToCliString } from '../utilities';
 import { NestCliJson } from './nest-cli-json.model';
 
 /**
@@ -98,7 +98,7 @@ export abstract class NestUtilities {
     static async updateNestCliJson(path: Path, data: DeepPartial<NestCliJson>): Promise<void> {
         const oldData: NestCliJson = await FsUtilities.parseFileAs(path);
         const updatedData: NestCliJson = mergeDeep(oldData, data);
-        await FsUtilities.updateFile(path, JsonUtilities.stringify(updatedData), 'replace', false);
+        await FsUtilities.updateFile(path, JsonUtilities.stringify(updatedData), 'replace');
     }
 
     /**

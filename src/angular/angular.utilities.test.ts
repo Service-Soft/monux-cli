@@ -4,7 +4,6 @@ import { fakeAddNavElementConfig, fakeTsImportDefinition, FileMockUtilities, get
 import { CPUtilities, FsUtilities, PathUtilities } from '../encapsulation';
 import { NpmPackage, NpmUtilities } from '../npm';
 import { TsImportDefinition } from '../ts';
-
 import { AddNavElementConfig } from './add-nav-element-config.model';
 import { AngularUtilities } from './angular.utilities';
 

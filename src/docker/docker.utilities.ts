@@ -1,18 +1,63 @@
-import yaml from 'js-yaml';
 
-import { DEV_DOCKER_COMPOSE_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, LOCAL_DOCKER_COMPOSE_FILE_NAME, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME, STAGE_DOCKER_COMPOSE_FILE_NAME } from '../constants';
-import { FsUtilities } from '../encapsulation';
-import { ComposeBuild, ComposeDefinition, ComposePort, ComposeService, ComposeServiceEnvironment } from './compose-file.model';
+import { DEV_DOCKER_COMPOSE_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, LOCAL_DOCKER_COMPOSE_FILE_NAME, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME, STAGE_DOCKER_COMPOSE_FILE_NAME, WORKSPACE_FILE_NAME } from '../constants';
+import { CPUtilities, FsUtilities, JsonUtilities, PathUtilities, Path, YamlUtilities } from '../encapsulation';
 import { DefaultEnvKeys, EnvUtilities } from '../env';
-import { getPath, Path } from '../utilities';
+import { WorkspaceConfig, WorkspaceUtilities } from '../workspace';
+import { ComposeBuild, ComposeDefinition, ComposePort, ComposeService, ComposeServiceEnvironment } from './compose-file.model';
 import { DockerComposeFileName, dockerComposeFileNames } from './docker-compose-file-name.model';
+import { DockerLabel } from './docker-labels.enum';
 import { DockerTraefikUtilities, TRAEFIK_BASE_DOCKER_COMMANDS, TRAEFIK_DOCKER_IMAGE, TRAEFIK_DOCKER_SOCK_VOLUME } from './docker-traefik.utilities';
 import { ParsedDockerCompose, ParsedDockerComposeEnvironment, ParsedDockerComposeService, ParsedDockerComposeServiceNetwork } from './parsed-docker-compose.model';
+import { FullyParsedDockerService, isFullyParsedDockerService, StringifiedDockerService, StringifiedDockerServiceWithParsedLabels } from './stringified-docker-service.model';
 
 /**
  * Utilities for docker specific code generation/manipulation.
  */
 export abstract class DockerUtilities {
+
+    /**
+     * Finds the docker services of every Monux workspace on this machine.
+     * @param all - Whether stopped services are included.
+     * @returns The services that belong to a Monux workspace.
+     */
+    static async findServices(all: boolean): Promise<FullyParsedDockerService[]> {
+        const output: string = await CPUtilities.resolveOutput(`docker ps${all ? ' -a' : ''} --format "{{json .}}" --size=false`);
+
+        const services: StringifiedDockerServiceWithParsedLabels[] = await Promise.all(output
+            .split('\n')
+            .filter(line => line)
+            .map(async line => {
+                const service: StringifiedDockerService = JsonUtilities.parse(line);
+                const labels: Record<string, string | undefined> = this.parseLabels(service.Labels);
+                const config: WorkspaceConfig | undefined = await this.findWorkspaceConfig(labels);
+                return {
+                    ...service,
+                    Labels: labels,
+                    config: config
+                };
+            }));
+
+        return services.filter(isFullyParsedDockerService);
+    }
+
+    private static async findWorkspaceConfig(labels: Record<DockerLabel, string | undefined>): Promise<WorkspaceConfig | undefined> {
+        const composeProjectDir: string | undefined = labels[DockerLabel.COMPOSE_PROJECT_DIR];
+        return composeProjectDir
+            ? await WorkspaceUtilities.getConfig(PathUtilities.resolve(composeProjectDir, WORKSPACE_FILE_NAME))
+            : undefined;
+    }
+
+    private static parseLabels(labels: string): Record<string, string | undefined> {
+        return labels.split(',')
+            .reduce<Record<string, string | undefined>>((acc, pair) => {
+                if (!pair) {
+                    return acc;
+                }
+                const [key, ...value] = pair.split('=');
+                acc[key.trim()] = value.join('').trim();
+                return acc;
+            }, {});
+    }
 
     /**
      * Creates the initial docker compose files at the given path.
@@ -61,7 +106,7 @@ export abstract class DockerUtilities {
             networks: []
         };
         const yaml: string[] = this.composeDefinitionToYaml(compose);
-        await FsUtilities.createFile(getPath(DEV_DOCKER_COMPOSE_FILE_NAME), yaml);
+        await FsUtilities.createFile(PathUtilities.resolve(DEV_DOCKER_COMPOSE_FILE_NAME), yaml);
     }
 
     private static async createLocalDockerCompose(): Promise<void> {
@@ -89,7 +134,7 @@ export abstract class DockerUtilities {
             networks: []
         };
         const yaml: string[] = this.composeDefinitionToYaml(compose);
-        await FsUtilities.createFile(getPath(LOCAL_DOCKER_COMPOSE_FILE_NAME), yaml);
+        await FsUtilities.createFile(PathUtilities.resolve(LOCAL_DOCKER_COMPOSE_FILE_NAME), yaml);
     }
 
     private static async createStageDockerCompose(email: string): Promise<void> {
@@ -146,7 +191,7 @@ export abstract class DockerUtilities {
             networks: []
         };
         const yaml: string[] = this.composeDefinitionToYaml(compose);
-        await FsUtilities.createFile(getPath(STAGE_DOCKER_COMPOSE_FILE_NAME), yaml);
+        await FsUtilities.createFile(PathUtilities.resolve(STAGE_DOCKER_COMPOSE_FILE_NAME), yaml);
     }
 
     private static async createProdDockerCompose(email: string): Promise<void> {
@@ -186,7 +231,7 @@ export abstract class DockerUtilities {
             networks: []
         };
         const yaml: string[] = this.composeDefinitionToYaml(compose);
-        await FsUtilities.createFile(getPath(PROD_DOCKER_COMPOSE_FILE_NAME), yaml);
+        await FsUtilities.createFile(PathUtilities.resolve(PROD_DOCKER_COMPOSE_FILE_NAME), yaml);
     }
 
     /**
@@ -210,7 +255,7 @@ export abstract class DockerUtilities {
         subDomain?: string,
         composeFileName: DockerComposeFileName = PROD_DOCKER_COMPOSE_FILE_NAME
     ): Promise<void> {
-        const composePath: Path = getPath(composeFileName);
+        const composePath: Path = PathUtilities.resolve(composeFileName);
         const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
 
         const labels: string[] = [];
@@ -346,23 +391,26 @@ export abstract class DockerUtilities {
             }
         }
 
-        const environmentModelFilePath: Path = getPath(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
-        await FsUtilities.replaceAllInFile(environmentModelFilePath, '\'PORT_PLACEHOLDER\'', `env.${DefaultEnvKeys.port(service.name)}`);
-        await FsUtilities.replaceAllInFile(
-            environmentModelFilePath,
-            '\'SUB_DOMAIN_PLACEHOLDER\'',
-            `env.${DefaultEnvKeys.subDomain(service.name)}`
-        );
-        await FsUtilities.replaceAllInFile(
-            environmentModelFilePath,
-            '\'PROD_ROOT_DOMAIN_PLACEHOLDER\'',
-            `env.${DefaultEnvKeys.PROD_ROOT_DOMAIN}`
-        );
-        await FsUtilities.replaceAllInFile(
-            environmentModelFilePath,
-            '\'STAGE_ROOT_DOMAIN_PLACEHOLDER\'',
-            `env.${DefaultEnvKeys.STAGE_ROOT_DOMAIN}`
-        );
+        await this.fillEnvironmentPlaceholders(service.name);
+    }
+
+    /**
+     * The calculated variables above are written with placeholders, which are replaced with the variables of the
+     * service here. Which placeholders a calculation uses depends on the service, such as whether it has a sub domain.
+     * They are Monux's own, so unlike an edit of a framework's output, a missing one is no error.
+     * @param serviceName - The name of the service whose variables replace the placeholders.
+     */
+    private static async fillEnvironmentPlaceholders(serviceName: string): Promise<void> {
+        const environmentModelFilePath: Path = PathUtilities.resolve(GLOBAL_ENVIRONMENT_MODEL_FILE_NAME);
+        const content: string = await FsUtilities.readFile(environmentModelFilePath);
+        const filled: string = content
+            .replaceAll('\'PORT_PLACEHOLDER\'', `env.${DefaultEnvKeys.port(serviceName)}`)
+            .replaceAll('\'SUB_DOMAIN_PLACEHOLDER\'', `env.${DefaultEnvKeys.subDomain(serviceName)}`)
+            .replaceAll('\'PROD_ROOT_DOMAIN_PLACEHOLDER\'', `env.${DefaultEnvKeys.PROD_ROOT_DOMAIN}`)
+            .replaceAll('\'STAGE_ROOT_DOMAIN_PLACEHOLDER\'', `env.${DefaultEnvKeys.STAGE_ROOT_DOMAIN}`);
+        if (filled !== content) {
+            await FsUtilities.updateFile(environmentModelFilePath, filled, 'replace');
+        }
     }
 
     /**
@@ -371,7 +419,7 @@ export abstract class DockerUtilities {
      * @returns The parsed services.
      */
     static async getComposeServices(rootDir: string): Promise<ComposeService[]> {
-        const composePath: Path = getPath(rootDir, PROD_DOCKER_COMPOSE_FILE_NAME);
+        const composePath: Path = PathUtilities.resolve(rootDir, PROD_DOCKER_COMPOSE_FILE_NAME);
         const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
         return definition.services;
     }
@@ -388,7 +436,7 @@ export abstract class DockerUtilities {
         volume: string,
         composeFileName: DockerComposeFileName
     ): Promise<void> {
-        const composePath: Path = getPath(composeFileName);
+        const composePath: Path = PathUtilities.resolve(composeFileName);
         const definition: ComposeDefinition = await this.yamlToComposeDefinition(composePath);
         definition.volumes.push(volume);
         await FsUtilities.updateFile(composePath, this.composeDefinitionToYaml(definition), 'replace');
@@ -403,27 +451,15 @@ export abstract class DockerUtilities {
     }
 
     private static getServiceSection(services: ComposeService[]): string[] {
-        if (!services.length) {
-            return [];
-        }
-
-        return ['services:', ...services.map(s => this.getService(s))];
+        return !services.length ? [] : ['services:', ...services.map(s => this.getService(s))];
     }
 
     private static getVolumeSection(volumes: string[]): string[] {
-        if (!volumes.length) {
-            return [];
-        }
-
-        return ['', 'volumes:', ...volumes.map(v => `\t${v}:`)];
+        return !volumes.length ? [] : ['', 'volumes:', ...volumes.map(v => `\t${v}:`)];
     }
 
     private static getNetworkSection(networks: string[]): string[] {
-        if (!networks.length) {
-            return [];
-        }
-
-        return ['', 'networks:', ...networks.map(n => `\t${n}:`)];
+        return !networks.length ? [] : ['', 'networks:', ...networks.map(n => `\t${n}:`)];
     }
 
     private static getService(service: ComposeService): string {
@@ -443,11 +479,7 @@ export abstract class DockerUtilities {
     }
 
     private static getServiceLabelsSection(labels: string[] | undefined): string[] {
-        if (!labels?.length) {
-            return [];
-        }
-
-        return ['\t\tlabels:', ...labels.map(l => `\t\t\t- ${l}`)];
+        return !labels?.length ? [] : ['\t\tlabels:', ...labels.map(l => `\t\t\t- ${l}`)];
     }
 
     private static getServicePortsSection(ports: ComposePort[] | undefined): string[] {
@@ -458,26 +490,17 @@ export abstract class DockerUtilities {
         return [
             '\t\tports:',
             ...ports.map(p => {
-                if (typeof p === 'number') {
-                    return `\t\t\t- ${p}`;
-                }
-                return `\t\t\t- ${p.external}:${p.internal}`;
+                return typeof p === 'number' ? `\t\t\t- ${p}` : `\t\t\t- ${p.external}:${p.internal}`;
             })
         ];
     }
 
     private static getServiceCommandSection(command: string[] | undefined): string[] {
-        if (command == undefined) {
-            return [];
-        }
-        return ['\t\tcommand:', ...command.map(e => `\t\t\t- ${e}`)];
+        return command == undefined ? [] : ['\t\tcommand:', ...command.map(e => `\t\t\t- ${e}`)];
     }
 
     private static getServiceEnvironmentSection(environment: ComposeServiceEnvironment | undefined): string[] {
-        if (!environment?.length) {
-            return [];
-        }
-        return ['\t\tenvironment:', ...environment.map(e => `\t\t\t${e.key}: ${e.value}`)];
+        return !environment?.length ? [] : ['\t\tenvironment:', ...environment.map(e => `\t\t\t${e.key}: ${e.value}`)];
     }
 
     private static getServiceBuildSection(build: ComposeBuild | undefined): string[] {
@@ -496,19 +519,11 @@ export abstract class DockerUtilities {
     }
 
     private static getServiceImageSection(image: string | undefined): string[] {
-        if (image == undefined) {
-            return [];
-        }
-
-        return [`\t\timage: ${image}`];
+        return image == undefined ? [] : [`\t\timage: ${image}`];
     }
 
     private static getServiceNetworksSection(networks: string[] | undefined): string[] {
-        if (!networks?.length) {
-            return [];
-        }
-
-        return ['\t\tnetworks:', ...networks.map(n => `\t\t\t${n}:`)];
+        return !networks?.length ? [] : ['\t\tnetworks:', ...networks.map(n => `\t\t\t${n}:`)];
     }
 
     private static getServiceVolumesSection(volumes: string[] | undefined): string[] {
@@ -525,7 +540,7 @@ export abstract class DockerUtilities {
     private static async yamlToComposeDefinition(composePath: Path): Promise<ComposeDefinition> {
         // Load the YAML file
         const fileContent: string = await FsUtilities.readFile(composePath);
-        const parsedYaml: ParsedDockerCompose | undefined = yaml.load(fileContent) as ParsedDockerCompose | undefined;
+        const parsedYaml: ParsedDockerCompose | undefined = YamlUtilities.parse<ParsedDockerCompose>(fileContent);
 
         // Transform YAML into ComposeDefinition
         const services: ComposeService[] = Object.entries(parsedYaml?.services ?? {})

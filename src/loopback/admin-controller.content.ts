@@ -1,8 +1,8 @@
-import { toPascalCase } from '../utilities';
+import { StringUtilities } from '../utilities';
 
 // eslint-disable-next-line jsdoc/require-jsdoc
 export function adminControllerContent(dbName: string): string {
-    const datasource: string = `${toPascalCase(dbName)}DataSource`;
+    const datasource: string = `${StringUtilities.toPascalCase(dbName)}DataSource`;
     return `import { authenticate } from '@loopback/authentication';
 import { authorize } from '@loopback/authorization';
 import { inject } from '@loopback/core';

@@ -1,7 +1,7 @@
-import { execSync, ExecSyncOptions } from 'child_process';
+import { execSync, ExecSyncOptions } from 'node:child_process';
 
-import { ChalkUtilities } from './chalk.utilities';
-import { exitWithInterrupt, isErrorWithSignal, isExitPromptError } from '../utilities';
+import { LogUtilities } from './log.utilities';
+import { ProcessUtilities } from './process.utilities';
 
 /**
  * Encapsulates functionality of the child_process package.
@@ -21,20 +21,29 @@ export abstract class CPUtilities {
      * @throws When there was an error during execution.
      */
     static async exec(command: string, output: boolean = true): Promise<void> {
-        const options: ExecSyncOptions = {
-            stdio: output ? 'inherit' : undefined,
-            killSignal: 'SIGINT',
-            cwd: this.cwd
-        };
+        await this.execSync(command, { stdio: output ? 'inherit' : undefined });
+    }
+
+    /**
+     * Executes a command and resolves what it wrote to stdout.
+     * @param command - The command to run.
+     * @returns The output of the command, trimmed.
+     * @throws When there was an error during execution.
+     */
+    static async resolveOutput(command: string): Promise<string> {
+        const output: Buffer | string = await this.execSync(command, { stdio: 'pipe' });
+        return output.toString().trim();
+    }
+
+    private static async execSync(command: string, options: ExecSyncOptions): Promise<Buffer | string> {
         try {
-            execSync(command, options);
+            return execSync(command, { ...options, killSignal: 'SIGINT', cwd: this.cwd });
         }
         catch (error) {
-            if (isExitPromptError(error) || (isErrorWithSignal(error) && error.signal === 'SIGINT')) {
-                await exitWithInterrupt();
+            if (ProcessUtilities.isInterrupt(error)) {
+                return await ProcessUtilities.exitWithInterrupt();
             }
-            // eslint-disable-next-line no-console
-            console.error(ChalkUtilities.error(`Command failed: ${command}`));
+            LogUtilities.error(`Command failed: ${command}`);
             throw error;
         }
     }

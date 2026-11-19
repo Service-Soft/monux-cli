@@ -1,6 +1,6 @@
-import { AddConfiguration } from './add-configuration.model';
 import { InquirerUtilities, QuestionsFor } from '../../../encapsulation';
 import { OmitStrict } from '../../../types';
+import { AddConfiguration } from './add-configuration.model';
 
 /**
  * Base Add Command class.

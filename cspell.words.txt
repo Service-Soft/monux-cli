@@ -31,3 +31,4 @@ htpasswd
 usersfile
 zibri
 autodocs
+claude

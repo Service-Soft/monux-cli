@@ -4,7 +4,6 @@ import { FileMockUtilities, getMockConstants, MockConstants } from '../__testing
 import { DATABASES_DIRECTORY_NAME } from '../constants';
 import { FsUtilities, PathUtilities } from '../encapsulation';
 import { DefaultEnvKeys, EnvUtilities } from '../env';
-
 import { DbType } from './db-type.enum';
 import { DbUtilities } from './db.utilities';
 

@@ -3,13 +3,13 @@ import { ModuleKind } from 'typescript';
 import { APPS_DIRECTORY_NAME, BASE_TS_CONFIG_FILE_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ESLINT_CONFIG_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME } from '../../../constants';
 import { DbType, DbUtilities } from '../../../db';
 import { DockerUtilities } from '../../../docker';
-import { FsUtilities, QuestionsFor } from '../../../encapsulation';
+import { FsUtilities, QuestionsFor, CryptoUtilities, PathUtilities, Path, LogUtilities } from '../../../encapsulation';
 import { DefaultEnvKeys, EnvUtilities } from '../../../env';
 import { EslintUtilities } from '../../../eslint';
 import { TsUtilities } from '../../../ts';
 import { TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
-import { generatePlaceholderPassword, getPath, Path, toKebabCase, toPascalCase } from '../../../utilities';
+import { StringUtilities } from '../../../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
 import { ZibriUtilities } from '../../../zibri';
 import { AddConfiguration, BaseAddCommand } from '../models';
@@ -66,7 +66,7 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
             name: 'defaultUserEmail',
             message: 'Email of the default user',
             validate: (v?: string) => !!v,
-            default: async () => (await FsUtilities.readFile(getPath(PROD_DOCKER_COMPOSE_FILE_NAME)))
+            default: async () => (await FsUtilities.readFile(PathUtilities.resolve(PROD_DOCKER_COMPOSE_FILE_NAME)))
                 .split('.acme.email=')[1]
                 .split('\n')[0]
         },
@@ -74,7 +74,7 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
             type: 'input',
             name: 'defaultUserPassword',
             message: 'Password of the default user',
-            validate: (v?: string) => v != undefined && v.length >= 12 ? true : 'Password must be at least 12 characters strong'
+            validate: (v?: string) => v != undefined && v.length >= 12 ? true : 'The password needs to be at least 12 characters long'
         },
         frontendName: {
             type: 'input',
@@ -86,7 +86,7 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
 
     override async run(): Promise<void> {
         const config: AddZibriConfiguration = await this.getConfig();
-        const { dbComposeServiceName, databaseName } = await DbUtilities.configureDb(config.name, DbType.POSTGRES, getPath('.'));
+        const { dbComposeServiceName, databaseName } = await DbUtilities.configureDb(config.name, DbType.POSTGRES, PathUtilities.resolve('.'));
         const root: Path = await this.createProject(config);
         await EnvUtilities.setupProjectEnvironment(root, false);
         await this.createZibriDatasource(dbComposeServiceName, databaseName, DbType.POSTGRES, root, config.name);
@@ -115,7 +115,7 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
         ]);
 
         await FsUtilities.replaceInFile(
-            getPath(root, ESLINT_CONFIG_FILE_NAME),
+            PathUtilities.resolve(root, ESLINT_CONFIG_FILE_NAME),
             '    ...baseConfig,',
             [
                 '    ...baseConfig,',
@@ -123,19 +123,18 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
             ].join('\n')
         );
 
-        const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
-        await EnvUtilities.buildEnvironmentFileForApp(app, false, 'dev.docker-compose.yaml', getPath('.'));
+        const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, PathUtilities.resolve('.'));
+        await EnvUtilities.buildEnvironmentFileForApp(app, false, 'dev.docker-compose.yaml', PathUtilities.resolve('.'));
     }
 
     private async createProject(config: AddZibriConfiguration): Promise<Path> {
-        // eslint-disable-next-line no-console
-        console.log('Creates the base app');
+        LogUtilities.step('Creating the project');
         await ZibriUtilities.runCommand(
-            getPath(APPS_DIRECTORY_NAME),
+            PathUtilities.resolve(APPS_DIRECTORY_NAME),
             `new ${config.name}`,
             {} as never
         );
-        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
+        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, PathUtilities.resolve('.'));
         return newProject.path;
     }
 
@@ -146,16 +145,16 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
         root: Path,
         projectName: string
     ): Promise<void> {
-        const datasourcesPath: Path = getPath(
+        const datasourcesPath: Path = PathUtilities.resolve(
             root,
             'src',
             'data-sources'
         );
-        const newDbPath: Path = getPath(datasourcesPath, toKebabCase(databaseName));
+        const newDbPath: Path = PathUtilities.resolve(datasourcesPath, StringUtilities.toKebabCase(databaseName));
         await FsUtilities.rm(newDbPath);
-        await FsUtilities.rm(getPath(datasourcesPath, 'db'));
+        await FsUtilities.rm(PathUtilities.resolve(datasourcesPath, 'db'));
         await FsUtilities.createFile(
-            getPath(newDbPath, `${toKebabCase(databaseName)}.data-source.ts`),
+            PathUtilities.resolve(newDbPath, `${StringUtilities.toKebabCase(databaseName)}.data-source.ts`),
             [
                 // eslint-disable-next-line stylistic/max-len
                 'import { BaseDataSource, BaseEntity, DataSource, Newable, DataSourceOptions, MigrationEntity, MailingList, MailingListSubscriber, MailingListSubscriptionConfirmationToken, JwtRefreshToken, JwtCredentials, Log, PasswordResetToken } from \'zibri\';',
@@ -164,7 +163,7 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
                 'import { User } from \'../../models\';',
                 '',
                 '@DataSource()',
-                `export class ${toPascalCase(databaseName)}DataSource extends BaseDataSource {`,
+                `export class ${StringUtilities.toPascalCase(databaseName)}DataSource extends BaseDataSource {`,
                 '    options: DataSourceOptions = {',
                 `        type: '${dbType}',`,
                 `        host: environment.${DefaultEnvKeys.dbHost(dbServiceName)},`,
@@ -188,53 +187,53 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
                 '}'
             ]
         );
-        await FsUtilities.createFile(getPath(newDbPath, 'migrations', 'index.ts'), '');
-        await FsUtilities.createFile(getPath(newDbPath, 'index.ts'), `export * from './${toKebabCase(databaseName)}.data-source';`);
-        await FsUtilities.rm(getPath(datasourcesPath, 'index.ts'));
-        await FsUtilities.createFile(getPath(datasourcesPath, 'index.ts'), `export * from './${toKebabCase(databaseName)}';`);
+        await FsUtilities.createFile(PathUtilities.resolve(newDbPath, 'migrations', 'index.ts'), '');
+        await FsUtilities.createFile(PathUtilities.resolve(newDbPath, 'index.ts'), `export * from './${StringUtilities.toKebabCase(databaseName)}.data-source';`);
+        await FsUtilities.rm(PathUtilities.resolve(datasourcesPath, 'index.ts'));
+        await FsUtilities.createFile(PathUtilities.resolve(datasourcesPath, 'index.ts'), `export * from './${StringUtilities.toKebabCase(databaseName)}';`);
 
         await FsUtilities.replaceInFile(
-            getPath(root, 'src', 'index.ts'),
+            PathUtilities.resolve(root, 'src', 'index.ts'),
             'import { DbDataSource } from \'./data-sources\';',
-            `import { ${toPascalCase(databaseName)}DataSource } from './data-sources';`
+            `import { ${StringUtilities.toPascalCase(databaseName)}DataSource } from './data-sources';`
         );
         await FsUtilities.replaceInFile(
-            getPath(root, 'src', 'index.ts'),
+            PathUtilities.resolve(root, 'src', 'index.ts'),
             'dataSources: [DbDataSource]',
-            `dataSources: [${toPascalCase(databaseName)}DataSource]`
+            `dataSources: [${StringUtilities.toPascalCase(databaseName)}DataSource]`
         );
         await FsUtilities.replaceInFile(
-            getPath(root, 'src', 'index.ts'),
+            PathUtilities.resolve(root, 'src', 'index.ts'),
             'createDefaultData(DbDataSource);',
-            `createDefaultData(${toPascalCase(databaseName)}DataSource);`
+            `createDefaultData(${StringUtilities.toPascalCase(databaseName)}DataSource);`
         );
 
-        const environmentModel: Path = getPath(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
+        const environmentModel: Path = PathUtilities.resolve(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
 
         await EnvUtilities.addProjectVariableKey(
             projectName,
             environmentModel,
             DefaultEnvKeys.dbPassword(dbServiceName, databaseName),
             true,
-            getPath('.')
+            PathUtilities.resolve('.')
         );
         await EnvUtilities.addProjectVariableKey(
             projectName,
             environmentModel,
             DefaultEnvKeys.dbUser(dbServiceName, databaseName),
             true,
-            getPath('.')
+            PathUtilities.resolve('.')
         );
         await EnvUtilities.addProjectVariableKey(projectName,
             environmentModel,
             DefaultEnvKeys.dbName(dbServiceName, databaseName),
             true,
-            getPath('.'));
-        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, DefaultEnvKeys.dbHost(dbServiceName), true, getPath('.'));
+            PathUtilities.resolve('.'));
+        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, DefaultEnvKeys.dbHost(dbServiceName), true, PathUtilities.resolve('.'));
     }
 
     private async updateIndexTs(root: Path, config: AddZibriConfiguration): Promise<void> {
-        const indexTs: Path = getPath(root, 'src', 'index.ts');
+        const indexTs: Path = PathUtilities.resolve(root, 'src', 'index.ts');
         await FsUtilities.replaceInFile(
             indexTs,
             'baseUrl: \'http://localhost:3000\'',
@@ -289,7 +288,7 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
             ].join('\n')
         );
 
-        const createDefaultDataTs: Path = getPath(root, 'src', 'create-default-data.function.ts');
+        const createDefaultDataTs: Path = PathUtilities.resolve(root, 'src', 'create-default-data.function.ts');
         await FsUtilities.replaceInFile(
             createDefaultDataTs,
             '\'password\'',
@@ -307,8 +306,7 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
     }
 
     private async setupTsConfig(projectName: string): Promise<void> {
-        // eslint-disable-next-line no-console
-        console.log('sets up tsconfig');
+        LogUtilities.step('Setting up the tsconfig');
         await TsConfigUtilities.updateTsConfig(
             projectName,
             {
@@ -331,7 +329,7 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
 
     private async createDockerfile(root: string, config: AddZibriConfiguration): Promise<void> {
         await FsUtilities.createFile(
-            getPath(root, DOCKER_FILE_NAME),
+            PathUtilities.resolve(root, DOCKER_FILE_NAME),
             [
                 'FROM node:20 AS build',
                 '# Set to a non-root built-in user `node`',
@@ -367,11 +365,11 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
             value: config.defaultUserPassword
         }, false);
         await EnvUtilities.addStaticVariable(
-            { key: DefaultEnvKeys.ACCESS_TOKEN_SECRET, required: true, type: 'string', value: generatePlaceholderPassword() },
+            { key: DefaultEnvKeys.ACCESS_TOKEN_SECRET, required: true, type: 'string', value: CryptoUtilities.generatePassword() },
             false
         );
         await EnvUtilities.addStaticVariable(
-            { key: DefaultEnvKeys.REFRESH_TOKEN_SECRET, required: true, type: 'string', value: generatePlaceholderPassword() },
+            { key: DefaultEnvKeys.REFRESH_TOKEN_SECRET, required: true, type: 'string', value: CryptoUtilities.generatePassword() },
             false
         );
         await EnvUtilities.addStaticVariable(
@@ -391,42 +389,42 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
             false
         );
 
-        const environmentModel: Path = getPath(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
+        const environmentModel: Path = PathUtilities.resolve(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
         await EnvUtilities.addProjectVariableKey(
             config.name,
             environmentModel,
             DefaultEnvKeys.defaultUserEmail(config.name),
             true,
-            getPath('.')
+            PathUtilities.resolve('.')
         );
         await EnvUtilities.addProjectVariableKey(
             config.name,
             environmentModel,
             DefaultEnvKeys.defaultUserPassword(config.name),
             true,
-            getPath('.')
+            PathUtilities.resolve('.')
         );
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.ACCESS_TOKEN_SECRET, true, getPath('.'));
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.REFRESH_TOKEN_SECRET, true, getPath('.'));
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.WEBSERVER_MAIL_USER, true, getPath('.'));
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.WEBSERVER_MAIL_PASSWORD, true, getPath('.'));
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.WEBSERVER_MAIL_HOST, true, getPath('.'));
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.WEBSERVER_MAIL_PORT, true, getPath('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.ACCESS_TOKEN_SECRET, true, PathUtilities.resolve('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.REFRESH_TOKEN_SECRET, true, PathUtilities.resolve('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.WEBSERVER_MAIL_USER, true, PathUtilities.resolve('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.WEBSERVER_MAIL_PASSWORD, true, PathUtilities.resolve('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.WEBSERVER_MAIL_HOST, true, PathUtilities.resolve('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.WEBSERVER_MAIL_PORT, true, PathUtilities.resolve('.'));
         await EnvUtilities.addProjectVariableKey(
             config.name,
             environmentModel,
             DefaultEnvKeys.baseUrl(config.frontendName),
             false,
-            getPath('.')
+            PathUtilities.resolve('.')
         );
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.baseUrl(config.name), false, getPath('.'));
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.ENV, false, getPath('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.baseUrl(config.name), false, PathUtilities.resolve('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.ENV, false, PathUtilities.resolve('.'));
         await EnvUtilities.addProjectVariableKey(
             config.name,
             environmentModel,
             DefaultEnvKeys.domain(config.frontendName),
             false,
-            getPath('.')
+            PathUtilities.resolve('.')
         );
     }
 }

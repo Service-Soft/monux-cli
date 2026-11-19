@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, test } from '@jest/globals';
 
 import { FileMockUtilities, getMockConstants, MockConstants } from '../__testing__';
 import { FsUtilities, PathUtilities, Path } from '../encapsulation';
-
 import { GithubUtilities } from './github.utilities';
 
 const mockConstants: MockConstants = getMockConstants('github-utilities');

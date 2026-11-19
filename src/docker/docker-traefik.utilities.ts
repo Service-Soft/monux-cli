@@ -1,6 +1,6 @@
 import { DEV_DOCKER_COMPOSE_FILE_NAME, LOCAL_DOCKER_COMPOSE_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, STAGE_DOCKER_COMPOSE_FILE_NAME } from '../constants';
 import { DefaultEnvKeys } from '../env';
-import { toSnakeCase } from '../utilities';
+import { StringUtilities } from '../utilities';
 import { DockerComposeFileName } from './docker-compose-file-name.model';
 
 /**
@@ -99,13 +99,13 @@ export abstract class DockerTraefikUtilities {
         }
         labels.push(
             TRAEFIK_ENABLE_LABEL,
-            `traefik.http.routers.${toSnakeCase(projectName)}.rule=${host}`,
-            `traefik.http.routers.${toSnakeCase(projectName)}.entrypoints=web_secure`,
-            `traefik.http.routers.${toSnakeCase(projectName)}.tls.certresolver=ssl_resolver`,
-            `traefik.http.services.${toSnakeCase(projectName)}.loadbalancer.server.port=${port}`,
+            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.rule=${host}`,
+            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.entrypoints=web_secure`,
+            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.tls.certresolver=ssl_resolver`,
+            `traefik.http.services.${StringUtilities.toSnakeCase(projectName)}.loadbalancer.server.port=${port}`,
             TRAEFIK_COMPRESSION_LABEL
         );
-        labels.push(`traefik.http.routers.${toSnakeCase(projectName)}.middlewares=${middlewares.join(',')}`);
+        labels.push(`traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.middlewares=${middlewares.join(',')}`);
         return labels;
     }
 
@@ -127,13 +127,13 @@ export abstract class DockerTraefikUtilities {
         }
         labels.push(
             TRAEFIK_ENABLE_LABEL,
-            `traefik.http.routers.${toSnakeCase(projectName)}.rule=${host}`,
-            `traefik.http.routers.${toSnakeCase(projectName)}.entrypoints=web_secure`,
-            `traefik.http.routers.${toSnakeCase(projectName)}.tls.certresolver=ssl_resolver`,
-            `traefik.http.services.${toSnakeCase(projectName)}.loadbalancer.server.port=${port}`,
+            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.rule=${host}`,
+            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.entrypoints=web_secure`,
+            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.tls.certresolver=ssl_resolver`,
+            `traefik.http.services.${StringUtilities.toSnakeCase(projectName)}.loadbalancer.server.port=${port}`,
             TRAEFIK_COMPRESSION_LABEL
         );
-        labels.push(`traefik.http.routers.${toSnakeCase(projectName)}.middlewares=${middlewares.join(',')}`);
+        labels.push(`traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.middlewares=${middlewares.join(',')}`);
         return labels;
     }
 
@@ -151,12 +151,12 @@ export abstract class DockerTraefikUtilities {
         }
         labels.push(
             TRAEFIK_ENABLE_LABEL,
-            `traefik.http.routers.${toSnakeCase(projectName)}.rule=${host}`,
-            `traefik.http.routers.${toSnakeCase(projectName)}.entrypoints=web`,
-            `traefik.http.services.${toSnakeCase(projectName)}.loadbalancer.server.port=${port}`,
+            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.rule=${host}`,
+            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.entrypoints=web`,
+            `traefik.http.services.${StringUtilities.toSnakeCase(projectName)}.loadbalancer.server.port=${port}`,
             TRAEFIK_COMPRESSION_LABEL
         );
-        labels.push(`traefik.http.routers.${toSnakeCase(projectName)}.middlewares=${middlewares.join(',')}`);
+        labels.push(`traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.middlewares=${middlewares.join(',')}`);
         return labels;
     }
 }

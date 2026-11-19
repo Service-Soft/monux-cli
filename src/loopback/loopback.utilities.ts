@@ -1,11 +1,10 @@
-
 import { AddLoopbackConfiguration } from '../commands/add/add-loopback';
 import { ENVIRONMENT_MODEL_TS_FILE_NAME } from '../constants';
-import { CPUtilities, FsUtilities } from '../encapsulation';
+import { CPUtilities, FsUtilities, CryptoUtilities, PathUtilities, Path } from '../encapsulation';
 import { DefaultEnvKeys, EnvUtilities, EnvValue } from '../env';
 import { NpmPackage, NpmUtilities } from '../npm';
 import { TsUtilities } from '../ts';
-import { generatePlaceholderPassword, getPath, optionsToCliString, Path, toKebabCase, toPascalCase } from '../utilities';
+import { optionsToCliString, StringUtilities } from '../utilities';
 import { adminControllerContent } from './admin-controller.content';
 import { adminModelContent } from './admin-model.content';
 import { fullAdminModelContent } from './full-admin-model.content';
@@ -176,7 +175,7 @@ export abstract class LoopbackUtilities {
             `cd ${directory} && npx --yes @loopback/cli@${this.CLI_VERSION} ${command} ${optionsToCliString(options, ' ')}`
         );
         if (command.startsWith('service')) {
-            const servicePath: Path = getPath(directory, 'src', 'services', `${toKebabCase(command.split(' ')[1])}.service.ts`);
+            const servicePath: Path = PathUtilities.resolve(directory, 'src', 'services', `${StringUtilities.toKebabCase(command.split(' ')[1])}.service.ts`);
             await FsUtilities.replaceInFile(servicePath, '/* inject, */', '');
             await FsUtilities.replaceInFile(servicePath, '/* Add @inject to inject parameters */', '');
             await FsUtilities.replaceInFile(servicePath, '\n  /*\n   * Add service methods here\n   */', '');
@@ -206,7 +205,7 @@ export abstract class LoopbackUtilities {
 
     private static async createBiometricCredentialsService(root: Path, config: AddLoopbackConfiguration): Promise<void> {
         await this.runCommand(root, 'service BiometricCredentials', { '--skip-install': true, '--type': 'class', '--yes': true });
-        const servicePath: Path = getPath(root, 'src', 'services', 'biometric-credentials.service.ts');
+        const servicePath: Path = PathUtilities.resolve(root, 'src', 'services', 'biometric-credentials.service.ts');
         await TsUtilities.addImportStatements(
             servicePath,
             [
@@ -220,17 +219,17 @@ export abstract class LoopbackUtilities {
             ' class BiometricCredentialsService extends BaseBiometricCredentialsService'
         );
         await TsUtilities.addToStartOfClass(servicePath, [
-            `    protected override readonly RP_NAME: string = '${toPascalCase(config.frontendName)}';`,
+            `    protected override readonly RP_NAME: string = '${StringUtilities.toPascalCase(config.frontendName)}';`,
             `    protected override readonly RP_DOMAIN: string = environment.${DefaultEnvKeys.domain(config.frontendName)};`
         ]);
         await FsUtilities.replaceInFile(servicePath, 'constructor() {}', '');
     }
 
     private static async createAdminFiles(root: Path, dbName: string): Promise<void> {
-        const adminModelTs: Path = getPath(root, 'src', 'models', 'admin.model.ts');
+        const adminModelTs: Path = PathUtilities.resolve(root, 'src', 'models', 'admin.model.ts');
         await FsUtilities.createFile(adminModelTs, adminModelContent);
         await FsUtilities.createFile(
-            getPath(root, 'src', 'models', 'roles.enum.ts'),
+            PathUtilities.resolve(root, 'src', 'models', 'roles.enum.ts'),
             [
                 'export enum Roles {',
                 '\tADMIN = \'ADMIN\'',
@@ -238,7 +237,7 @@ export abstract class LoopbackUtilities {
             ]
         );
         await FsUtilities.createFile(
-            getPath(root, 'src', 'models', 'index.ts'),
+            PathUtilities.resolve(root, 'src', 'models', 'index.ts'),
             [
                 'export * from \'./admin.model\';',
                 'export * from \'./roles.enum\';'
@@ -250,7 +249,7 @@ export abstract class LoopbackUtilities {
             'repository Admin',
             { '--skip-install': true, '--yes': true, '--datasource': dbName, '--model': 'Admin' }
         );
-        const adminRepositoryTs: Path = getPath(root, 'src', 'repositories', 'admin.repository.ts');
+        const adminRepositoryTs: Path = PathUtilities.resolve(root, 'src', 'repositories', 'admin.repository.ts');
         await TsUtilities.addImportStatements(adminRepositoryTs, [
             { defaultImport: false, element: 'Getter', path: '@loopback/core' },
             { defaultImport: false, element: 'BelongsToAccessor', path: '@loopback/repository' },
@@ -294,7 +293,7 @@ export abstract class LoopbackUtilities {
         await FsUtilities.replaceInFile(
             adminRepositoryTs,
             `'datasources.${dbName}') dataSource`,
-            `${toPascalCase(dbName)}DataSource.INJECTION_KEY)\n        dataSource`
+            `${StringUtilities.toPascalCase(dbName)}DataSource.INJECTION_KEY)\n        dataSource`
         );
         // eslint-disable-next-line stylistic/max-len
         await FsUtilities.replaceInFile(adminRepositoryTs, 'super(Admin, dataSource', 'super(Admin, dataSource, changeSetRepositoryGetter, changeRepository, changeSetRepository, getUserProfile');
@@ -303,17 +302,17 @@ export abstract class LoopbackUtilities {
             'this.registerInclusionResolver(\'baseUser\', this.baseUser.inclusionResolver);'
         ].join('\n'));
 
-        const controllerPath: string = getPath(root, 'src', 'controllers');
-        await FsUtilities.createFile(getPath(controllerPath, 'admin', 'admin.controller.ts'), adminControllerContent(dbName));
-        await FsUtilities.updateFile(getPath(controllerPath, 'index.ts'), 'export * from \'./admin/admin.controller\';', 'append');
+        const controllerPath: string = PathUtilities.resolve(root, 'src', 'controllers');
+        await FsUtilities.createFile(PathUtilities.resolve(controllerPath, 'admin', 'admin.controller.ts'), adminControllerContent(dbName));
+        await FsUtilities.updateFile(PathUtilities.resolve(controllerPath, 'index.ts'), 'export * from \'./admin/admin.controller\';', 'append');
 
-        await FsUtilities.createFile(getPath(controllerPath, 'admin', 'new-admin.model.ts'), newAdminModelContent);
-        await FsUtilities.createFile(getPath(controllerPath, 'admin', 'full-admin.model.ts'), fullAdminModelContent);
+        await FsUtilities.createFile(PathUtilities.resolve(controllerPath, 'admin', 'new-admin.model.ts'), newAdminModelContent);
+        await FsUtilities.createFile(PathUtilities.resolve(controllerPath, 'admin', 'full-admin.model.ts'), fullAdminModelContent);
     }
 
     private static async createMailService(root: Path, config: AddLoopbackConfiguration): Promise<void> {
         await this.runCommand(root, 'service mail', { '--skip-install': true, '--type': 'class', '--yes': true });
-        const servicePath: Path = getPath(root, 'src', 'services', 'mail.service.ts');
+        const servicePath: Path = PathUtilities.resolve(root, 'src', 'services', 'mail.service.ts');
         await TsUtilities.addImportStatements(
             servicePath,
             [
@@ -367,11 +366,11 @@ export abstract class LoopbackUtilities {
             value: config.defaultUserPassword
         }, false);
         await EnvUtilities.addStaticVariable(
-            { key: DefaultEnvKeys.ACCESS_TOKEN_SECRET, required: true, type: 'string', value: generatePlaceholderPassword() },
+            { key: DefaultEnvKeys.ACCESS_TOKEN_SECRET, required: true, type: 'string', value: CryptoUtilities.generatePassword() },
             false
         );
         await EnvUtilities.addStaticVariable(
-            { key: DefaultEnvKeys.REFRESH_TOKEN_SECRET, required: true, type: 'string', value: generatePlaceholderPassword() },
+            { key: DefaultEnvKeys.REFRESH_TOKEN_SECRET, required: true, type: 'string', value: CryptoUtilities.generatePassword() },
             false
         );
         await EnvUtilities.addStaticVariable(
@@ -391,42 +390,42 @@ export abstract class LoopbackUtilities {
             false
         );
 
-        const environmentModel: Path = getPath(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
+        const environmentModel: Path = PathUtilities.resolve(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
         await EnvUtilities.addProjectVariableKey(
             config.name,
             environmentModel,
             DefaultEnvKeys.defaultUserEmail(config.name),
             true,
-            getPath('.')
+            PathUtilities.resolve('.')
         );
         await EnvUtilities.addProjectVariableKey(
             config.name,
             environmentModel,
             DefaultEnvKeys.defaultUserPassword(config.name),
             true,
-            getPath('.')
+            PathUtilities.resolve('.')
         );
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'access_token_secret', true, getPath('.'));
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'refresh_token_secret', true, getPath('.'));
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'webserver_mail_user', true, getPath('.'));
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'webserver_mail_password', true, getPath('.'));
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'webserver_mail_host', true, getPath('.'));
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'webserver_mail_port', true, getPath('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'access_token_secret', true, PathUtilities.resolve('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'refresh_token_secret', true, PathUtilities.resolve('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'webserver_mail_user', true, PathUtilities.resolve('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'webserver_mail_password', true, PathUtilities.resolve('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'webserver_mail_host', true, PathUtilities.resolve('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, 'webserver_mail_port', true, PathUtilities.resolve('.'));
         await EnvUtilities.addProjectVariableKey(
             config.name,
             environmentModel,
             DefaultEnvKeys.baseUrl(config.frontendName),
             false,
-            getPath('.')
+            PathUtilities.resolve('.')
         );
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.baseUrl(config.name), false, getPath('.'));
-        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.ENV, false, getPath('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.baseUrl(config.name), false, PathUtilities.resolve('.'));
+        await EnvUtilities.addProjectVariableKey(config.name, environmentModel, DefaultEnvKeys.ENV, false, PathUtilities.resolve('.'));
         await EnvUtilities.addProjectVariableKey(
             config.name,
             environmentModel,
             DefaultEnvKeys.domain(config.frontendName),
             false,
-            getPath('.')
+            PathUtilities.resolve('.')
         );
     }
 
@@ -434,7 +433,7 @@ export abstract class LoopbackUtilities {
         root: string,
         config: AddLoopbackConfiguration
     ): Promise<void> {
-        const indexTs: Path = getPath(root, 'src', 'index.ts');
+        const indexTs: Path = PathUtilities.resolve(root, 'src', 'index.ts');
         await TsUtilities.addImportStatements(
             indexTs,
             [
@@ -448,7 +447,7 @@ export abstract class LoopbackUtilities {
 
         await FsUtilities.updateFile(indexTs, [
             '',
-            `async function createDefaultData(app: ${toPascalCase(config.name)}Application): Promise<void> {`,
+            `async function createDefaultData(app: ${StringUtilities.toPascalCase(config.name)}Application): Promise<void> {`,
             '    const adminController: AdminController = await app.get<AdminController>(\'controllers.AdminController\');',
             // eslint-disable-next-line stylistic/max-len
             '    const baseUserRepository: BaseUserRepository<Roles> = await app.get<BaseUserRepository<Roles>>(\'repositories.BaseUserRepository\');',
@@ -468,7 +467,7 @@ export abstract class LoopbackUtilities {
 
     private static async applyAuthToApplicationTs(root: string, dbName: string): Promise<void> {
         // eslint-disable-next-line sonar/no-duplicate-string
-        const applicationTs: Path = getPath(root, 'src', 'application.ts');
+        const applicationTs: Path = PathUtilities.resolve(root, 'src', 'application.ts');
         await TsUtilities.addImportStatements(
             applicationTs,
             [
@@ -487,14 +486,14 @@ export abstract class LoopbackUtilities {
                     path: '@loopback/authorization'
                 },
                 { defaultImport: false, element: 'BiometricCredentialsService', path: './services/biometric-credentials.service' },
-                { defaultImport: false, element: `${toPascalCase(dbName)}DataSource`, path: './datasources' }
+                { defaultImport: false, element: `${StringUtilities.toPascalCase(dbName)}DataSource`, path: './datasources' }
             ]
         );
 
         await TsUtilities.addToEndOfClass(applicationTs, [
             '',
             '    private setupAuthentication(): void {',
-            `        this.bind(LbxJwtBindings.DATASOURCE_KEY).toClass(${toPascalCase(dbName)}DataSource);`,
+            `        this.bind(LbxJwtBindings.DATASOURCE_KEY).toClass(${StringUtilities.toPascalCase(dbName)}DataSource);`,
             '        this.component(AuthenticationComponent);',
             '        this.component(LbxJwtComponent);',
             '',
@@ -538,7 +537,7 @@ export abstract class LoopbackUtilities {
         await NpmUtilities.install(name, [NpmPackage.LBX_PERSISTENCE_LOGGER]);
         await NpmUtilities.install(name, [NpmPackage.LOOPBACK_CRON]);
 
-        const applicationTs: Path = getPath(root, 'src', 'application.ts');
+        const applicationTs: Path = PathUtilities.resolve(root, 'src', 'application.ts');
         await TsUtilities.addImportStatements(
             applicationTs,
             [
@@ -557,7 +556,7 @@ export abstract class LoopbackUtilities {
         await TsUtilities.addToEndOfClass(applicationTs, [
             '',
             '    private setupLogging(): void {',
-            `        this.bind(LbxPersistenceLoggerComponentBindings.DATASOURCE_KEY).toClass(${toPascalCase(dbName)}DataSource);`,
+            `        this.bind(LbxPersistenceLoggerComponentBindings.DATASOURCE_KEY).toClass(${StringUtilities.toPascalCase(dbName)}DataSource);`,
             '        this.component(LbxPersistenceLoggerComponent);',
             '        this.repository(LogRepository);',
             '        this.bind(LbxPersistenceLoggerComponentBindings.LOGGER_NOTIFICATION_SERVICE).toClass(MailService);',
@@ -565,7 +564,7 @@ export abstract class LoopbackUtilities {
             '    }'
         ]);
         await TsUtilities.addToConstructorBody(applicationTs, 'this.setupLogging();');
-        const indexTs: Path = getPath(root, 'src', 'index.ts');
+        const indexTs: Path = PathUtilities.resolve(root, 'src', 'index.ts');
         await TsUtilities.addImportStatements(
             indexTs,
             [
@@ -584,7 +583,7 @@ export abstract class LoopbackUtilities {
         );
         await FsUtilities.replaceInFile(indexTs, 'console.log(`Server', 'await logger.info(`Server');
 
-        const mailServiceTs: Path = getPath(root, 'src', 'services', 'mail.service.ts');
+        const mailServiceTs: Path = PathUtilities.resolve(root, 'src', 'services', 'mail.service.ts');
         await TsUtilities.addImportStatements(
             mailServiceTs,
             [{ defaultImport: false, element: 'Log, LoggerNotificationService', path: NpmPackage.LBX_PERSISTENCE_LOGGER }]
@@ -609,7 +608,7 @@ export abstract class LoopbackUtilities {
      */
     static async setupChangeSets(root: string, name: string, dbName: string): Promise<void> {
         await NpmUtilities.install(name, [NpmPackage.LBX_CHANGE_SETS]);
-        const applicationTs: Path = getPath(root, 'src', 'application.ts');
+        const applicationTs: Path = PathUtilities.resolve(root, 'src', 'application.ts');
         await TsUtilities.addImportStatements(
             applicationTs,
             [
@@ -623,7 +622,7 @@ export abstract class LoopbackUtilities {
         await TsUtilities.addToEndOfClass(applicationTs, [
             '',
             '    private setupChangeSets(): void {',
-            `        this.bind(LbxChangeSetsBindings.DATASOURCE_KEY).toClass(${toPascalCase(dbName)}DataSource);`,
+            `        this.bind(LbxChangeSetsBindings.DATASOURCE_KEY).toClass(${StringUtilities.toPascalCase(dbName)}DataSource);`,
             '        this.component(LbxChangeSetsComponent);',
             '        this.repository(ChangeRepository);',
             '        this.repository(ChangeSetRepository);',
@@ -639,7 +638,7 @@ export abstract class LoopbackUtilities {
      */
     static async setupMigrations(root: string, name: string): Promise<void> {
         await NpmUtilities.install(name, [NpmPackage.LOOPBACK_4_MIGRATION]);
-        const applicationTs: Path = getPath(root, 'src', 'application.ts');
+        const applicationTs: Path = PathUtilities.resolve(root, 'src', 'application.ts');
         await TsUtilities.addImportStatements(
             applicationTs,
             [
@@ -651,6 +650,6 @@ export abstract class LoopbackUtilities {
             ]
         );
         await TsUtilities.addToConstructorBody(applicationTs, 'this.component(MigrationComponent);');
-        await FsUtilities.mkdir(getPath(root, 'src', 'migrations'));
+        await FsUtilities.mkdir(PathUtilities.resolve(root, 'src', 'migrations'));
     }
 }

@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, test } from '@jest/globals';
 
 import { FileMockUtilities, getMockConstants, MockConstants } from '../__testing__';
 import { FsUtilities, PathUtilities } from '../encapsulation';
-
 import { NestUtilities } from './nest.utilities';
 
 const mockConstants: MockConstants = getMockConstants('nest-utilities');
