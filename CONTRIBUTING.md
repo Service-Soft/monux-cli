@@ -43,7 +43,9 @@ The tests generate real workspaces, so they need what a user of Monux needs:
 - Node 24 or newer
 - Docker with Docker Compose, running
 - Chromium for the checks of the generated websites (Lighthouse and the requests a page makes):
-  `npx playwright-core install --with-deps chromium`
+  `npx playwright-core install --with-deps chromium`. Playwright supports its Chromium on Ubuntu and Debian only; on
+  another Linux, set `CHROME_PATH` to the Chrome or Chromium of the system, such as
+  `CHROME_PATH=/usr/bin/google-chrome-stable npm test`
 
 The clis of the frameworks need no install: Monux runs them through `npx`, in the versions it pins.
 

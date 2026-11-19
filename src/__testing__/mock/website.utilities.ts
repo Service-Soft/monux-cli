@@ -35,7 +35,7 @@ type LighthouseResult = {
 
 /**
  * Starts and measures the websites the tests generate, the way a visitor and a search engine get them.
- * Uses the chromium of playwright, which "npx playwright install chromium" installs.
+ * Uses the chromium of playwright, which "npx playwright-core install chromium" installs, or the browser CHROME_PATH names.
  */
 export abstract class WebsiteUtilities {
     /**
@@ -77,12 +77,14 @@ export abstract class WebsiteUtilities {
         // connects to the chromium playwright starts, which starts where the launcher of lighthouse does not find a port
         const lighthouse: Path = PathUtilities.resolve(__dirname, '..', '..', '..', 'node_modules', '.bin', 'lighthouse');
         // the whole chromium rather than the headless shell playwright starts by default, which lacks what lighthouse traces
-        const browser: Browser = await chromium.launch({ channel: 'chromium', args: [`--remote-debugging-port=${LIGHTHOUSE_DEBUGGING_PORT}`] });
+        const browser: Browser = await this.launchBrowser('chromium', [`--remote-debugging-port=${LIGHTHOUSE_DEBUGGING_PORT}`]);
         try {
             const output: string = await CPUtilities.resolveOutput([
                 lighthouse,
                 url,
                 `--port=${LIGHTHOUSE_DEBUGGING_PORT}`,
+                // a browser that does not load the page fails the test here, rather than when the test times out
+                '--max-wait-for-load=30000',
                 '--quiet',
                 '--output=json',
                 '--only-categories=performance,accessibility,seo'
@@ -106,7 +108,7 @@ export abstract class WebsiteUtilities {
      * @returns The urls of the requests to other origins.
      */
     static async findThirdPartyRequests(url: string): Promise<string[]> {
-        const browser: Browser = await chromium.launch();
+        const browser: Browser = await this.launchBrowser(undefined, []);
         try {
             const page: Page = await browser.newPage();
             const origin: string = new URL(url).origin;
@@ -122,5 +124,19 @@ export abstract class WebsiteUtilities {
         finally {
             await browser.close();
         }
+    }
+
+    /**
+     * Starts the browser of playwright, or the one CHROME_PATH names. Playwright supports its chromium on Ubuntu and
+     * Debian only, so on another Linux CHROME_PATH can name the Chrome or Chromium the system installed.
+     * @param channel - Which build of playwright's chromium to start without CHROME_PATH, the headless shell by default.
+     * @param args - The arguments to start the browser with.
+     * @returns The started browser.
+     */
+    private static async launchBrowser(channel: 'chromium' | undefined, args: string[]): Promise<Browser> {
+        const executablePath: string | undefined = process.env['CHROME_PATH'];
+        return executablePath
+            ? await chromium.launch({ executablePath, args })
+            : await chromium.launch({ channel, args });
     }
 }
