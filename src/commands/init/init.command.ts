@@ -1,4 +1,4 @@
-import { APPS_DIRECTORY_NAME, ENV_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, ROBOTS_FILE_NAME } from '../../constants';
+import { APPS_DIRECTORY_NAME, ENV_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME } from '../../constants';
 import { DockerUtilities } from '../../docker';
 import { CPUtilities, FsUtilities, InquirerUtilities, ProcessUtilities, PathUtilities } from '../../encapsulation';
 import { EnvUtilities } from '../../env';
@@ -77,7 +77,6 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
             '# See http://help.github.com/ignore-files/ for more about ignoring files.',
             ENV_FILE_NAME,
             ENVIRONMENT_TS_FILE_NAME,
-            ROBOTS_FILE_NAME,
             '**/init/**.sql',
             'letsencrypt',
             '# compiled output',

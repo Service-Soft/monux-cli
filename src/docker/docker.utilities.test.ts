@@ -57,8 +57,8 @@ describe('DockerUtilities', () => {
                 ...def.labels ?? [],
                 TRAEFIK_ENABLE_LABEL,
                 `traefik.http.routers.${def.name}.rule=Host(\`\${${def.name}_sub_domain}.\${prod_root_domain}\`)`,
-                `traefik.http.routers.${def.name}.entrypoints=web_secure`,
-                `traefik.http.routers.${def.name}.tls.certresolver=ssl_resolver`,
+                `traefik.http.routers.${def.name}.entrypoints=websecure`,
+                `traefik.http.routers.${def.name}.tls.certresolver=sslresolver`,
                 `traefik.http.services.${def.name}.loadbalancer.server.port=4000`,
                 TRAEFIK_COMPRESSION_LABEL,
                 `traefik.http.routers.${def.name}.middlewares=compression`

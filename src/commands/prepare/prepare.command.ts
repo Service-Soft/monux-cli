@@ -3,7 +3,6 @@ import { DbUtilities } from '../../db';
 import { DockerComposeFileName } from '../../docker';
 import { InquirerUtilities, ProcessUtilities, PathUtilities } from '../../encapsulation';
 import { EnvUtilities, EnvValidationErrorMessage } from '../../env';
-import { RobotsUtilities } from '../../robots';
 import { KeyValue } from '../../types';
 import { BaseCommand } from '../base-command.model';
 import { PrepareConfig, prepareConfigQuestions } from './prepare-config.model';
@@ -13,7 +12,6 @@ export class PrepareCommand extends BaseCommand<PrepareConfig> {
 
     protected override async run(input: PrepareConfig): Promise<void> {
         await this.buildEnv(input.fileName, input.rootDir);
-        await RobotsUtilities.createRobotsTxtFiles(input.fileName, input.rootDir);
         await DbUtilities.createInitFiles(input.fileName, input.rootDir);
     }
 

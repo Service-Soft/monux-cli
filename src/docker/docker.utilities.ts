@@ -6,7 +6,7 @@ import { WorkspaceConfig, WorkspaceUtilities } from '../workspace';
 import { ComposeBuild, ComposeDefinition, ComposePort, ComposeService, ComposeServiceEnvironment } from './compose-file.model';
 import { DockerComposeFileName, dockerComposeFileNames } from './docker-compose-file-name.model';
 import { DockerLabel } from './docker-labels.enum';
-import { DockerTraefikUtilities, TRAEFIK_BASE_DOCKER_COMMANDS, TRAEFIK_DOCKER_IMAGE, TRAEFIK_DOCKER_SOCK_VOLUME } from './docker-traefik.utilities';
+import { DockerTraefikUtilities, TRAEFIK_BASE_DOCKER_COMMANDS, TRAEFIK_CERT_RESOLVER, TRAEFIK_DOCKER_IMAGE, TRAEFIK_DOCKER_SOCK_VOLUME, TRAEFIK_SECURE_ENTRYPOINT } from './docker-traefik.utilities';
 import { ParsedDockerCompose, ParsedDockerComposeEnvironment, ParsedDockerComposeService, ParsedDockerComposeServiceNetwork } from './parsed-docker-compose.model';
 import { FullyParsedDockerService, isFullyParsedDockerService, StringifiedDockerService, StringifiedDockerServiceWithParsedLabels } from './stringified-docker-service.model';
 
@@ -145,13 +145,13 @@ export abstract class DockerUtilities {
                     name: 'traefik',
                     command: [
                         ...TRAEFIK_BASE_DOCKER_COMMANDS,
-                        '--entrypoints.web.http.redirections.entrypoint.to=websecure',
+                        `--entrypoints.web.http.redirections.entrypoint.to=${TRAEFIK_SECURE_ENTRYPOINT}`,
                         '--entryPoints.web.http.redirections.entrypoint.scheme=https',
-                        '--entrypoints.websecure.asDefault=true',
-                        '--certificatesresolvers.sslresolver.acme.httpchallenge=true',
-                        '--certificatesresolvers.sslresolver.acme.httpchallenge.entrypoint=web',
-                        `--certificatesresolvers.sslresolver.acme.email=${email}`,
-                        '--certificatesresolvers.sslresolver.acme.storage=/letsencrypt/acme.json'
+                        `--entrypoints.${TRAEFIK_SECURE_ENTRYPOINT}.asDefault=true`,
+                        `--certificatesresolvers.${TRAEFIK_CERT_RESOLVER}.acme.httpchallenge=true`,
+                        `--certificatesresolvers.${TRAEFIK_CERT_RESOLVER}.acme.httpchallenge.entrypoint=web`,
+                        `--certificatesresolvers.${TRAEFIK_CERT_RESOLVER}.acme.email=${email}`,
+                        `--certificatesresolvers.${TRAEFIK_CERT_RESOLVER}.acme.storage=/letsencrypt/acme.json`
                     ],
                     ports: [
                         {
@@ -202,13 +202,13 @@ export abstract class DockerUtilities {
                     name: 'traefik',
                     command: [
                         ...TRAEFIK_BASE_DOCKER_COMMANDS,
-                        '--entrypoints.web.http.redirections.entrypoint.to=websecure',
+                        `--entrypoints.web.http.redirections.entrypoint.to=${TRAEFIK_SECURE_ENTRYPOINT}`,
                         '--entryPoints.web.http.redirections.entrypoint.scheme=https',
-                        '--entrypoints.websecure.asDefault=true',
-                        '--certificatesresolvers.sslresolver.acme.httpchallenge=true',
-                        '--certificatesresolvers.sslresolver.acme.httpchallenge.entrypoint=web',
-                        `--certificatesresolvers.sslresolver.acme.email=${email}`,
-                        '--certificatesresolvers.sslresolver.acme.storage=/letsencrypt/acme.json'
+                        `--entrypoints.${TRAEFIK_SECURE_ENTRYPOINT}.asDefault=true`,
+                        `--certificatesresolvers.${TRAEFIK_CERT_RESOLVER}.acme.httpchallenge=true`,
+                        `--certificatesresolvers.${TRAEFIK_CERT_RESOLVER}.acme.httpchallenge.entrypoint=web`,
+                        `--certificatesresolvers.${TRAEFIK_CERT_RESOLVER}.acme.email=${email}`,
+                        `--certificatesresolvers.${TRAEFIK_CERT_RESOLVER}.acme.storage=/letsencrypt/acme.json`
                     ],
                     ports: [
                         {
@@ -275,7 +275,7 @@ export abstract class DockerUtilities {
 
         if (composeFileName === PROD_DOCKER_COMPOSE_FILE_NAME) {
             await this.addServiceToCompose(service, port, devPort, addTraefik, false, subDomain, LOCAL_DOCKER_COMPOSE_FILE_NAME);
-            await this.addServiceToCompose(service, port, devPort, addTraefik, false, subDomain, STAGE_DOCKER_COMPOSE_FILE_NAME);
+            await this.addServiceToCompose(service, port, devPort, addTraefik, traefikBasicAuth, subDomain, STAGE_DOCKER_COMPOSE_FILE_NAME);
             if (!addTraefik) {
                 return;
             }
@@ -448,6 +448,10 @@ export abstract class DockerUtilities {
         }
     }
 
+    /**
+     *
+     * @param volume
+     */
     static async addVolumeToComposeFiles(volume: string): Promise<void> {
         await Promise.all(dockerComposeFileNames.map(d => this.addVolumeToCompose(volume, d)));
     }

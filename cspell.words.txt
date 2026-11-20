@@ -46,3 +46,4 @@ pooler
 prometheus
 fesm
 errordisplay
+tsgolint

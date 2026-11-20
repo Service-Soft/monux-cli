@@ -1,14 +1,12 @@
-import { Type } from '@nestjs/common';
-
-import { APPS_DIRECTORY_NAME, BASE_TS_CONFIG_FILE_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ESLINT_CONFIG_FILE_NAME, NEST_CLI_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, WEBPACK_CONFIG } from '../../../constants';
+import { APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ESLINT_CONFIG_FILE_NAME, NEST_CLI_FILE_NAME } from '../../../constants';
 import { DbType, DbUtilities, defaultPortForDbType } from '../../../db';
 import { DockerUtilities } from '../../../docker';
-import { FsUtilities, QuestionsFor, PathUtilities, Path, LogUtilities } from '../../../encapsulation';
-import { DefaultEnvKeys, EnvUtilities } from '../../../env';
+import { FsUtilities, LogUtilities, Path, PathUtilities, QuestionsFor } from '../../../encapsulation';
+import { DefaultEnvKeys, EnvironmentVariableKey, EnvUtilities } from '../../../env';
 import { EslintUtilities } from '../../../eslint';
 import { NestUtilities } from '../../../nest';
 import { NpmPackage, NpmUtilities } from '../../../npm';
-import { TsUtilities } from '../../../ts';
+import { TemplateUtilities } from '../../../templates';
 import { TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
 import { WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
@@ -19,206 +17,130 @@ import { AddConfiguration, BaseAddCommand } from '../models';
  */
 type AddNestConfiguration = AddConfiguration & {
     /**
-     * The name of the frontend where the reset password functionality is implemented.
-     */
-    frontendName: string,
-    /**
-     * The port that should be used by the application.
+     * The port the api listens on during development.
      * @default 3000
      */
     port: number,
     /**
-     * The sub domain that this service should be reached under.
-     * If nothing is provided, Monux assumes that the service should be reached under the root domain
-     * and under the www sub domain.
+     * The sub domain the api is reached under. Without one, Monux assumes the root domain and its www sub domain.
      */
-    subDomain?: string,
-    /**
-     * The email for the default root user.
-     */
-    defaultUserEmail: string,
-    /**
-     * The password for the default root user.
-     */
-    defaultUserPassword: string
+    subDomain?: string
 };
 
 /**
- * Command that handles adding a nest api to the monorepo.
+ * The names of the variables of the database of the api.
+ */
+type DbKeys = {
+    /**
+     * The host of the database.
+     */
+    dbHostKey: EnvironmentVariableKey,
+    /**
+     * The user of the api.
+     */
+    dbUserKey: EnvironmentVariableKey,
+    /**
+     * The password of the user.
+     */
+    dbPasswordKey: EnvironmentVariableKey,
+    /**
+     * The name of the database.
+     */
+    dbNameKey: EnvironmentVariableKey
+};
+
+// the driver TypeORM reaches each database with
+const DB_PACKAGES: Record<DbType, NpmPackage> = {
+    [DbType.POSTGRES]: NpmPackage.PG,
+    [DbType.MARIADB]: NpmPackage.MYSQL_2
+};
+
+// what Nest lints and formats with, which the eslint of the workspace replaces
+const LINT_FILES: string[] = ['.oxlintrc.json', '.prettierrc', ESLINT_CONFIG_FILE_NAME];
+
+// the entry files "nest new" writes, with inferred types and the untyped tsconfig jest reads, which the eslint of the
+// workspace would otherwise flag. The code the developer adds is linted like every other project
+const NEST_ESLINT_EXCEPTIONS: string = [
+    '    ...baseConfig,',
+    '    {',
+    '        files: [\'src/main.ts\', \'jest.config.ts\'],',
+    '        rules: {',
+    '            \'typescript/typedef\': \'off\',',
+    '            \'typescript/explicit-function-return-type\': \'off\',',
+    '            \'typescript/no-unsafe-assignment\': \'off\',',
+    '            \'typescript/no-unsafe-member-access\': \'off\',',
+    '            \'typescript/no-unsafe-argument\': \'off\'',
+    '        }',
+    '    },'
+].join('\n');
+
+/**
+ * Command that handles adding a nest api to the monorepo: a Nest project as "nest new" generates it, with its database,
+ * its environment and its image as part of the workspace, and its OpenAPI document, see GOALS.md.
  */
 export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
-
-    private readonly dbNpmPackages: Record<DbType, NpmPackage[]> = {
-        [DbType.POSTGRES]: [NpmPackage.PG],
-        [DbType.MARIADB]: [NpmPackage.MYSQL_2]
-    };
-
     protected override configQuestions: QuestionsFor<OmitStrict<AddNestConfiguration, keyof AddConfiguration>> = {
         port: {
             type: 'number',
-            message: 'port',
+            message: 'Port',
             name: 'port',
-            validate: (v: number) => !!v,
+            validate: (v?: number) => !!v,
             default: 3000
         },
         subDomain: {
             type: 'input',
             name: 'subDomain',
-            message: 'sub domain'
-        },
-        defaultUserEmail: {
-            type: 'input',
-            name: 'defaultUserEmail',
-            message: 'Email of the default user',
-            validate: (v?: string) => !!v,
-            default: async () => (await FsUtilities.readFile(PathUtilities.resolve(PROD_DOCKER_COMPOSE_FILE_NAME)))
-                .split('.acme.email=')[1]
-                .split('\n')[0]
-        },
-        defaultUserPassword: {
-            type: 'input',
-            name: 'defaultUserPassword',
-            message: 'Password of the default user',
-            validate: (v?: string) => v != undefined && v.length >= 12 ? true : 'The password needs to be at least 12 characters long'
-        },
-        frontendName: {
-            type: 'input',
-            name: 'frontendName',
-            message: 'Name of the frontend where the reset password ui is implemented',
-            validate: (v?: string) => !!v
+            message: 'Sub domain'
         }
     };
 
     protected override async run(): Promise<void> {
         const config: AddNestConfiguration = await this.getConfig();
-        const { dbComposeServiceName, databaseName, dbType } = await DbUtilities.configureDb(config.name, undefined, PathUtilities.resolve('.'));
+        const { dbComposeServiceName, databaseName, dbType } = await DbUtilities.configureDb(
+            config.name,
+            undefined,
+            PathUtilities.resolve('.')
+        );
+        const dbKeys: DbKeys = {
+            dbHostKey: DefaultEnvKeys.dbHost(dbComposeServiceName),
+            dbUserKey: DefaultEnvKeys.dbUser(dbComposeServiceName, databaseName),
+            dbPasswordKey: DefaultEnvKeys.dbPassword(dbComposeServiceName, databaseName),
+            dbNameKey: DefaultEnvKeys.dbName(dbComposeServiceName, databaseName)
+        };
+
         const root: Path = await this.createProject(config);
-        await EnvUtilities.setupProjectEnvironment(root, false);
-        await this.createNestDatasource(dbComposeServiceName, databaseName, dbType, root, config.name);
-        await this.updateMainTs(root, config.port);
-
-        await Promise.all([
-            FsUtilities.rm(PathUtilities.resolve(root, '.prettierrc')),
-            FsUtilities.rm(PathUtilities.resolve(root, 'src', 'app.controller.ts')),
-            FsUtilities.rm(PathUtilities.resolve(root, 'src', 'app.controller.spec.ts')),
-            FsUtilities.rm(PathUtilities.resolve(root, 'src', 'app.service.ts')),
-            EslintUtilities.setupProjectEslint(root, true, 'tsconfig.json'),
-            this.setupTsConfig(config.name),
-            this.updatePackageJson(config.name),
-            this.setupSwagger(root, config.name),
-            DockerUtilities.addServiceToCompose(
-                {
-                    name: config.name,
-                    build: {
-                        dockerfile: `./${root}/${DOCKER_FILE_NAME}`,
-                        context: '.'
-                    },
-                    volumes: [`/${config.name}`]
-                },
-                3000,
-                config.port,
-                true,
-                false,
-                config.subDomain
-            ),
-            this.createDockerfile(root, config)
-        ]);
-
+        LogUtilities.step('Adding the database, the environment and the image of the workspace');
+        await TemplateUtilities.write('nest', root, {
+            name: config.name,
+            dbType: dbType === DbType.POSTGRES ? 'postgres' : 'mariadb',
+            dbPort: String(defaultPortForDbType[dbType]),
+            ...dbKeys
+        });
         await NpmUtilities.install(
             config.name,
-            [
-                NpmPackage.CLASS_VALIDATOR,
-                NpmPackage.CLASS_TRANSFORMER,
-                NpmPackage.NEST_JS_SWAGGER,
-                NpmPackage.NEST_JS_TYPEORM,
-                NpmPackage.TYPEORM,
-                ...this.dbNpmPackages[dbType]
-            ]
+            [NpmPackage.NEST_JS_TYPEORM, NpmPackage.TYPEORM, DB_PACKAGES[dbType], NpmPackage.NEST_JS_SWAGGER]
         );
-    }
+        await this.setupEnvironment(root, config, dbKeys);
+        await this.connect(root, config.name);
+        await this.compileFromWorkspaceRoot(root, config.name);
+        await this.addToCompose(root, config);
 
-    private async createWebpackConfig(root: Path): Promise<void> {
-        await FsUtilities.createFile(
-            PathUtilities.resolve(root, WEBPACK_CONFIG),
-            [
-                '/* eslint-disable jsdoc/require-param-description */',
-                '/* eslint-disable jsdoc/require-returns-description */',
-                '/* eslint-disable jsdoc/no-types */',
-                '/* eslint-disable jsdoc/require-description */',
-                '',
-                'const webpack = require(\'webpack\');',
-                '',
-                '/**',
-                ' * @param {import(\'webpack\').Configuration} config',
-                ' * @returns {import(\'webpack\').Configuration}',
-                ' */',
-                'module.exports = (config) => {',
-                '    const existingPlugins = config.plugins ?? [];',
-                '    return {',
-                '        ...config,',
-                '        plugins: [',
-                '            ...existingPlugins,',
-                '            new webpack.IgnorePlugin({',
-                '                resourceRegExp: /^pg-native$|^cloudflare:sockets$/',
-                '            })',
-                '        ]',
-                '    };',
-                '};'
-            ]
-        );
-    }
+        const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, PathUtilities.resolve('.'));
+        await EnvUtilities.buildEnvironmentFileForApp(app, false, 'dev.docker-compose.yaml', PathUtilities.resolve('.'));
 
-    private async setupSwagger(root: Path, name: string): Promise<void> {
-        const mainPath: Path = PathUtilities.resolve(root, 'src', 'main.ts');
-        await TsUtilities.addBelowImports(
-            mainPath,
-            [
-                'function setupSwagger(app: NestExpressApplication): void {',
-                '\tconst config: Omit<OpenAPIObject, \'paths\'> = new DocumentBuilder()',
-                `\t\t.setTitle('${name}')`,
-                '\t\t.setVersion(\'1.0\')',
-                '\t\t.addBearerAuth()',
-                '\t\t.build();',
-                '',
-                '\tconst document: OpenAPIObject = SwaggerModule.createDocument(app, config);',
-                '\tSwaggerModule.setup(\'api\', app, document);',
-                '\tSwaggerModule.setup(\'api-json\', app, document);',
-                '}'
-            ]
-        );
+        LogUtilities.step('Setting up eslint');
+        await EslintUtilities.setupProjectEslint(root, true, 'tsconfig.json');
         await FsUtilities.replaceInFile(
-            mainPath,
-            // eslint-disable-next-line sonar/no-duplicate-string
-            '    app.enableCors();',
-            [
-                '    app.enableCors();',
-                '',
-                '    setupSwagger(app);'
-            ].join('\n')
+            PathUtilities.resolve(root, ESLINT_CONFIG_FILE_NAME),
+            '    ...baseConfig,',
+            NEST_ESLINT_EXCEPTIONS
         );
-        await TsUtilities.addImportStatements(
-            mainPath,
-            [
-                { defaultImport: false, element: 'OpenAPIObject', path: NpmPackage.NEST_JS_SWAGGER },
-                { defaultImport: false, element: 'DocumentBuilder', path: NpmPackage.NEST_JS_SWAGGER },
-                { defaultImport: false, element: 'SwaggerModule', path: NpmPackage.NEST_JS_SWAGGER }
-            ]
-        );
-    }
-
-    private async updateNestCliJson(root: Path): Promise<void> {
-        await NestUtilities.updateNestCliJson(
-            PathUtilities.resolve(root, NEST_CLI_FILE_NAME),
-            {
-                compilerOptions: {
-                    builder: 'webpack'
-                }
-            }
-        );
+        await EslintUtilities.fix(root);
+        LogUtilities.success(`Added "${config.name}" in ${PathUtilities.getRelative(PathUtilities.resolve('.'), root)}`);
     }
 
     private async createProject(config: AddNestConfiguration): Promise<Path> {
-        LogUtilities.step('Creating the project');
+        LogUtilities.step('Creating the Nest project');
         await NestUtilities.runCommand(
             PathUtilities.resolve(APPS_DIRECTORY_NAME),
             `new ${config.name}`,
@@ -231,221 +153,113 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
                 '--no-observe': true
             }
         );
-        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, PathUtilities.resolve('.'));
-
-        await FsUtilities.mkdir(PathUtilities.resolve(newProject.path, 'src', 'modules'));
-        await FsUtilities.mkdir(PathUtilities.resolve(newProject.path, 'src', 'utilities'));
-        await FsUtilities.mkdir(PathUtilities.resolve(newProject.path, 'src', 'decorators'));
-        await FsUtilities.mkdir(PathUtilities.resolve(newProject.path, 'src', 'guards'));
-        await FsUtilities.mkdir(PathUtilities.resolve(newProject.path, 'src', 'migrations'));
-        await FsUtilities.mkdir(PathUtilities.resolve(newProject.path, 'src', 'assets'));
-
-        const appModuleTs: Path = PathUtilities.resolve(newProject.path, 'src', 'app.module.ts');
-        await FsUtilities.replaceInFile(appModuleTs, '\nimport { AppController } from \'./app.controller\';', '');
-        await FsUtilities.replaceInFile(appModuleTs, '\nimport { AppService } from \'./app.service\';', '');
-        await FsUtilities.replaceInFile(appModuleTs, 'AppService', '');
-        await FsUtilities.replaceInFile(appModuleTs, 'AppController', '');
-
-        await FsUtilities.rm(PathUtilities.resolve(newProject.path, ESLINT_CONFIG_FILE_NAME));
-
-        return newProject.path;
-    }
-
-    private async setupTsConfig(projectName: string): Promise<void> {
-        LogUtilities.step('Setting up the tsconfig');
-        await TsConfigUtilities.updateTsConfig(
-            projectName,
-            {
-                extends: `../../${BASE_TS_CONFIG_FILE_NAME}`,
-                compilerOptions: {
-                    removeComments: undefined,
-                    emitDecoratorMetadata: undefined,
-                    experimentalDecorators: undefined,
-                    forceConsistentCasingInFileNames: undefined,
-                    allowSyntheticDefaultImports: undefined,
-                    sourceMap: undefined,
-                    skipLibCheck: undefined,
-                    noImplicitAny: undefined,
-                    noFallthroughCasesInSwitch: undefined,
-                    rootDir: undefined
-                }
-            }
-        );
-
-        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName, PathUtilities.resolve('.'));
-        const tsConfigPath: Path = PathUtilities.resolve(project.path, 'tsconfig.build.json');
-        await TsConfigUtilities.update(tsConfigPath, {
-            compilerOptions: { rootDir: undefined }
-        });
-
-        await NpmUtilities.updatePackageJson(
-            projectName,
-            {
-                main: `dist/${APPS_DIRECTORY_NAME}/${projectName}/src/main.js`,
-                types: `dist/${APPS_DIRECTORY_NAME}/${projectName}/src/main.d.ts`
-            }
-        );
-    }
-
-    private async updatePackageJson(name: string): Promise<void> {
-        await NpmUtilities.updatePackageJson(name, {
-            license: 'MIT',
+        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, PathUtilities.resolve('.'));
+        await Promise.all(LINT_FILES.map(f => FsUtilities.rm(PathUtilities.resolve(project.path, f))));
+        await NpmUtilities.updatePackageJson(config.name, {
             scripts: {
-                format: undefined
+                format: undefined,
+                lint: undefined,
+                // see scripts/jest.mjs
+                test: 'node --experimental-vm-modules scripts/jest.mjs',
+                'test:watch': 'node --experimental-vm-modules scripts/jest.mjs --watch',
+                'test:cov': 'node --experimental-vm-modules scripts/jest.mjs --coverage',
+                'test:e2e': 'node --experimental-vm-modules scripts/jest.mjs --config ./test/jest-e2e.json'
             },
             devDependencies: {
-                '@eslint/eslintrc': undefined,
-                '@eslint/js': undefined,
-                eslint: undefined,
-                'eslint-config-prettier': undefined,
-                'eslint-plugin-prettier': undefined,
-                prettier: undefined,
-                'typescript-eslint': undefined
+                oxlint: undefined,
+                'oxlint-tsgolint': undefined,
+                prettier: undefined
             }
         });
-        await NpmUtilities.install(name, []);
+        await NpmUtilities.install(config.name, []);
+        return project.path;
     }
 
-    private async updateMainTs(root: Path, port: number): Promise<void> {
+    private async setupEnvironment(root: Path, config: AddNestConfiguration, dbKeys: DbKeys): Promise<void> {
+        await EnvUtilities.setupProjectEnvironment(root, true);
+        const environmentModel: Path = PathUtilities.resolve(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
+        const keys: EnvironmentVariableKey[] = [DefaultEnvKeys.ENV, DefaultEnvKeys.port(config.name), ...Object.values(dbKeys)];
+        for (const key of keys) {
+            await EnvUtilities.addProjectVariableKey(config.name, environmentModel, key, false, PathUtilities.resolve('.'));
+        }
+    }
+
+    /**
+     * Connects the api to the workspace: its database, the port of the workspace during development, traefik in front
+     * of it, and its OpenAPI document.
+     * @param root - The directory of the api.
+     * @param name - The name of the api.
+     */
+    private async connect(root: Path, name: string): Promise<void> {
+        const appModulePath: Path = PathUtilities.resolve(root, 'src', 'app.module.ts');
+        await FsUtilities.replaceInFile(appModulePath, '  imports: [],', '  imports: [TypeOrmModule.forRoot(DATABASE_OPTIONS)],');
+        await FsUtilities.updateFile(
+            appModulePath,
+            'import { TypeOrmModule } from \'@nestjs/typeorm\';\nimport { DATABASE_OPTIONS } from \'./database.options\';',
+            'prepend'
+        );
+
         const mainPath: Path = PathUtilities.resolve(root, 'src', 'main.ts');
-        await FsUtilities.replaceInFile(mainPath, 'env.PORT', 'env[\'PORT\']');
-        await FsUtilities.replaceInFile(mainPath, '?? 3000', `?? ${port}`);
-        await FsUtilities.replaceInFile(mainPath, 'async function bootstrap() {', 'async function bootstrap(): Promise<void> {');
-        await FsUtilities.replaceInFile(mainPath, 'bootstrap();', '\nvoid bootstrap();');
         await FsUtilities.replaceInFile(
             mainPath,
             '  const app = await NestFactory.create(AppModule);',
             [
-                '    const app: NestExpressApplication = await NestFactory.create(AppModule, { abortOnError: false });',
-                '',
-                '    app.set(\'trust proxy\', 1);',
-                '    app.useGlobalPipes(',
-                '        new ValidationPipe({',
-                '            transform: true,',
-                '            forbidUnknownValues: true,',
-                '            whitelist: true,',
-                '            forbidNonWhitelisted: true',
-                '        })',
-                '    );',
-                '    const reflector: Reflector = app.get(Reflector);',
-                '    app.useGlobalInterceptors(new ClassSerializerInterceptor(reflector));',
-                '    app.enableCors();',
-                ''
+                '  const app = await NestFactory.create<NestExpressApplication>(AppModule);',
+                '  // behind traefik, which forwards the address of the client',
+                '  app.set(\'trust proxy\', 1);',
+                '  // the OpenAPI document of the api, at /api and as json at /api-json',
+                '  SwaggerModule.setup(\'api\', app, () => SwaggerModule.createDocument(',
+                '    app,',
+                `    new DocumentBuilder().setTitle('${name}').build()`,
+                '  ));'
             ].join('\n')
         );
-        await TsUtilities.addImportStatements(
+        await FsUtilities.replaceInFile(
+            mainPath,
+            'await app.listen(process.env.PORT ?? 3000);',
+            `await app.listen(environment.env === 'dev' ? environment.${DefaultEnvKeys.port(name)} : 3000);`
+        );
+        await FsUtilities.updateFile(
             mainPath,
             [
-                { defaultImport: false, element: 'NestExpressApplication', path: '@nestjs/platform-express' },
-                { defaultImport: false, element: 'ValidationPipe', path: '@nestjs/common' },
-                { defaultImport: false, element: 'Reflector', path: '@nestjs/core' },
-                { defaultImport: false, element: 'ClassSerializerInterceptor', path: '@nestjs/common' }
-            ]
+                'import { NestExpressApplication } from \'@nestjs/platform-express\';',
+                'import { DocumentBuilder, SwaggerModule } from \'@nestjs/swagger\';',
+                'import { environment } from \'./environment/environment\';'
+            ].join('\n'),
+            'prepend'
         );
     }
 
-    private async createDockerfile(root: string, config: AddNestConfiguration): Promise<void> {
-        await FsUtilities.createFile(
-            PathUtilities.resolve(root, DOCKER_FILE_NAME),
-            [
-                'FROM node:20 AS build',
-                '# Set to a non-root built-in user `node`',
-                'USER node',
-                'RUN mkdir -p /home/node/root',
-                'COPY --chown=node . /home/node/root',
-                'WORKDIR /home/node/root',
-                'RUN npm install',
-                `RUN npm run build --workspace=${APPS_DIRECTORY_NAME}/${config.name} --omit=dev`,
-                '',
-                'FROM node:20',
-                'WORKDIR /usr/app',
-                `COPY --from=build /home/node/root/${APPS_DIRECTORY_NAME}/${config.name}/dist ./`,
-                'CMD node main'
-            ]
-        );
+    /**
+     * Compiles the api from the root of the workspace, as it imports the global-environment.model.ts there, which a
+     * rootDir of src refuses. The output is below dist/apps/<name>/src then, so what Nest starts from dist points there.
+     * @param root - The directory of the api.
+     * @param name - The name of the api.
+     */
+    private async compileFromWorkspaceRoot(root: Path, name: string): Promise<void> {
+        await TsConfigUtilities.updateTsConfig(name, { compilerOptions: { rootDir: '../..' } });
+        await TsConfigUtilities.update(PathUtilities.resolve(root, 'tsconfig.build.json'), { compilerOptions: { rootDir: '../..' } });
+        const output: string = `${APPS_DIRECTORY_NAME}/${name}/src`;
+        await NestUtilities.updateNestCliJson(PathUtilities.resolve(root, NEST_CLI_FILE_NAME), { entryFile: `${output}/main` });
+        await NpmUtilities.updatePackageJson(name, { scripts: { 'start:prod': `node dist/${output}/main` } });
     }
 
-    private async createNestDatasource(
-        dbServiceName: string,
-        databaseName: string,
-        dbType: DbType,
-        root: Path,
-        projectName: string
-    ): Promise<void> {
-        const DB_TYPE_PLACEHOLDER: string = 'DB_TYPE_PLACEHOLDER';
-        const DB_HOST_PLACEHOLDER: string = 'DB_HOST_PLACEHOLDER';
-        const DB_USERNAME_PLACEHOLDER: string = 'DB_USERNAME_PLACEHOLDER';
-        const DB_PASSWORD_PLACEHOLDER: string = 'DB_PASSWORD_PLACEHOLDER';
-        const DB_DATABASE_PLACEHOLDER: string = 'DB_DATABASE_PLACEHOLDER';
-
-        const appModuleTs: Path = PathUtilities.resolve(root, 'src', 'app.module.ts');
-        await NestUtilities.addModuleImports(
-            appModuleTs,
-            [
-                `TypeOrmModule.forRoot({
-            type: ${DB_TYPE_PLACEHOLDER},
-            host: ${DB_HOST_PLACEHOLDER},
-            port: ${defaultPortForDbType[dbType]},
-            username: ${DB_USERNAME_PLACEHOLDER},
-            password: ${DB_PASSWORD_PLACEHOLDER},
-            database: ${DB_DATABASE_PLACEHOLDER},
-            autoLoadEntities: true,
-            synchronize: true,
-            logging: false
-        })` as unknown as Type<unknown>
-            ]
-        );
-        await TsUtilities.addImportStatements(
-            appModuleTs,
-            [
-                { defaultImport: false, element: 'TypeOrmModule', path: NpmPackage.NEST_JS_TYPEORM },
-                { defaultImport: false, element: 'environment', path: './environment/environment' }
-            ]
-        );
-        await FsUtilities.replaceInFile(appModuleTs, DB_TYPE_PLACEHOLDER, `'${dbType}'`);
-        await FsUtilities.replaceInFile(appModuleTs, '\'TypeOrmModule', 'TypeOrmModule');
-        await FsUtilities.replaceInFile(appModuleTs, ')\'', ')');
-        await FsUtilities.replaceAllInFile(
-            appModuleTs,
-            DB_HOST_PLACEHOLDER,
-            `environment.${DefaultEnvKeys.dbHost(dbServiceName)}`
-        );
-        await FsUtilities.replaceAllInFile(
-            appModuleTs,
-            DB_USERNAME_PLACEHOLDER,
-            `environment.${DefaultEnvKeys.dbUser(dbServiceName, databaseName)}`
-        );
-        await FsUtilities.replaceAllInFile(
-            appModuleTs,
-            DB_PASSWORD_PLACEHOLDER,
-            `environment.${DefaultEnvKeys.dbPassword(dbServiceName, databaseName)}`
-        );
-        await FsUtilities.replaceAllInFile(
-            appModuleTs,
-            DB_DATABASE_PLACEHOLDER,
-            `environment.${DefaultEnvKeys.dbName(dbServiceName, databaseName)}`
-        );
-
-        const environmentModel: Path = PathUtilities.resolve(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
-        await EnvUtilities.addProjectVariableKey(
-            projectName,
-            environmentModel,
-            DefaultEnvKeys.dbPassword(dbServiceName, databaseName),
+    private async addToCompose(root: Path, config: AddNestConfiguration): Promise<void> {
+        const projectDirectory: string = PathUtilities.getRelative(PathUtilities.resolve('.'), root);
+        await DockerUtilities.addServiceToCompose(
+            {
+                name: config.name,
+                build: {
+                    dockerfile: `./${projectDirectory}/${DOCKER_FILE_NAME}`,
+                    context: '.'
+                },
+                envFile: [`./${projectDirectory}/.env`]
+            },
+            3000,
+            config.port,
             true,
-            PathUtilities.resolve('.')
+            false,
+            config.subDomain
         );
-        await EnvUtilities.addProjectVariableKey(
-            projectName,
-            environmentModel,
-            DefaultEnvKeys.dbUser(dbServiceName, databaseName),
-            true,
-            PathUtilities.resolve('.')
-        );
-        await EnvUtilities.addProjectVariableKey(projectName,
-            environmentModel,
-            DefaultEnvKeys.dbName(dbServiceName, databaseName),
-            true,
-            PathUtilities.resolve('.'));
-        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, DefaultEnvKeys.dbHost(dbServiceName), true, PathUtilities.resolve('.'));
     }
 }

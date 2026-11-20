@@ -1,374 +1,235 @@
-import { APPS_DIRECTORY_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, GIT_IGNORE_FILE_NAME, TS_CONFIG_FILE_NAME, WEBPACK_CONFIG, BASE_TS_CONFIG_FILE_NAME, VITE_CONFIG } from '../../../constants';
+import { APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ESLINT_CONFIG_FILE_NAME, GIT_IGNORE_FILE_NAME, TS_CONFIG_FILE_NAME } from '../../../constants';
 import { DbType, DbUtilities } from '../../../db';
 import { DockerUtilities } from '../../../docker';
-import { FsUtilities, QuestionsFor, PathUtilities, Path, LogUtilities } from '../../../encapsulation';
-import { DefaultEnvKeys, EnvUtilities } from '../../../env';
+import { FsUtilities, LogUtilities, Path, PathUtilities, QuestionsFor } from '../../../encapsulation';
+import { DefaultEnvKeys, EnvironmentVariableKey, EnvUtilities } from '../../../env';
 import { EslintUtilities } from '../../../eslint';
-import { LbDatabaseConfig, LoopbackUtilities } from '../../../loopback';
+import { LoopbackUtilities } from '../../../loopback';
 import { NpmPackage, NpmUtilities } from '../../../npm';
-import { TsUtilities } from '../../../ts';
+import { TemplateUtilities } from '../../../templates';
 import { TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
-import { StringUtilities } from '../../../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
-import { BaseAddCommand } from '../models';
-import { AddConfiguration } from '../models/add-configuration.model';
-import { loopbackViteContent } from './loopback-vite.content';
-import { loopbackWebpackContent } from './loopback-webpack.content';
+import { AddConfiguration, BaseAddCommand } from '../models';
 
 /**
  * Configuration for adding a new loopback api.
  */
 export type AddLoopbackConfiguration = AddConfiguration & {
     /**
-     * The name of the frontend where the reset password functionality is implemented.
-     */
-    frontendName: string,
-    /**
-     * The port that should be used by the application.
+     * The port the api listens on during development.
      * @default 3000
      */
     port: number,
     /**
-     * The sub domain that this service should be reached under.
-     * If nothing is provided, Monux assumes that the service should be reached under the root domain
-     * and under the www sub domain.
+     * The sub domain the api is reached under. Without one, Monux assumes the root domain and its www sub domain.
      */
-    subDomain?: string,
-    /**
-     * The email for the default root user.
-     */
-    defaultUserEmail: string,
-    /**
-     * The password for the default root user.
-     */
-    defaultUserPassword: string
+    subDomain?: string
 };
 
 /**
- * Command that handles adding a loopback api to the monorepo.
+ * The names of the variables of the database of the api.
+ */
+type DbKeys = {
+    /**
+     * The host of the database.
+     */
+    dbHostKey: EnvironmentVariableKey,
+    /**
+     * The user of the api.
+     */
+    dbUserKey: EnvironmentVariableKey,
+    /**
+     * The password of the user.
+     */
+    dbPasswordKey: EnvironmentVariableKey,
+    /**
+     * The name of the database.
+     */
+    dbNameKey: EnvironmentVariableKey
+};
+
+// what lb4 writes the way LoopBack writes code, which the eslint of the workspace would otherwise flag. The code the
+// developer adds is linted like every other project
+const LOOPBACK_ESLINT_EXCEPTIONS: string = [
+    '    ...baseConfig,',
+    '    // the static home page LoopBack serves, which is no Angular template',
+    '    { ignores: [\'public\', \'dist\'] },',
+    '    {',
+    '        files: [\'**/*.ts\'],',
+    '        rules: {',
+    '            // "__tests__" is where LoopBack keeps its tests',
+    '            \'unicorn/filename-case\': [\'warn\', { directoryRoots: [/(^|\\/)__tests__$/u] }]',
+    '        }',
+    '    },',
+    '    {',
+    '        // the entry files and the tests lb4 writes: types inferred, callbacks of promises and logs to the console',
+    '        files: [\'src/index.ts\', \'src/migrate.ts\', \'src/openapi-spec.ts\', \'src/__tests__/**/*.ts\'],',
+    '        rules: {',
+    '            \'typescript/typedef\': \'off\',',
+    '            \'typescript/explicit-function-return-type\': \'off\',',
+    '            \'no-console\': \'off\',',
+    '            \'promise/prefer-await-to-callbacks\': \'off\',',
+    '            \'promise/prefer-await-to-then\': \'off\'',
+    '        }',
+    '    },',
+    '    {',
+    '        // the assertions of @loopback/testlab, which come without types',
+    '        files: [\'src/__tests__/**/*.ts\'],',
+    '        rules: {',
+    '            \'typescript/no-unsafe-call\': \'off\'',
+    '        }',
+    '    },'
+].join('\n');
+
+/**
+ * Command that handles adding a loopback api to the monorepo: a LoopBack project as lb4 generates it, with its Postgres
+ * database, its environment and its image as part of the workspace, see GOALS.md.
  */
 export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration> {
     protected override configQuestions: QuestionsFor<OmitStrict<AddLoopbackConfiguration, keyof AddConfiguration>> = {
         port: {
             type: 'number',
             name: 'port',
-            message: 'port',
-            validate: (v: number) => !!v,
+            message: 'Port',
+            validate: (v?: number) => !!v,
             default: 3000
         },
         subDomain: {
             type: 'input',
             name: 'subDomain',
-            message: 'sub domain'
-        },
-        defaultUserEmail: {
-            type: 'input',
-            name: 'defaultUserEmail',
-            message: 'Email of the default user',
-            validate: (v?: string) => !!v,
-            default: async () => (await FsUtilities.readFile(PathUtilities.resolve(PROD_DOCKER_COMPOSE_FILE_NAME)))
-                .split('.acme.email=')[1]
-                .split('\n')[0]
-        },
-        defaultUserPassword: {
-            type: 'input',
-            name: 'defaultUserPassword',
-            message: 'Password of the default user',
-            validate: (v?: string) => v != undefined && v.length >= 12 ? true : 'The password needs to be at least 12 characters long'
-        },
-        frontendName: {
-            type: 'input',
-            name: 'frontendName',
-            message: 'Name of the frontend where the reset password ui is implemented',
-            validate: (v?: string) => !!v
+            message: 'Sub domain'
         }
     };
 
     protected override async run(): Promise<void> {
         const config: AddLoopbackConfiguration = await this.getConfig();
-        const { dbComposeServiceName, databaseName, dbType } = await DbUtilities.configureDb(config.name, DbType.POSTGRES, PathUtilities.resolve('.'));
+        const { dbComposeServiceName, databaseName, dbType } = await DbUtilities.configureDb(
+            config.name,
+            DbType.POSTGRES,
+            PathUtilities.resolve('.')
+        );
         if (dbType !== DbType.POSTGRES) {
-            throw new Error('Error adding the app: Currently loopback only supports postgres as its database.');
+            throw new Error('A LoopBack api of Monux uses Postgres as its database');
         }
+        const dbKeys: DbKeys = {
+            dbHostKey: DefaultEnvKeys.dbHost(dbComposeServiceName),
+            dbUserKey: DefaultEnvKeys.dbUser(dbComposeServiceName, databaseName),
+            dbPasswordKey: DefaultEnvKeys.dbPassword(dbComposeServiceName, databaseName),
+            dbNameKey: DefaultEnvKeys.dbName(dbComposeServiceName, databaseName)
+        };
+
         const root: Path = await this.createProject(config);
-        await EnvUtilities.setupProjectEnvironment(root, false);
-        await this.createLoopbackDatasource(dbComposeServiceName, databaseName, root, config.name);
-
-        await Promise.all([
-            this.setupTsConfig(config.name),
-            this.updateApplicationTs(root, databaseName),
-            this.updateIndexTs(root, config.port),
-            this.updateOpenApiSpec(root, config.port),
-            EslintUtilities.setupProjectEslint(root, true, TS_CONFIG_FILE_NAME),
-            DockerUtilities.addServiceToCompose(
-                {
-                    name: config.name,
-                    build: {
-                        dockerfile: `./${root}/${DOCKER_FILE_NAME}`,
-                        context: '.'
-                    },
-                    volumes: [`/${config.name}`]
-                },
-                3000,
-                config.port,
-                true,
-                false,
-                config.subDomain
-            ),
-            this.updateDockerFile(root, config)
-            // this.setupVite(root, config.name)
-            // this.setupWebpack(root, config.name) TODO: enable
-        ]);
-
-        await NpmUtilities.updatePackageJson(config.name, {
-            scripts: {
-                start: 'npm run start:watch',
-                'start:watch': 'tsc-watch --target es2017 --outDir ./dist --onSuccess \"node .\"'
-            }
-        });
-        await NpmUtilities.install(config.name, [NpmPackage.TSC_WATCH], true);
-        await LoopbackUtilities.setupAuth(root, config, databaseName);
-        await LoopbackUtilities.setupLogging(root, config.name, databaseName);
-        await LoopbackUtilities.setupChangeSets(root, config.name, databaseName);
-        await LoopbackUtilities.setupMigrations(root, config.name);
+        LogUtilities.step('Adding the database, the environment and the image of the workspace');
+        await TemplateUtilities.write('loopback', root, { name: config.name, ...dbKeys });
+        await NpmUtilities.install(config.name, [NpmPackage.LOOPBACK_CONNECTOR_POSTGRES]);
+        await this.setupEnvironment(root, config, dbKeys);
+        await this.compileFromWorkspaceRoot(root, config.name);
+        await this.addToCompose(root, config);
 
         const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, PathUtilities.resolve('.'));
         await EnvUtilities.buildEnvironmentFileForApp(app, false, 'dev.docker-compose.yaml', PathUtilities.resolve('.'));
-    }
 
-    private async setupVite(root: Path, projectName: string): Promise<void> {
-        await FsUtilities.createFile(PathUtilities.resolve(root, VITE_CONFIG), loopbackViteContent);
-        await NpmUtilities.install(projectName, [NpmPackage.VITE, NpmPackage.VITE_TS_CONFIG_PATHS], true);
-        await NpmUtilities.updatePackageJson(projectName, {
-            scripts: {
-                'build:vite': 'vite build'
-            }
-        });
-    }
-
-    private async setupWebpack(root: Path, projectName: string): Promise<void> {
-        await FsUtilities.createFile(PathUtilities.resolve(root, WEBPACK_CONFIG), loopbackWebpackContent);
-        await NpmUtilities.install(projectName, [NpmPackage.WEBPACK, NpmPackage.WEBPACK_CLI], true);
-        await NpmUtilities.updatePackageJson(projectName, {
-            scripts: {
-                'build:webpack': 'webpack'
-            }
-        });
-    }
-
-    private async updateDockerFile(root: string, config: AddLoopbackConfiguration): Promise<void> {
-        await FsUtilities.updateFile(
-            PathUtilities.resolve(root, DOCKER_FILE_NAME),
-            [
-                'FROM node:20 AS build',
-                '# Set to a non-root built-in user `node`',
-                'USER node',
-                'RUN mkdir -p /home/node/root',
-                'COPY --chown=node . /home/node/root',
-                'WORKDIR /home/node/root',
-                'RUN npm install',
-                `RUN npm run build --workspace=${APPS_DIRECTORY_NAME}/${config.name} --omit=dev`,
-                '',
-                'FROM node:20',
-                'WORKDIR /usr/app',
-                `COPY --from=build /home/node/root/${APPS_DIRECTORY_NAME}/${config.name}/dist/${APPS_DIRECTORY_NAME}/${config.name} ./`,
-                'COPY --from=build /home/node/root/node_modules ./node_modules', // TODO: get rid off
-                'CMD node src'
-            ],
-            'replace'
-        );
-    }
-
-    private async updateIndexTs(root: string, port: number): Promise<void> {
-        const indexPath: Path = PathUtilities.resolve(root, 'src', 'index.ts');
-        await FsUtilities.replaceInFile(indexPath, '  console.log(`Try ${url}/ping`);\n', '');
+        LogUtilities.step('Setting up eslint');
+        await EslintUtilities.setupProjectEslint(root, true, TS_CONFIG_FILE_NAME);
         await FsUtilities.replaceInFile(
-            indexPath,
-            '  await app.boot();',
-            [
-                '  await app.boot();',
-                '  await app.migrateSchema({ existingSchema: \'alter\' });'
-            ].join('\n')
+            PathUtilities.resolve(root, ESLINT_CONFIG_FILE_NAME),
+            '    ...baseConfig,',
+            LOOPBACK_ESLINT_EXCEPTIONS
         );
-        await FsUtilities.replaceInFile(indexPath, 'env.PORT', 'env[\'PORT\']');
-        await FsUtilities.replaceInFile(indexPath, 'env.HOST', 'env[\'HOST\']');
-        await FsUtilities.replaceInFile(indexPath, '?? 3000', `?? ${port}`);
-        await TsUtilities.addImportStatements(indexPath, [{ defaultImport: false, element: 'Roles', path: './models' }]);
-    }
-
-    private async updateOpenApiSpec(root: string, port: number): Promise<void> {
-        const openApiPath: Path = PathUtilities.resolve(root, 'src', 'openapi-spec.ts');
-        await FsUtilities.replaceInFile(openApiPath, 'env.PORT', 'env[\'PORT\']');
-        await FsUtilities.replaceInFile(openApiPath, 'env.HOST', 'env[\'HOST\']');
-        await FsUtilities.replaceInFile(openApiPath, '?? 3000', `?? ${port}`);
-    }
-
-    private async updateApplicationTs(root: string, dbName: string): Promise<void> {
-        const applicationPath: Path = PathUtilities.resolve(root, 'src', 'application.ts');
-        await FsUtilities.replaceInFile(
-            applicationPath,
-            'BootMixin(RestApplication)',
-            'BootMixin(ServiceMixin(RepositoryMixin(RestApplication)))'
-        );
-        await TsUtilities.addToConstructorBody(
-            applicationPath,
-            // eslint-disable-next-line stylistic/max-len
-            `this.dataSource(${StringUtilities.toPascalCase(dbName)}DataSource, 'db'); // "db" is the key under wich the datasource is registered in teh external components`
-        );
-        await TsUtilities.addImportStatements(
-            applicationPath,
-            [
-                { defaultImport: false, element: 'ServiceMixin', path: '@loopback/service-proxy' },
-                { defaultImport: false, element: 'RepositoryMixin', path: '@loopback/repository' }
-            ]
-        );
-    }
-
-    /**
-     * Creates a loopback datasource.
-     * @param dbServiceName - The name of the docker database service.
-     * @param databaseName - The name of the database.
-     * @param root - The root of the loopback project.
-     * @param projectName - The name of the loopback app.
-     */
-    private async createLoopbackDatasource(
-        dbServiceName: string,
-        databaseName: string,
-        root: Path,
-        projectName: string
-    ): Promise<void> {
-        const lbDatabaseConfig: LbDatabaseConfig = {
-            name: databaseName,
-            connector: 'postgres' as 'postgresql'
-        } as LbDatabaseConfig;
-        await NpmUtilities.install(projectName, [NpmPackage.LOOPBACK_CONNECTOR_POSTGRES]);
-        await LoopbackUtilities.runCommand(root, `datasource ${databaseName}`, { '--config': lbDatabaseConfig, '--yes': true });
-
-        const dataSourcePath: Path = PathUtilities.resolve(root, 'src', 'datasources', `${StringUtilities.toKebabCase(databaseName)}.datasource.ts`);
-        await TsUtilities.addImportStatements(
-            dataSourcePath,
-            [{ defaultImport: false, element: 'environment', path: '../environment/environment' }]
-        );
-        await FsUtilities.replaceInFile(dataSourcePath, 'postgres', 'postgresql');
-        await FsUtilities.replaceInFile(
-            dataSourcePath,
-            // eslint-disable-next-line sonar/no-duplicate-string
-            'const config = {',
-            [
-                'const config = {',
-                '  url: \'\',',
-                `  host: environment.${DefaultEnvKeys.dbHost(dbServiceName)},`,
-                '  port: 5432,',
-                `  user: environment.${DefaultEnvKeys.dbUser(dbServiceName, databaseName)},`,
-                `  password: environment.${DefaultEnvKeys.dbPassword(dbServiceName, databaseName)},`,
-                `  database: environment.${DefaultEnvKeys.dbName(dbServiceName, databaseName)},`
-            ].join('\n')
-        );
-        await FsUtilities.replaceInFile(
-            dataSourcePath,
-            '  static dataSourceName = ',
-            '\n  static readonly dataSourceName: string = '
-        );
-        await FsUtilities.replaceInFile(
-            dataSourcePath,
-            '  static readonly defaultConfig = config;',
-            `\n  static readonly INJECTION_KEY: string = 'datasources.${databaseName}';`
-        );
-        await FsUtilities.replaceInFile(
-            dataSourcePath,
-            // eslint-disable-next-line stylistic/max-len
-            `  constructor(\n    @inject('datasources.config.${databaseName}', {optional: true})\n    dsConfig: object = config,\n  ) {\n    super(dsConfig);\n  }`,
-            '    constructor() {\n        super(config);\n    }'
-        );
-        const environmentModel: Path = PathUtilities.resolve(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
-
-        await EnvUtilities.addProjectVariableKey(
-            projectName,
-            environmentModel,
-            DefaultEnvKeys.dbPassword(dbServiceName, databaseName),
-            true,
-            PathUtilities.resolve('.')
-        );
-        await EnvUtilities.addProjectVariableKey(
-            projectName,
-            environmentModel,
-            DefaultEnvKeys.dbUser(dbServiceName, databaseName),
-            true,
-            PathUtilities.resolve('.')
-        );
-        await EnvUtilities.addProjectVariableKey(projectName,
-            environmentModel,
-            DefaultEnvKeys.dbName(dbServiceName, databaseName),
-            true,
-            PathUtilities.resolve('.'));
-        await EnvUtilities.addProjectVariableKey(projectName, environmentModel, DefaultEnvKeys.dbHost(dbServiceName), true, PathUtilities.resolve('.'));
+        await EslintUtilities.fix(root);
+        LogUtilities.success(`Added "${config.name}" in ${PathUtilities.getRelative(PathUtilities.resolve('.'), root)}`);
     }
 
     private async createProject(config: AddLoopbackConfiguration): Promise<Path> {
-        await LoopbackUtilities.runCommand(PathUtilities.resolve(APPS_DIRECTORY_NAME), `new ${config.name}`, {
+        LogUtilities.step('Creating the LoopBack project');
+        await LoopbackUtilities.createProject(PathUtilities.resolve(APPS_DIRECTORY_NAME), config.name, {
             '--yes': true,
             '--config': {
-                docker: true,
+                docker: false,
                 eslint: false,
                 mocha: true,
                 loopbackBuild: true,
                 prettier: false,
-                vscode: false
+                vscode: false,
+                repositories: true,
+                services: true
             }
         });
-        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, PathUtilities.resolve('.'));
-        await Promise.all([
-            FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', '__tests__')),
-            FsUtilities.rm(PathUtilities.resolve(newProject.path, GIT_IGNORE_FILE_NAME)),
-            FsUtilities.rm(PathUtilities.resolve(newProject.path, 'DEVELOPING.md')),
-            FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'controllers', 'ping.controller.ts')),
-            FsUtilities.updateFile(PathUtilities.resolve(newProject.path, 'src', 'controllers', 'index.ts'), '', 'replace')
-        ]);
-        const indexTs: Path = PathUtilities.resolve(newProject.path, 'src', 'index.ts');
-        await FsUtilities.replaceInFile(
-            indexTs,
-            'async function main(options: ApplicationConfig = {})',
-            `async function main(options: ApplicationConfig = {}): Promise<${StringUtilities.toPascalCase(config.name)}Application>`
-        );
-        await FsUtilities.replaceInFile(
-            indexTs,
-            'const app = new ',
-            `const app: ${StringUtilities.toPascalCase(config.name)}Application = new `
-        );
-        await FsUtilities.replaceInFile(
-            indexTs,
-            'const url = app.restServer.url;',
-            'const url: string | undefined = app.restServer.url;'
-        );
-        await FsUtilities.replaceInFile(
-            indexTs,
-            'const config = {',
-            'const config: ApplicationConfig = {'
-        );
-        await FsUtilities.replaceInFile(
-            indexTs,
-            '|| \'127.0.0.1\'',
-            '?? \'127.0.0.1\''
-        );
-        return newProject.path;
+        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, PathUtilities.resolve('.'));
+        // the workspace has one for every project
+        await FsUtilities.rm(PathUtilities.resolve(project.path, GIT_IGNORE_FILE_NAME));
+        return project.path;
     }
 
-    private async setupTsConfig(projectName: string): Promise<void> {
-        LogUtilities.step('Setting up the tsconfig');
-        await TsConfigUtilities.updateTsConfig(
-            projectName,
-            {
-                extends: [`../../${BASE_TS_CONFIG_FILE_NAME}`, '@loopback/build/config/tsconfig.common.json'],
-                compilerOptions: { rootDir: undefined }
-            }
+    private async setupEnvironment(root: Path, config: AddLoopbackConfiguration, dbKeys: DbKeys): Promise<void> {
+        await EnvUtilities.setupProjectEnvironment(root, true);
+        const environmentModel: Path = PathUtilities.resolve(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME);
+        const keys: EnvironmentVariableKey[] = [DefaultEnvKeys.ENV, DefaultEnvKeys.port(config.name), ...Object.values(dbKeys)];
+        for (const key of keys) {
+            await EnvUtilities.addProjectVariableKey(config.name, environmentModel, key, false, PathUtilities.resolve('.'));
+        }
+
+        // where the api listens: the port of the workspace during development, behind traefik on every interface of
+        // its container
+        const indexPath: Path = PathUtilities.resolve(root, 'src', 'index.ts');
+        await FsUtilities.replaceInFile(
+            indexPath,
+            'port: +(process.env.PORT ?? 3000),',
+            `port: environment.env === 'dev' ? environment.${DefaultEnvKeys.port(config.name)} : 3000,`
         );
-        await NpmUtilities.updatePackageJson(
-            projectName,
-            {
-                main: `dist/${APPS_DIRECTORY_NAME}/${projectName}/src/index.js`,
-                types: `dist/${APPS_DIRECTORY_NAME}/${projectName}/src/index.d.ts`
+        await FsUtilities.replaceInFile(
+            indexPath,
+            'host: process.env.HOST || \'127.0.0.1\',',
+            'host: environment.env === \'dev\' ? \'127.0.0.1\' : \'0.0.0.0\','
+        );
+        await FsUtilities.updateFile(indexPath, 'import {environment} from \'./environment/environment\';', 'prepend');
+    }
+
+    /**
+     * Compiles the api from the root of the workspace, as it imports the global-environment.model.ts there, which a
+     * rootDir of src refuses. The output is below dist/apps/<name>/src then, so what LoopBack reads from dist points
+     * there.
+     * @param root - The directory of the api.
+     * @param name - The name of the api.
+     */
+    private async compileFromWorkspaceRoot(root: Path, name: string): Promise<void> {
+        await TsConfigUtilities.updateTsConfig(name, { compilerOptions: { rootDir: '../..' } });
+        const output: string = `dist/${APPS_DIRECTORY_NAME}/${name}/src`;
+        await NpmUtilities.updatePackageJson(name, {
+            main: `${output}/index.js`,
+            types: `${output}/index.d.ts`,
+            scripts: {
+                test: `lb-mocha --allow-console-logs "${output}/__tests__"`,
+                'test:dev': `lb-mocha --allow-console-logs ${output}/__tests__/**/*.js`,
+                migrate: `node ./${output}/migrate`,
+                'openapi-spec': `node ./${output}/openapi-spec`
             }
+        });
+        // the home page, next to src, four folders up from the compiled application.ts
+        await FsUtilities.replaceInFile(
+            PathUtilities.resolve(root, 'src', 'application.ts'),
+            'path.join(__dirname, \'../public\')',
+            'path.join(__dirname, \'../../../../public\')'
+        );
+    }
+
+    private async addToCompose(root: Path, config: AddLoopbackConfiguration): Promise<void> {
+        const projectDirectory: string = PathUtilities.getRelative(PathUtilities.resolve('.'), root);
+        await DockerUtilities.addServiceToCompose(
+            {
+                name: config.name,
+                build: {
+                    dockerfile: `./${projectDirectory}/${DOCKER_FILE_NAME}`,
+                    context: '.'
+                },
+                envFile: [`./${projectDirectory}/.env`]
+            },
+            3000,
+            config.port,
+            true,
+            false,
+            config.subDomain
         );
     }
 }

@@ -1,7 +1,5 @@
-import type { ModuleMetadata } from '@nestjs/common';
 
 import { CPUtilities, FsUtilities, JsonUtilities, Path } from '../encapsulation';
-import { TsUtilities } from '../ts';
 import { DeepPartial } from '../types';
 import { mergeDeep, optionsToCliString } from '../utilities';
 import { NestCliJson } from './nest-cli-json.model';
@@ -99,30 +97,5 @@ export abstract class NestUtilities {
         const oldData: NestCliJson = await FsUtilities.parseFileAs(path);
         const updatedData: NestCliJson = mergeDeep(oldData, data);
         await FsUtilities.updateFile(path, JsonUtilities.stringify(updatedData), 'replace');
-    }
-
-    /**
-     * Adds a import to the provided module.
-     * @param modulePath - The path of the module where the import should be added.
-     * @param imports - The imports to add.
-     */
-    static async addModuleImports(
-        modulePath: Path,
-        imports: ModuleMetadata['imports']
-    ): Promise<void> {
-        if (imports === undefined) {
-            return;
-        }
-        const { result, contentString } = await TsUtilities.getArrayStartingWith(modulePath, 'imports: [');
-
-        result.push(...imports);
-
-        const stringifiedArray: string = ` ${JsonUtilities.stringifyAsTs(result, 4)}`;
-
-        await FsUtilities.replaceInFile(
-            modulePath,
-            contentString,
-            stringifiedArray
-        );
     }
 }

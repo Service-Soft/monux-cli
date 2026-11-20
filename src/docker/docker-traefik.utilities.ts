@@ -24,6 +24,16 @@ export const TRAEFIK_COMPRESSION_LABEL: string = 'traefik.http.middlewares.compr
 export const TRAEFIK_DOCKER_IMAGE: string = 'traefik:v3.6';
 
 /**
+ * The entrypoint of traefik for https, which the routers of the services use.
+ */
+export const TRAEFIK_SECURE_ENTRYPOINT: string = 'websecure';
+
+/**
+ * The resolver of the certificates of traefik, which the routers of the services use.
+ */
+export const TRAEFIK_CERT_RESOLVER: string = 'sslresolver';
+
+/**
  * The base traefik commands.
  * Includes things such as http and https ports etc.
  */
@@ -31,7 +41,7 @@ export const TRAEFIK_BASE_DOCKER_COMMANDS: string[] = [
     '--providers.docker=true',
     '--providers.docker.exposedbydefault=false',
     '--entryPoints.web.address=:80',
-    '--entryPoints.websecure.address=:443'
+    `--entryPoints.${TRAEFIK_SECURE_ENTRYPOINT}.address=:443`
 ];
 
 /**
@@ -112,7 +122,8 @@ export abstract class DockerTraefikUtilities {
     }
 
     private static resolveHostRule(projectName: string, composeFileName: DockerComposeFileName, subDomain: string | undefined): string {
-        return this.resolveHosts(projectName, composeFileName, subDomain).map(h => `Host(\`${h}\`)`).join(' || ');
+        return this.resolveHosts(projectName, composeFileName, subDomain).map(h => `Host(\`${h}\`)`)
+            .join(' || ');
     }
 
     private static getTraefikLabelsForStage(
@@ -130,7 +141,7 @@ export abstract class DockerTraefikUtilities {
         }
         if (!subDomain) {
             labels.push(
-                'traefik.http.middlewares.wwwredirect.redirectregex.regex=^https://www\.(.*)',
+                'traefik.http.middlewares.wwwredirect.redirectregex.regex=^https://www\\.(.*)',
                 'traefik.http.middlewares.wwwredirect.redirectregex.replacement=https://$${1}'
             );
             middlewares.push('wwwredirect');
@@ -138,8 +149,8 @@ export abstract class DockerTraefikUtilities {
         labels.push(
             TRAEFIK_ENABLE_LABEL,
             `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.rule=${host}`,
-            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.entrypoints=web_secure`,
-            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.tls.certresolver=ssl_resolver`,
+            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.entrypoints=${TRAEFIK_SECURE_ENTRYPOINT}`,
+            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.tls.certresolver=${TRAEFIK_CERT_RESOLVER}`,
             `traefik.http.services.${StringUtilities.toSnakeCase(projectName)}.loadbalancer.server.port=${port}`,
             TRAEFIK_COMPRESSION_LABEL
         );
@@ -157,7 +168,7 @@ export abstract class DockerTraefikUtilities {
         const middlewares: string[] = ['compression'];
         if (!subDomain) {
             labels.push(
-                'traefik.http.middlewares.wwwredirect.redirectregex.regex=^https://www\.(.*)',
+                'traefik.http.middlewares.wwwredirect.redirectregex.regex=^https://www\\.(.*)',
                 'traefik.http.middlewares.wwwredirect.redirectregex.replacement=https://$${1}'
             );
             middlewares.push('wwwredirect');
@@ -165,8 +176,8 @@ export abstract class DockerTraefikUtilities {
         labels.push(
             TRAEFIK_ENABLE_LABEL,
             `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.rule=${host}`,
-            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.entrypoints=web_secure`,
-            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.tls.certresolver=ssl_resolver`,
+            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.entrypoints=${TRAEFIK_SECURE_ENTRYPOINT}`,
+            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.tls.certresolver=${TRAEFIK_CERT_RESOLVER}`,
             `traefik.http.services.${StringUtilities.toSnakeCase(projectName)}.loadbalancer.server.port=${port}`,
             TRAEFIK_COMPRESSION_LABEL
         );
@@ -180,7 +191,7 @@ export abstract class DockerTraefikUtilities {
         const middlewares: string[] = ['compression'];
         if (!subDomain) {
             labels.push(
-                'traefik.http.middlewares.wwwredirect.redirectregex.regex=^http://www\.(.*)',
+                'traefik.http.middlewares.wwwredirect.redirectregex.regex=^http://www\\.(.*)',
                 'traefik.http.middlewares.wwwredirect.redirectregex.replacement=http://$${1}'
             );
             middlewares.push('wwwredirect');

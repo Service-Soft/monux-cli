@@ -130,16 +130,6 @@ export const ANGULAR_APP_COMPONENT_FILE_NAME: string = 'app.ts';
 export const GIT_IGNORE_FILE_NAME: string = '.gitignore';
 
 /**
- * The name of the robots txt file.
- */
-export const ROBOTS_FILE_NAME: string = 'robots.txt';
-
-/**
- * The name of the sitemap file.
- */
-export const SITEMAP_FILE_NAME: string = 'sitemap.xml';
-
-/**
  * The name of the angular app config file.
  */
 export const APP_CONFIG_FILE_NAME: string = 'app.config.ts';
@@ -158,16 +148,6 @@ export const NG_PACKAGE_FILE_NAME: string = 'ng-package.json';
  * The name of the nest cli file.
  */
 export const NEST_CLI_FILE_NAME: string = 'nest-cli.json';
-
-/**
- * The name of the webpack config file.
- */
-export const WEBPACK_CONFIG: string = 'webpack.config.js';
-
-/**
- * The name of the vite config file.
- */
-export const VITE_CONFIG: string = 'vite.config.ts';
 
 /**
  * The message to notify the user of the help command.

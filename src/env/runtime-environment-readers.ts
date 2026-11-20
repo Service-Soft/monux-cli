@@ -4,7 +4,7 @@ import { AddType } from '../commands/add/models/add-type.enum';
  * The project types that run on a server, whose environment.ts reads its values when the project starts instead of
  * holding them.
  */
-export const SERVER_PROJECT_TYPES: AddType[] = [AddType.ZIBRI];
+export const SERVER_PROJECT_TYPES: AddType[] = [AddType.ZIBRI, AddType.LOOPBACK, AddType.NEST];
 
 /**
  * The functions the environment.ts of a server project reads its values with, by their name.

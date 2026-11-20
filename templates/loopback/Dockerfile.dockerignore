@@ -1,0 +1,9 @@
+# what the build produces or the machine happens to have lying around. node_modules in
+# particular is installed inside the image for the platform it runs on
+**/node_modules
+**/dist
+**/coverage
+.git
+# the values the projects run on, secrets included. A container gets its own from docker compose,
+# and a copy in an image travels to everyone the image is pushed to
+**/.env
