@@ -28,6 +28,8 @@ export enum NpmPackage {
     AXE_CORE_PLAYWRIGHT = '@axe-core/playwright@^4.14.0',
     // the types of node, which the storybook config of an Angular library runs in
     TYPES_NODE = '@types/node@^24.19.2',
+    // the types of mocha, which a LoopBack api tests with
+    TYPES_MOCHA = '@types/mocha@^10.0.10',
     // the models the routes of zibri answer and take, which the @service-soft libraries read them as
     ZIBRI_CONTRACT = 'zibri-contract@^3.2.0',
     // draws the qr code a user scans with an authenticator app, for ngx-auth

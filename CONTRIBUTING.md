@@ -41,7 +41,9 @@ Read [CODE_STYLE.md](./CODE_STYLE.md) before your first change. It covers the co
 The tests generate real workspaces, so they need what a user of Monux needs:
 
 - Node 24 or newer
-- Docker with Docker Compose, running
+- Docker with Docker Compose, running. The suites start what they generated, the way `mx up` does, so the ports
+  their services use need to be free: 80 and 443 of traefik, 3000 of an api in development, 5432 and 3306 of the
+  databases and 8080 of adminer
 - Chromium for the checks of the generated websites (Lighthouse and the requests a page makes):
   `npx playwright-core install --with-deps chromium`. Playwright supports its Chromium on Ubuntu and Debian only; on
   another Linux, set `CHROME_PATH` to the Chrome or Chromium of the system, such as

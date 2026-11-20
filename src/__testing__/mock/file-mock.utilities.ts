@@ -1,5 +1,7 @@
 /* eslint-disable jsdoc/require-jsdoc */
 import { AngularJson } from '../../angular';
+import { DEV_DOCKER_COMPOSE_FILE_NAME, LOCAL_DOCKER_COMPOSE_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, STAGE_DOCKER_COMPOSE_FILE_NAME } from '../../constants';
+import { DockerUtilities } from '../../docker';
 import { CPUtilities, FsUtilities, JsonUtilities, PathUtilities } from '../../encapsulation';
 import { EnvUtilities } from '../../env';
 import { EslintUtilities } from '../../eslint';
@@ -7,6 +9,9 @@ import { TemplateUtilities } from '../../templates';
 import { TsConfigUtilities } from '../../tsconfig';
 import { WorkspaceUtilities } from '../../workspace';
 import { MockConstants, FileMockConstants, DirMockConstants } from './constants';
+
+// the email the letsencrypt of the compose files of a test workspace would register with
+const MOCK_EMAIL: string = 'test@test.com';
 
 export const defaultFilesToMock: (keyof FileMockConstants)[] = [
     'WORKSPACE_JSON',
@@ -35,10 +40,11 @@ export abstract class FileMockUtilities {
         keyof FileMockConstants,
         (mockConstants: MockConstants, entry: keyof MockConstants) => void | Promise<void>
     > = {
-        DOCKER_COMPOSE_YAML: this.createEmptyFile,
-        DEV_DOCKER_COMPOSE_YAML: this.createEmptyFile,
-        LOCAL_DOCKER_COMPOSE_YAML: this.createEmptyFile,
-        STAGE_DOCKER_COMPOSE_YAML: this.createEmptyFile,
+        // the compose files of mx init, with their traefik, so that a test can start what it generated
+        DOCKER_COMPOSE_YAML: async () => await DockerUtilities.createComposeFile(PROD_DOCKER_COMPOSE_FILE_NAME, MOCK_EMAIL),
+        DEV_DOCKER_COMPOSE_YAML: async () => await DockerUtilities.createComposeFile(DEV_DOCKER_COMPOSE_FILE_NAME, MOCK_EMAIL),
+        LOCAL_DOCKER_COMPOSE_YAML: async () => await DockerUtilities.createComposeFile(LOCAL_DOCKER_COMPOSE_FILE_NAME, MOCK_EMAIL),
+        STAGE_DOCKER_COMPOSE_YAML: async () => await DockerUtilities.createComposeFile(STAGE_DOCKER_COMPOSE_FILE_NAME, MOCK_EMAIL),
         ANGULAR_ESLINT_CONFIG_MJS: this.createEmptyFile,
         ANGULAR_PACKAGE_JSON: this.createAngularPackageJson,
         ANGULAR_APP_COMPONENT_TS: this.createAppComponentTsFile,

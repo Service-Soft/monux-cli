@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import { FileMockUtilities, GeneratedProjectUtilities, getMockConstants, inquireMock, MAX_ADD_TIME, MockConstants } from '../../../__testing__';
+import { FileMockUtilities, GeneratedProjectUtilities, getMockConstants, inquireMock, MAX_ADD_TIME, MAX_DOCKER_TIME, MockConstants, RunningWorkspaceUtilities, ServiceResponse } from '../../../__testing__';
+import { LOCAL_DOCKER_COMPOSE_FILE_NAME } from '../../../constants';
 import { DbType } from '../../../db';
 import { FsUtilities, InquirerUtilities, Path, PathUtilities } from '../../../encapsulation';
 import { NpmUtilities } from '../../../npm';
@@ -68,7 +69,21 @@ describe('AddAngularCommand', () => {
         // the tests of the api are the ones of its own generator
         await NpmUtilities.run('api', 'build', false);
         await NpmUtilities.run('api', 'lint', false);
-    }, MAX_ADD_TIME * 6);
+
+        // locally the app and its api run from their images, behind traefik, the app with the contract library in it
+        try {
+            await RunningWorkspaceUtilities.up(LOCAL_DOCKER_COMPOSE_FILE_NAME);
+            await RunningWorkspaceUtilities.waitFor({ host: 'api.localhost', path: '/health/ready', port: 80 }, response => response.status === 200);
+            const app: ServiceResponse = await RunningWorkspaceUtilities.waitFor(
+                { host: 'admin.localhost', path: '/login', port: 80 },
+                response => response.status === 200
+            );
+            expect(app.body).toContain('<app-root');
+        }
+        finally {
+            await RunningWorkspaceUtilities.down(LOCAL_DOCKER_COMPOSE_FILE_NAME, true);
+        }
+    }, (MAX_ADD_TIME * 6) + MAX_DOCKER_TIME);
 
     afterEach(() => {
         jest.restoreAllMocks();

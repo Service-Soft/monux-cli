@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import { FileMockUtilities, GeneratedProjectUtilities, getMockConstants, inquireMock, LighthouseRating, MAX_ADD_TIME, MockConstants, RunningWebsite, WebsiteUtilities } from '../../../__testing__';
+import { FileMockUtilities, GeneratedProjectUtilities, getMockConstants, inquireMock, LighthouseRating, MAX_ADD_TIME, MAX_DOCKER_TIME, MockConstants, RunningWebsite, RunningWorkspaceUtilities, ServiceRequest, ServiceResponse, WebsiteUtilities } from '../../../__testing__';
+import { LOCAL_DOCKER_COMPOSE_FILE_NAME, STAGE_DOCKER_COMPOSE_FILE_NAME } from '../../../constants';
 import { FsUtilities, InquirerUtilities, Path, PathUtilities } from '../../../encapsulation';
 import { AddConfiguration, AddType } from '../models';
 import { AddAngularWebsiteCommand } from './add-angular-website.command';
@@ -68,7 +69,37 @@ describe('AddAngularWebsiteCommand', () => {
         finally {
             website.stop();
         }
-    }, MAX_ADD_TIME * 6);
+
+        // locally the website runs from its image, behind traefik, and search engines may read it
+        try {
+            await RunningWorkspaceUtilities.up(LOCAL_DOCKER_COMPOSE_FILE_NAME);
+            const local: ServiceResponse = await RunningWorkspaceUtilities.waitFor(
+                { host: 'localhost', path: '/', port: 80 },
+                response => response.status === 200
+            );
+            expect(local.body).toContain('Shop</h1>');
+            expect((await RunningWorkspaceUtilities.request({ host: 'localhost', path: '/robots.txt', port: 80 })).body)
+                .toContain('User-agent: *\nAllow: /');
+        }
+        finally {
+            await RunningWorkspaceUtilities.down(LOCAL_DOCKER_COMPOSE_FILE_NAME, true);
+        }
+
+        // stage is behind basic auth, and tells search engines to stay away, as it is reachable from the internet
+        try {
+            await RunningWorkspaceUtilities.up(STAGE_DOCKER_COMPOSE_FILE_NAME);
+            const stage: ServiceRequest = { host: 'test-staging.com', path: '/robots.txt', port: 443, https: true };
+            await RunningWorkspaceUtilities.waitFor(stage, response => response.status === 401);
+            const robots: ServiceResponse = await RunningWorkspaceUtilities.waitFor(
+                { ...stage, auth: { user: 'user', password: 'password' } },
+                response => response.status === 200
+            );
+            expect(robots.body).toContain('User-agent: *\nDisallow: /');
+        }
+        finally {
+            await RunningWorkspaceUtilities.down(STAGE_DOCKER_COMPOSE_FILE_NAME, true);
+        }
+    }, (MAX_ADD_TIME * 6) + (MAX_DOCKER_TIME * 2));
 
     afterEach(() => {
         jest.restoreAllMocks();

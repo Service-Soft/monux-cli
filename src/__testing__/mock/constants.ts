@@ -5,6 +5,9 @@ import { OmitStrict } from '../../types';
 
 export const MAX_ADD_TIME: number = 100000;
 
+// what starting the services of a workspace with docker compose may take: building its images and starting a database
+export const MAX_DOCKER_TIME: number = 300000;
+
 export const MAX_GEN_CODE_TIME: number = 10000;
 
 export const MAX_FAST_TIME: number = 1000;

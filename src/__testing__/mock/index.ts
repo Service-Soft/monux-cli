@@ -8,3 +8,4 @@ export * from './fake-calculated-env-variable.function';
 export * from './inquire.mock';
 export * from './generated-project.utilities';
 export * from './website.utilities';
+export * from './running-workspace.utilities';

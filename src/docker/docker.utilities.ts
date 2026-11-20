@@ -65,27 +65,32 @@ export abstract class DockerUtilities {
      * Defaults to "" (which creates the file in the current directory).
      */
     static async createComposeFiles(email: string): Promise<void> {
-        await Promise.all(
-            dockerComposeFileNames.map(async d => {
-                switch (d) {
-                    case PROD_DOCKER_COMPOSE_FILE_NAME: {
-                        await this.createProdDockerCompose(email);
-                        return;
-                    }
-                    case DEV_DOCKER_COMPOSE_FILE_NAME: {
-                        await this.createDevDockerCompose();
-                        return;
-                    }
-                    case LOCAL_DOCKER_COMPOSE_FILE_NAME: {
-                        await this.createLocalDockerCompose();
-                        return;
-                    }
-                    case STAGE_DOCKER_COMPOSE_FILE_NAME: {
-                        await this.createStageDockerCompose(email);
-                    }
-                }
-            })
-        );
+        await Promise.all(dockerComposeFileNames.map(async d => await this.createComposeFile(d, email)));
+    }
+
+    /**
+     * Creates one of the docker compose files of a new workspace, with its traefik.
+     * @param fileName - The compose file.
+     * @param email - The email that should be used for the letsencrypt certificate.
+     */
+    static async createComposeFile(fileName: DockerComposeFileName, email: string): Promise<void> {
+        switch (fileName) {
+            case PROD_DOCKER_COMPOSE_FILE_NAME: {
+                await this.createProdDockerCompose(email);
+                return;
+            }
+            case DEV_DOCKER_COMPOSE_FILE_NAME: {
+                await this.createDevDockerCompose();
+                return;
+            }
+            case LOCAL_DOCKER_COMPOSE_FILE_NAME: {
+                await this.createLocalDockerCompose();
+                return;
+            }
+            case STAGE_DOCKER_COMPOSE_FILE_NAME: {
+                await this.createStageDockerCompose(email);
+            }
+        }
     }
 
     private static async createDevDockerCompose(): Promise<void> {

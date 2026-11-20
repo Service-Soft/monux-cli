@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import { FileMockUtilities, GeneratedProjectUtilities, getMockConstants, inquireMock, MAX_ADD_TIME, MockConstants } from '../../../__testing__';
+import { FileMockUtilities, GeneratedProjectUtilities, getMockConstants, inquireMock, MAX_ADD_TIME, MAX_DOCKER_TIME, MockConstants, RunningWorkspaceUtilities, ServiceResponse } from '../../../__testing__';
+import { LOCAL_DOCKER_COMPOSE_FILE_NAME } from '../../../constants';
 import { FsUtilities, InquirerUtilities, Path, PathUtilities } from '../../../encapsulation';
 import { GenerateComponentCommand } from '../../generate-component';
 import { AddAngularWebsiteCommand } from '../add-angular-website';
@@ -76,7 +77,20 @@ describe('AddAngularLibraryCommand', () => {
         const files: string[] = await FsUtilities.findFilesRecursive(browser);
         const contents: string[] = await Promise.all(files.filter(f => /\.(m?js|html)$/.test(f)).map(f => FsUtilities.readFile(PathUtilities.resolve(browser, f))));
         expect(contents.filter(c => c.includes('shop-opening-hours'))).toEqual([]);
-    }, MAX_ADD_TIME * 4);
+
+        // the image of the website builds the library in it, and its page shows the component
+        try {
+            await RunningWorkspaceUtilities.up(LOCAL_DOCKER_COMPOSE_FILE_NAME);
+            const home: ServiceResponse = await RunningWorkspaceUtilities.waitFor(
+                { host: 'localhost', path: '/', port: 80 },
+                response => response.status === 200
+            );
+            expect(home.body).toContain('Opening hours changed</shop-notice>');
+        }
+        finally {
+            await RunningWorkspaceUtilities.down(LOCAL_DOCKER_COMPOSE_FILE_NAME, true);
+        }
+    }, (MAX_ADD_TIME * 4) + MAX_DOCKER_TIME);
 
     afterEach(() => {
         jest.restoreAllMocks();

@@ -58,22 +58,6 @@ const DB_PACKAGES: Record<DbType, NpmPackage> = {
 // what Nest lints and formats with, which the eslint of the workspace replaces
 const LINT_FILES: string[] = ['.oxlintrc.json', '.prettierrc', ESLINT_CONFIG_FILE_NAME];
 
-// the entry files "nest new" writes, with inferred types and the untyped tsconfig jest reads, which the eslint of the
-// workspace would otherwise flag. The code the developer adds is linted like every other project
-const NEST_ESLINT_EXCEPTIONS: string = [
-    '    ...baseConfig,',
-    '    {',
-    '        files: [\'src/main.ts\', \'jest.config.ts\'],',
-    '        rules: {',
-    '            \'typescript/typedef\': \'off\',',
-    '            \'typescript/explicit-function-return-type\': \'off\',',
-    '            \'typescript/no-unsafe-assignment\': \'off\',',
-    '            \'typescript/no-unsafe-member-access\': \'off\',',
-    '            \'typescript/no-unsafe-argument\': \'off\'',
-    '        }',
-    '    },'
-].join('\n');
-
 /**
  * Command that handles adding a nest api to the monorepo: a Nest project as "nest new" generates it, with its database,
  * its environment and its image as part of the workspace, and its OpenAPI document, see GOALS.md.
@@ -114,6 +98,7 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
             name: config.name,
             dbType: dbType === DbType.POSTGRES ? 'postgres' : 'mariadb',
             dbPort: String(defaultPortForDbType[dbType]),
+            portKey: DefaultEnvKeys.port(config.name),
             ...dbKeys
         });
         await NpmUtilities.install(
@@ -121,7 +106,7 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
             [NpmPackage.NEST_JS_TYPEORM, NpmPackage.TYPEORM, DB_PACKAGES[dbType], NpmPackage.NEST_JS_SWAGGER]
         );
         await this.setupEnvironment(root, config, dbKeys);
-        await this.connect(root, config.name);
+        await this.connect(root);
         await this.compileFromWorkspaceRoot(root, config.name);
         await this.addToCompose(root, config);
 
@@ -130,11 +115,6 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
 
         LogUtilities.step('Setting up eslint');
         await EslintUtilities.setupProjectEslint(root, true, 'tsconfig.json');
-        await FsUtilities.replaceInFile(
-            PathUtilities.resolve(root, ESLINT_CONFIG_FILE_NAME),
-            '    ...baseConfig,',
-            NEST_ESLINT_EXCEPTIONS
-        );
         await EslintUtilities.fix(root);
         LogUtilities.success(`Added "${config.name}" in ${PathUtilities.getRelative(PathUtilities.resolve('.'), root)}`);
     }
@@ -185,12 +165,10 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
     }
 
     /**
-     * Connects the api to the workspace: its database, the port of the workspace during development, traefik in front
-     * of it, and its OpenAPI document.
+     * Connects the api to its database. Its port, traefik and its OpenAPI document are in the main.ts of templates/nest.
      * @param root - The directory of the api.
-     * @param name - The name of the api.
      */
-    private async connect(root: Path, name: string): Promise<void> {
+    private async connect(root: Path): Promise<void> {
         const appModulePath: Path = PathUtilities.resolve(root, 'src', 'app.module.ts');
         await FsUtilities.replaceInFile(appModulePath, '  imports: [],', '  imports: [TypeOrmModule.forRoot(DATABASE_OPTIONS)],');
         await FsUtilities.updateFile(
@@ -199,35 +177,6 @@ export class AddNestCommand extends BaseAddCommand<AddNestConfiguration> {
             'prepend'
         );
 
-        const mainPath: Path = PathUtilities.resolve(root, 'src', 'main.ts');
-        await FsUtilities.replaceInFile(
-            mainPath,
-            '  const app = await NestFactory.create(AppModule);',
-            [
-                '  const app = await NestFactory.create<NestExpressApplication>(AppModule);',
-                '  // behind traefik, which forwards the address of the client',
-                '  app.set(\'trust proxy\', 1);',
-                '  // the OpenAPI document of the api, at /api and as json at /api-json',
-                '  SwaggerModule.setup(\'api\', app, () => SwaggerModule.createDocument(',
-                '    app,',
-                `    new DocumentBuilder().setTitle('${name}').build()`,
-                '  ));'
-            ].join('\n')
-        );
-        await FsUtilities.replaceInFile(
-            mainPath,
-            'await app.listen(process.env.PORT ?? 3000);',
-            `await app.listen(environment.env === 'dev' ? environment.${DefaultEnvKeys.port(name)} : 3000);`
-        );
-        await FsUtilities.updateFile(
-            mainPath,
-            [
-                'import { NestExpressApplication } from \'@nestjs/platform-express\';',
-                'import { DocumentBuilder, SwaggerModule } from \'@nestjs/swagger\';',
-                'import { environment } from \'./environment/environment\';'
-            ].join('\n'),
-            'prepend'
-        );
     }
 
     /**

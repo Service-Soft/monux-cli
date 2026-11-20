@@ -11,7 +11,13 @@ const mockConstants: MockConstants = getMockConstants('db-utilities');
 
 describe('DbUtilities', () => {
     beforeEach(async () => {
-        await FileMockUtilities.setup(mockConstants);
+        // compose files without the services of mx init, so what is compared is the database alone
+        await FileMockUtilities.setup(mockConstants, undefined, {
+            DOCKER_COMPOSE_YAML: '',
+            DEV_DOCKER_COMPOSE_YAML: '',
+            LOCAL_DOCKER_COMPOSE_YAML: '',
+            STAGE_DOCKER_COMPOSE_YAML: ''
+        });
     });
 
     test('createPostgresDatabase', async () => {

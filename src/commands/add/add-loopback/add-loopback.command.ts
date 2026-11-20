@@ -9,6 +9,7 @@ import { NpmPackage, NpmUtilities } from '../../../npm';
 import { TemplateUtilities } from '../../../templates';
 import { TsConfigUtilities } from '../../../tsconfig';
 import { OmitStrict } from '../../../types';
+import { StringUtilities } from '../../../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
 import { AddConfiguration, BaseAddCommand } from '../models';
 
@@ -49,39 +50,6 @@ type DbKeys = {
     dbNameKey: EnvironmentVariableKey
 };
 
-// what lb4 writes the way LoopBack writes code, which the eslint of the workspace would otherwise flag. The code the
-// developer adds is linted like every other project
-const LOOPBACK_ESLINT_EXCEPTIONS: string = [
-    '    ...baseConfig,',
-    '    // the static home page LoopBack serves, which is no Angular template',
-    '    { ignores: [\'public\', \'dist\'] },',
-    '    {',
-    '        files: [\'**/*.ts\'],',
-    '        rules: {',
-    '            // "__tests__" is where LoopBack keeps its tests',
-    '            \'unicorn/filename-case\': [\'warn\', { directoryRoots: [/(^|\\/)__tests__$/u] }]',
-    '        }',
-    '    },',
-    '    {',
-    '        // the entry files and the tests lb4 writes: types inferred, callbacks of promises and logs to the console',
-    '        files: [\'src/index.ts\', \'src/migrate.ts\', \'src/openapi-spec.ts\', \'src/__tests__/**/*.ts\'],',
-    '        rules: {',
-    '            \'typescript/typedef\': \'off\',',
-    '            \'typescript/explicit-function-return-type\': \'off\',',
-    '            \'no-console\': \'off\',',
-    '            \'promise/prefer-await-to-callbacks\': \'off\',',
-    '            \'promise/prefer-await-to-then\': \'off\'',
-    '        }',
-    '    },',
-    '    {',
-    '        // the assertions of @loopback/testlab, which come without types',
-    '        files: [\'src/__tests__/**/*.ts\'],',
-    '        rules: {',
-    '            \'typescript/no-unsafe-call\': \'off\'',
-    '        }',
-    '    },'
-].join('\n');
-
 /**
  * Command that handles adding a loopback api to the monorepo: a LoopBack project as lb4 generates it, with its Postgres
  * database, its environment and its image as part of the workspace, see GOALS.md.
@@ -121,8 +89,17 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
 
         const root: Path = await this.createProject(config);
         LogUtilities.step('Adding the database, the environment and the image of the workspace');
-        await TemplateUtilities.write('loopback', root, { name: config.name, ...dbKeys });
+        // the entry files, the tests and the home page of lb4 in the style the eslint of the workspace checks
+        await FsUtilities.rm(PathUtilities.resolve(root, 'src', '__tests__'));
+        await TemplateUtilities.write('loopback', root, {
+            name: config.name,
+            applicationClass: `${StringUtilities.toPascalCase(config.name)}Application`,
+            portKey: DefaultEnvKeys.port(config.name),
+            ...dbKeys
+        });
         await NpmUtilities.install(config.name, [NpmPackage.LOOPBACK_CONNECTOR_POSTGRES]);
+        // the types of the describe and it of mocha, which lb4 tests with
+        await NpmUtilities.install(config.name, [NpmPackage.TYPES_MOCHA], true);
         await this.setupEnvironment(root, config, dbKeys);
         await this.compileFromWorkspaceRoot(root, config.name);
         await this.addToCompose(root, config);
@@ -132,10 +109,11 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
 
         LogUtilities.step('Setting up eslint');
         await EslintUtilities.setupProjectEslint(root, true, TS_CONFIG_FILE_NAME);
+        // what lint has to leave alone: the build
         await FsUtilities.replaceInFile(
             PathUtilities.resolve(root, ESLINT_CONFIG_FILE_NAME),
             '    ...baseConfig,',
-            LOOPBACK_ESLINT_EXCEPTIONS
+            '    ...baseConfig,\n    { ignores: [\'dist\'] },'
         );
         await EslintUtilities.fix(root);
         LogUtilities.success(`Added "${config.name}" in ${PathUtilities.getRelative(PathUtilities.resolve('.'), root)}`);
@@ -169,21 +147,6 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
         for (const key of keys) {
             await EnvUtilities.addProjectVariableKey(config.name, environmentModel, key, false, PathUtilities.resolve('.'));
         }
-
-        // where the api listens: the port of the workspace during development, behind traefik on every interface of
-        // its container
-        const indexPath: Path = PathUtilities.resolve(root, 'src', 'index.ts');
-        await FsUtilities.replaceInFile(
-            indexPath,
-            'port: +(process.env.PORT ?? 3000),',
-            `port: environment.env === 'dev' ? environment.${DefaultEnvKeys.port(config.name)} : 3000,`
-        );
-        await FsUtilities.replaceInFile(
-            indexPath,
-            'host: process.env.HOST || \'127.0.0.1\',',
-            'host: environment.env === \'dev\' ? \'127.0.0.1\' : \'0.0.0.0\','
-        );
-        await FsUtilities.updateFile(indexPath, 'import {environment} from \'./environment/environment\';', 'prepend');
     }
 
     /**
@@ -194,14 +157,16 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
      * @param name - The name of the api.
      */
     private async compileFromWorkspaceRoot(root: Path, name: string): Promise<void> {
-        await TsConfigUtilities.updateTsConfig(name, { compilerOptions: { rootDir: '../..' } });
+        // the types of node and of mocha by name: TypeScript 6, which the eslint of the workspace reads the code with,
+        // includes no @types of its own anymore
+        await TsConfigUtilities.updateTsConfig(name, { compilerOptions: { rootDir: '../..', types: ['node', 'mocha'] } });
         const output: string = `dist/${APPS_DIRECTORY_NAME}/${name}/src`;
         await NpmUtilities.updatePackageJson(name, {
             main: `${output}/index.js`,
             types: `${output}/index.d.ts`,
             scripts: {
-                test: `lb-mocha --allow-console-logs "${output}/__tests__"`,
-                'test:dev': `lb-mocha --allow-console-logs ${output}/__tests__/**/*.js`,
+                test: `lb-mocha --allow-console-logs "${output}/tests"`,
+                'test:dev': `lb-mocha --allow-console-logs ${output}/tests/**/*.js`,
                 migrate: `node ./${output}/migrate`,
                 'openapi-spec': `node ./${output}/openapi-spec`
             }

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import { FileMockUtilities, GeneratedProjectUtilities, getMockConstants, inquireMock, MAX_ADD_TIME, MockConstants } from '../../../__testing__';
+import { FileMockUtilities, GeneratedProjectUtilities, getMockConstants, inquireMock, MAX_ADD_TIME, MAX_DOCKER_TIME, MockConstants, RunningWorkspaceUtilities } from '../../../__testing__';
+import { LOCAL_DOCKER_COMPOSE_FILE_NAME } from '../../../constants';
 import { DbType } from '../../../db';
 import { FsUtilities, InquirerUtilities, Path, PathUtilities } from '../../../encapsulation';
 import { AddConfiguration, AddType } from '../models';
@@ -61,7 +62,16 @@ describe('AddZibriCommand', () => {
         expect(await FsUtilities.readFile(PathUtilities.resolve(apiPath, 'src', 'data-sources', 'db', 'entities.ts'))).toContain('    TenantDeletion,\n    Invitation,');
 
         await GeneratedProjectUtilities.validate('api');
-    }, MAX_ADD_TIME * 3);
+
+        // locally the api runs from its image, behind traefik, and is ready once it reached its database
+        try {
+            await RunningWorkspaceUtilities.up(LOCAL_DOCKER_COMPOSE_FILE_NAME);
+            await RunningWorkspaceUtilities.waitFor({ host: 'api.localhost', path: '/health/ready', port: 80 }, response => response.status === 200);
+        }
+        finally {
+            await RunningWorkspaceUtilities.down(LOCAL_DOCKER_COMPOSE_FILE_NAME, true);
+        }
+    }, (MAX_ADD_TIME * 3) + MAX_DOCKER_TIME);
 
     afterEach(() => {
         jest.restoreAllMocks();
