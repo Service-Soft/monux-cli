@@ -8,6 +8,7 @@ export * from './up';
 export * from './down';
 export * from './prepare';
 export * from './generate-page';
+export * from './generate-component';
 export * from './run-all';
 export * from './command.utilities';
 export * from './list';

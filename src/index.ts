@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { Command, CommandUtilities, DownCommand, HelpCommand, VersionCommand, InitCommand, UpCommand, PrepareCommand, GeneratePageCommand, AddCommand, ListCommand, RunCommand, RunAllCommand } from './commands';
+import { Command, CommandUtilities, DownCommand, HelpCommand, VersionCommand, InitCommand, UpCommand, PrepareCommand, GeneratePageCommand, GenerateComponentCommand, AddCommand, ListCommand, RunCommand, RunAllCommand } from './commands';
 import { DeathUtilities, FigletUtilities } from './encapsulation';
 
 DeathUtilities.death();
@@ -51,6 +51,11 @@ async function main(): Promise<void> {
         case Command.GENERATE_PAGE:
         case Command.GP: {
             await new GeneratePageCommand().start(args);
+            return;
+        }
+        case Command.GENERATE_COMPONENT:
+        case Command.GC: {
+            await new GenerateComponentCommand().start(args);
             return;
         }
         case Command.RUN_ALL:

@@ -22,7 +22,8 @@ export class HelpCommand extends BaseCommand {
             `${this.getCommandLabel(Command.DOWN, Command.D)} Stops the services of the workspace`,
             `${this.getCommandLabel(Command.LIST, Command.LS)} Lists the workspaces with running docker services`,
             `${this.getCommandLabel(Command.LIST_ALL, Command.LA)} Lists every workspace with docker services, running or stopped`,
-            `${this.getCommandLabel(Command.GENERATE_PAGE, Command.GP)} Generates a page in an Angular project`
+            `${this.getCommandLabel(Command.GENERATE_PAGE, Command.GP)} Generates a page in an Angular project`,
+            `${this.getCommandLabel(Command.GENERATE_COMPONENT, Command.GC)} Generates a component in an Angular library`
         );
         LogUtilities.newLine();
         LogUtilities.heading('Running an npm script:');

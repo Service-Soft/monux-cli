@@ -1,41 +1,65 @@
 import { AngularUtilities } from '../../../angular';
-import { ANGULAR_JSON_FILE_NAME, BASE_TS_CONFIG_FILE_NAME, ESLINT_CONFIG_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, PACKAGE_JSON_FILE_NAME } from '../../../constants';
-import { FsUtilities, JsonUtilities, QuestionsFor, PathUtilities, Path, LogUtilities } from '../../../encapsulation';
+import { AngularLibraryUtilities } from '../../../angular-library';
+import { LIBS_DIRECTORY_NAME, PACKAGE_JSON_FILE_NAME } from '../../../constants';
+import { FsUtilities, LogUtilities, Path, PathUtilities, QuestionsFor } from '../../../encapsulation';
 import { EslintUtilities } from '../../../eslint';
-import { NpmUtilities, PackageJson } from '../../../npm';
-import { StorybookUtilities } from '../../../storybook';
-import { TailwindUtilities } from '../../../tailwind';
-import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
+import { NpmPackage, NpmUtilities, PackageJson } from '../../../npm';
+import { TemplateUtilities } from '../../../templates';
 import { OmitStrict } from '../../../types';
-import { mergeDeep } from '../../../utilities';
+import { filterAsync, StringUtilities } from '../../../utilities';
 import { WorkspaceConfig, WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
-import { BaseAddCommand } from '../models';
-import { AddConfiguration } from '../models/add-configuration.model';
-import { buttonComponentHtmlContent } from './button-component-html.content';
-import { buttonComponentTsContent } from './button-component-ts.content';
-import { buttonStoriesTsContent } from './button-stories-ts.content';
-import { storybookMainTsContent } from './storybook-main-ts.content';
+import { AddConfiguration, AddType, BaseAddCommand } from '../models';
 
 /**
  * Configuration for adding a new angular library.
  */
 type AddAngularLibraryConfiguration = AddConfiguration & {
     /**
-     * The scope of the library, eg. '@project'.
+     * The scope of the package of the library, eg. '@shop'.
      */
-    scope: string
+    scope: string,
+    /**
+     * What the selectors of its components start with, eg. 'shop' for `<shop-notice>`.
+     */
+    prefix: string,
+    /**
+     * The name of the first component of the library.
+     */
+    componentName: string,
+    /**
+     * The names of the Angular projects that use the library.
+     */
+    projects: string[]
 };
 
-// eslint-disable-next-line jsdoc/require-jsdoc
-type CreateResult = {
-    // eslint-disable-next-line jsdoc/require-jsdoc
-    root: Path,
-    // eslint-disable-next-line jsdoc/require-jsdoc
-    oldPackageJson: PackageJson
-};
+// taken by the Angular cli and the @service-soft libraries, whose selectors the ones of the library would clash with
+const RESERVED_PREFIXES: string[] = ['app', 'ng', 'ngx', 'ui'];
+
+// what ng-packagr and storybook call what they write, which the spellchecker of the workspace does not know
+const LIBRARY_WORDS: string[] = ['fesm', 'errordisplay'];
+
+// what the library is built, checked and linted with, next to what "ng new" installs
+const DEV_DEPENDENCIES: NpmPackage[] = [
+    NpmPackage.NG_PACKAGR,
+    NpmPackage.SERVICE_SOFT_UI,
+    NpmPackage.FONTAWESOME_SOLID_ICONS,
+    NpmPackage.TAILWIND,
+    NpmPackage.TAILWIND_POSTCSS,
+    NpmPackage.POSTCSS,
+    NpmPackage.STORYBOOK,
+    NpmPackage.STORYBOOK_ANGULAR,
+    NpmPackage.STORYBOOK_ADDON_A11Y,
+    NpmPackage.ANGULAR_DEVKIT_BUILD_ANGULAR,
+    NpmPackage.ANGULAR_PLATFORM_BROWSER_DYNAMIC,
+    NpmPackage.PLAYWRIGHT,
+    NpmPackage.AXE_CORE_PLAYWRIGHT,
+    NpmPackage.TYPES_NODE,
+    NpmPackage.ESLINT_PLUGIN_BETTER_TAILWINDCSS
+];
 
 /**
- * Command that handles adding an angular library to the monorepo.
+ * Command that handles adding an angular library to the monorepo: components the Angular projects of the workspace
+ * share, built like the @service-soft libraries, see GOALS.md.
  */
 export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryConfiguration> {
 
@@ -43,297 +67,118 @@ export class AddAngularLibraryCommand extends BaseAddCommand<AddAngularLibraryCo
         scope: {
             type: 'input',
             name: 'scope',
-            message: 'scope',
+            message: 'Scope',
             validate: (v?: string) => !!v,
+            default: async () => `@${(await WorkspaceUtilities.getConfigOrFail()).name}`
+        },
+        prefix: {
+            type: 'input',
+            name: 'prefix',
+            message: 'Prefix of the selectors of its components',
+            validate: (v?: string) => v != undefined && /^[a-z][\da-z]*$/.test(v) && !RESERVED_PREFIXES.includes(v)
+                ? true
+                : `The prefix needs to be lower case letters and digits, and none of ${RESERVED_PREFIXES.join(', ')}`,
             default: async () => {
                 const workspaceConfig: WorkspaceConfig = await WorkspaceUtilities.getConfigOrFail();
-                return `@${workspaceConfig.name}`;
+                return workspaceConfig.name.toLowerCase().replaceAll(/[^\da-z]/g, '');
             }
+        },
+        componentName: {
+            type: 'input',
+            name: 'componentName',
+            message: 'Name of its first component',
+            validate: (v?: string) => AngularLibraryUtilities.validateComponentName(v),
+            default: 'Notice'
+        },
+        projects: {
+            type: 'checkbox',
+            name: 'projects',
+            message: 'Angular projects that use the library',
+            choices: async () => (await this.findAngularProjects()).map(p => p.name)
         }
     };
 
     protected override async run(): Promise<void> {
         const config: AddAngularLibraryConfiguration = await this.getConfig();
-        const result: CreateResult = await this.createProject(config);
-        await EslintUtilities.setupProjectEslint(result.root, false);
-        await Promise.all([
-            FsUtilities.rm(PathUtilities.resolve(result.root, '.vscode')),
-            FsUtilities.rm(PathUtilities.resolve(result.root, '.editorconfig')),
-            FsUtilities.rm(PathUtilities.resolve(result.root, GIT_IGNORE_FILE_NAME)),
-            FsUtilities.rm(PathUtilities.resolve(result.root, 'src', 'lib')),
-            this.updateNgPackageJson(result.root),
-            this.updateAngularJson(result.root, config.name),
-            this.setupTsConfig(result.root, config),
-            this.updatePackageJson(result, config.name),
-            this.setupTailwind(result.root)
-        ]);
-        await FsUtilities.rm(PathUtilities.resolve(result.root, 'projects'));
-        await FsUtilities.replaceInFile(
-            PathUtilities.resolve(result.root, ESLINT_CONFIG_FILE_NAME),
-            '    ...baseConfig,',
-            [
-                '    ...baseConfig,',
-                '    {',
-                '        files: [\'**/*.stories.ts\'],',
-                '        rules: {',
-                '            \'jsdoc/require-jsdoc\': \'off\'',
-                '        }',
-                '    },'
-            ].join('\n')
-        );
+        const root: Path = await this.createProject(config);
+        const library: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, PathUtilities.resolve('.'));
+
+        await AngularLibraryUtilities.addComponent(library, config.componentName);
+        LogUtilities.step('Setting up eslint');
+        await EslintUtilities.addLintScripts(root);
+        await EslintUtilities.addWords(LIBRARY_WORDS);
+        await EslintUtilities.fix(root);
+
+        LogUtilities.step('Building the library');
+        await NpmUtilities.run(config.name, 'build', false);
+        for (const project of config.projects) {
+            await AngularLibraryUtilities.install(library, project);
+        }
+        LogUtilities.success(`Added "${config.name}" in ${PathUtilities.getRelative(PathUtilities.resolve('.'), root)}`);
     }
 
-    private async setupTailwind(root: string): Promise<void> {
-        await TailwindUtilities.setupProjectTailwind(root);
-        await FsUtilities.createFile(PathUtilities.resolve(root, 'src', 'styles.css'), [
-            '@tailwind base;',
-            '@tailwind components;',
-            '@tailwind utilities;'
-        ]);
-    }
-
-    private async updatePackageJson(result: CreateResult, name: string): Promise<void> {
-        await NpmUtilities.updatePackageJson(name, {
-            peerDependencies: result.oldPackageJson.peerDependencies,
-            dependencies: undefined,
-            devDependencies: undefined,
-            prettier: undefined
+    private async findAngularProjects(): Promise<WorkspaceProject[]> {
+        const rootDir: Path = PathUtilities.resolve('.');
+        return await filterAsync(await WorkspaceUtilities.getProjects('apps', rootDir), async p => {
+            const type: AddType | undefined = await WorkspaceUtilities.findProjectType(p.name, rootDir);
+            return type === AddType.ANGULAR || type === AddType.ANGULAR_WEBSITE;
         });
     }
 
-    private async createProject(config: AddAngularLibraryConfiguration): Promise<CreateResult> {
-        LogUtilities.step('Creating a temporary Angular workspace');
+    /**
+     * Creates the Angular workspace of the library, which "ng new" gives the dependencies of the Angular Monux uses, and
+     * writes the library into it from templates/angular-library.
+     * @param config - The configuration of the library.
+     * @returns The directory of the library.
+     */
+    private async createProject(config: AddAngularLibraryConfiguration): Promise<Path> {
+        LogUtilities.step('Creating the Angular workspace of the library');
         await AngularUtilities.runCommand(
             PathUtilities.resolve(LIBS_DIRECTORY_NAME),
             `new ${config.name}`,
-            { '--no-create-application': true, '--ai-config': 'none', '--zoneless': false }
+            { '--no-create-application': true, '--skip-git': true, '--zoneless': true, '--ai-config': 'none', '--defaults': true }
         );
-        LogUtilities.step('Creating the library');
-        await AngularUtilities.runCommand(
-            PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name),
-            `generate library ${config.name}`,
-            {}
-        );
+        const root: Path = PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name);
+        const generated: PackageJson = await FsUtilities.parseFileAs(PathUtilities.resolve(root, PACKAGE_JSON_FILE_NAME));
+        // what the workspace has once for every project, or what the template replaces
+        await Promise.all(['.vscode', '.editorconfig', '.gitignore', '.prettierrc', 'README.md']
+            .map(f => FsUtilities.rm(PathUtilities.resolve(root, f))));
 
-        LogUtilities.step('Setting up Storybook');
-        await StorybookUtilities.setup(PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name));
-
-        const oldPackageJson: PackageJson = await FsUtilities.parseFileAs(
-            PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name, 'projects', config.name, PACKAGE_JSON_FILE_NAME)
-        );
-
-        await FsUtilities.moveDirectoryContent(
-            PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name, 'projects', config.name),
-            PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name),
-            [PACKAGE_JSON_FILE_NAME]
-        );
-        await FsUtilities.replaceAllInFile(
-            PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME),
-            `projects/${config.name}/`,
-            ''
-        );
-        await FsUtilities.replaceAllInFile(
-            PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME),
-            '"-d",',
-            ''
-        );
-        await FsUtilities.replaceAllInFile(
-            PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME),
-            `"projects/${config.name}"`,
-            ''
-        );
-        await FsUtilities.replaceAllInFile(
-            PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME),
-            '"json",',
-            '"json"'
-        );
-        await FsUtilities.replaceInFile(PathUtilities.resolve(LIBS_DIRECTORY_NAME, config.name, ANGULAR_JSON_FILE_NAME), '"root": ,', '"root": "./",');
-
-        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, PathUtilities.resolve('.'));
-        await AngularUtilities.updateAngularJson(
-            PathUtilities.resolve(newProject.path, ANGULAR_JSON_FILE_NAME),
-            {
-                projects: {
-                    [newProject.name]: {
-                        schematics: {
-                            '@schematics/angular:component': {
-                                style: 'css',
-                                type: 'component'
-                            },
-                            '@schematics/angular:service': {
-                                type: 'service'
-                            },
-                            '@schematics/angular:pipe': {
-                                typeSeparator: '.'
-                            },
-                            '@schematics/angular:guard': {
-                                typeSeparator: '.'
-                            }
-                        }
-                    }
-                }
-            }
-        );
-
-        await FsUtilities.updateFile(
-            PathUtilities.resolve(newProject.path, '.storybook', 'main.ts'),
-            storybookMainTsContent,
-            'replace'
-        );
-
-        await this.cleanup(newProject);
-
-        await this.createDefaultFiles(newProject);
-
-        return { root: newProject.path, oldPackageJson };
-    }
-
-    private async createDefaultFiles(newProject: WorkspaceProject): Promise<void> {
-        await FsUtilities.updateFile(PathUtilities.resolve(newProject.path, 'src', 'public-api.ts'), 'export * from \'./stories\';', 'replace');
-        await FsUtilities.createFile(
-            PathUtilities.resolve(newProject.path, 'src', 'stories', 'index.ts'),
-            'export * from \'./button/button.component\';'
-        );
-        await FsUtilities.createFile(
-            PathUtilities.resolve(newProject.path, 'src', 'stories', 'button', 'button.component.ts'),
-            buttonComponentTsContent
-        );
-        await FsUtilities.createFile(
-            PathUtilities.resolve(newProject.path, 'src', 'stories', 'button', 'button.component.html'),
-            buttonComponentHtmlContent
-        );
-        await FsUtilities.createFile(
-            PathUtilities.resolve(newProject.path, 'src', 'stories', 'button', 'button.stories.ts'),
-            buttonStoriesTsContent
-        );
-    }
-
-    private async cleanup(newProject: WorkspaceProject): Promise<void> {
-        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', '.eslintrc.json'));
-        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'button.component.ts'));
-        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'button.css'));
-        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'button.stories.ts'));
-        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'header.component.ts'));
-        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'header.css'));
-        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'header.stories.ts'));
-        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'page.component.ts'));
-        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'page.css'));
-        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'page.stories.ts'));
-        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'user.ts'));
-        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'Configure.mdx'));
-        await FsUtilities.rm(PathUtilities.resolve(newProject.path, 'src', 'stories', 'assets'));
-    }
-
-    private async setupTsConfig(root: Path, config: AddAngularLibraryConfiguration): Promise<void> {
-        LogUtilities.step('Setting up the tsconfig');
-
-        await Promise.all([
-            TsConfigUtilities.updateTsConfig(config.name, { extends: `../../${BASE_TS_CONFIG_FILE_NAME}` }),
-            this.createTsConfigEslint(root),
-            this.updateTsConfigLib(root),
-            this.updateTsConfigSpec(root),
-            this.updateBaseTsConfig(config, root)
-        ]);
-    }
-
-    private async updateBaseTsConfig(config: AddAngularLibraryConfiguration, root: Path): Promise<void> {
-        await TsConfigUtilities.updateBaseTsConfig({
-            compilerOptions: {
-                paths: {
-                    [`${config.scope}/${config.name}`]: [`${root}/src/public-api.ts`]
-                }
+        LogUtilities.step('Adding the build, the stories and their AXE checks');
+        const packageName: string = `${config.scope}/${config.name}`;
+        await TemplateUtilities.write('angular-library', root, {
+            name: config.name,
+            prefix: config.prefix,
+            packageName,
+            // ng-packagr names the files of each entry point after the package, like "shop-ui-notice.mjs"
+            distName: packageName.replace('@', '').replace('/', '-'),
+            firstEntryPoint: StringUtilities.toKebabCase(config.componentName)
+        });
+        await NpmUtilities.updatePackageJson(config.name, {
+            // a library brings no Angular of its own: the one of the app that uses it
+            devDependencies: { ...generated.dependencies, ...generated.devDependencies },
+            peerDependencies: {
+                '@angular/common': this.findVersion(generated, '@angular/common'),
+                '@angular/core': this.findVersion(generated, '@angular/core'),
+                // its components are styled with the tokens of ui, by the tailwind of the app
+                '@service-soft/ui': this.getVersionRange(NpmPackage.SERVICE_SOFT_UI),
+                tailwindcss: this.getVersionRange(NpmPackage.TAILWIND)
             }
         });
+        await NpmUtilities.install(config.name, DEV_DEPENDENCIES, true);
+        return root;
     }
 
-    private async updateTsConfigLib(root: Path): Promise<void> {
-        const tsconfigPath: Path = PathUtilities.resolve(root, 'tsconfig.lib.json');
-        const oldConfig: TsConfig = await FsUtilities.parseFileAs(tsconfigPath);
-        const config: TsConfig = mergeDeep(oldConfig, {
-            extends: './tsconfig.json',
-            compilerOptions: {
-                outDir: 'out-tsc/lib'
-            }
-        });
-        await FsUtilities.updateFile(tsconfigPath, JsonUtilities.stringify(config), 'replace');
+    private findVersion(packageJson: PackageJson, name: string): string {
+        const version: string | undefined = packageJson.dependencies[name];
+        if (version == undefined) {
+            throw new Error(`"ng new" installed no ${name}`);
+        }
+        return version;
     }
 
-    private async updateTsConfigSpec(root: string): Promise<void> {
-        const tsconfigPath: Path = PathUtilities.resolve(root, 'tsconfig.spec.json');
-        const oldConfig: TsConfig = await FsUtilities.parseFileAs(tsconfigPath);
-        const config: TsConfig = mergeDeep(oldConfig, {
-            extends: './tsconfig.json',
-            compilerOptions: {
-                outDir: 'out-tsc/spec'
-            }
-        });
-        await FsUtilities.updateFile(tsconfigPath, JsonUtilities.stringify(config), 'replace');
-    }
-
-    private async createTsConfigEslint(root: string): Promise<void> {
-        const eslintTsconfig: TsConfig = {
-            compilerOptions: {
-                outDir: './out-tsc/eslint',
-                types: ['jasmine']
-            },
-            extends: `../../${BASE_TS_CONFIG_FILE_NAME}`,
-            files: ['src/public-api.ts'],
-            include: [
-                'src/**/*.spec.ts',
-                'src/**/*.d.ts',
-                'src/**/*.stories.ts',
-                '.storybook/*.ts'
-            ]
-        };
-        await FsUtilities.createFile(PathUtilities.resolve(root, 'tsconfig.eslint.json'), JsonUtilities.stringify(eslintTsconfig));
-    }
-
-    private async updateNgPackageJson(root: string): Promise<void> {
-        await AngularUtilities.updateNgPackageJson(PathUtilities.resolve(root, 'ng-package.json'), {
-            $schema: './node_modules/ng-packagr/ng-package.schema.json',
-            dest: './dist/ui',
-            lib: {
-                entryFile: 'src/public-api.ts'
-            }
-        });
-    }
-
-    private async updateAngularJson(root: string, projectName: string): Promise<void> {
-        await AngularUtilities.updateAngularJson(PathUtilities.resolve(root, ANGULAR_JSON_FILE_NAME), {
-            $schema: '../../node_modules/@angular/cli/lib/config/schema.json',
-            newProjectRoot: './',
-            projects: {
-                [projectName]: {
-                    prefix: projectName,
-                    root: './',
-                    sourceRoot: 'src',
-                    architect: {
-                        build: {
-                            options: {
-                                project: 'ng-package.json'
-                            },
-                            configurations: {
-                                production: {
-                                    tsConfig: 'tsconfig.lib.prod.json'
-                                },
-                                development: {
-                                    tsConfig: 'tsconfig.lib.json'
-                                }
-                            }
-                        },
-                        test: {
-                            options: {
-                                tsConfig: 'tsconfig.spec.json'
-                            }
-                        },
-                        storybook: {
-                            options: {
-                                styles: ['src/styles.css']
-                            }
-                        }
-                    }
-                }
-            }
-        });
+    // the range of a pinned package, eg. "^22.2.0" of "@service-soft/ui@^22.2.0"
+    private getVersionRange(npmPackage: NpmPackage): string {
+        return npmPackage.slice(npmPackage.lastIndexOf('@') + 1);
     }
 }
