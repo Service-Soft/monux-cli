@@ -1,7 +1,7 @@
 import { ModuleKind, ModuleResolutionKind, ScriptTarget } from 'typescript';
 
 import { BASE_TS_CONFIG_FILE_NAME, TS_CONFIG_FILE_NAME } from '../constants';
-import { CPUtilities, FsUtilities, JsonUtilities, PathUtilities, Path } from '../encapsulation';
+import { FsUtilities, JsonUtilities, Path, PathUtilities } from '../encapsulation';
 import { mergeDeep } from '../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../workspace';
 import { TsConfig } from './tsconfig.model';
@@ -10,14 +10,6 @@ import { TsConfig } from './tsconfig.model';
  * Utilities for tsconfig.
  */
 export abstract class TsConfigUtilities {
-    /**
-     * Initializes typescript inside the given path.
-     * @param path - Where to initialize typescript.
-     */
-    static async init(path: Path): Promise<void> {
-        await CPUtilities.exec(`cd ${path} && npx --yes tsc --init`);
-    }
-
     /**
      * Creates the base ts config at the monorepo root.
      */
