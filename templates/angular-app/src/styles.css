@@ -1,0 +1,11 @@
+/* the classes of this folder. The libraries add their own sources with their imports */
+@import "tailwindcss" source(".");
+@import "@service-soft/ui";
+@import "@service-soft/ngx-navigation";
+@import "@service-soft/ngx-auth";
+@import "@service-soft/ngx-pwa";
+@import "@service-soft/ngx-error-handling";
+@import "@service-soft/ngx-entity";
+@import "@service-soft/ngx-persistence-logger";
+/* the look of every project of the workspace */
+@import "../../../theme.css";

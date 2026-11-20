@@ -71,10 +71,6 @@ const TRACKING_VARIABLES: Record<WebsiteTracking, WebsiteTrackingVariable> = {
     metaPixel: { keySuffix: 'meta_pixel_id', example: '0000000000000000' }
 };
 
-// what the title ends up in: typescript strings, html and the meta tags of the pages
-const TITLE_REGEX: RegExp = /^[^"'<>\\{}`]+$/;
-const LANGUAGE_REGEX: RegExp = /^[a-z]{2}(-[A-Z]{2})?$/;
-
 // how much a page downloads before it is shown, raw, see the goals of the website. Angular, its router and hydration
 // are about 370kB of it, the libraries and the pages the rest. The build fails beyond, so that a heavy dependency added
 // to the first load does not go unnoticed. How fast the page is, is measured by lighthouse, not by this
@@ -103,9 +99,7 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
             type: 'input',
             name: 'title',
             message: 'Name of the website, as its titles show it',
-            validate: (v?: string) => v != undefined && TITLE_REGEX.test(v)
-                ? true
-                : 'The name needs to be without quotes, "<", ">", "{", "}" and "\\"',
+            validate: (v?: string) => AngularUtilities.validateTitle(v),
             default: StringUtilities.toPascalCase(this.baseConfig.name)
         },
         // TODO: localization, set up by mx, for the website and the Angular app alike. What it takes:
@@ -121,9 +115,7 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
             type: 'input',
             name: 'language',
             message: 'Language of the website',
-            validate: (v?: string) => v != undefined && LANGUAGE_REGEX.test(v)
-                ? true
-                : 'The language needs to be a code like "en" or "de-AT"',
+            validate: (v?: string) => AngularUtilities.validateLanguage(v),
             default: 'en'
         },
         trackings: {
@@ -150,6 +142,7 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
 
         LogUtilities.step('Adding the pages, the navigation and what makes the website fast and findable');
         await this.cleanUp(root);
+        await TemplateUtilities.write('angular', root, { name: config.name });
         await TemplateUtilities.write(
             'angular-website',
             root,

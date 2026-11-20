@@ -49,6 +49,30 @@ const constructorLineIdentifier: string = 'constructor(';
 export abstract class TsUtilities {
 
     /**
+     * Adds a member to an enum, above the comment that marks where Monux adds them. The member before it gets the comma
+     * it needs, and every other line, comments included, stays as it is.
+     * @param path - The ts file of the enum.
+     * @param marker - The comment inside the enum, such as "// mx add adds the apps above this line".
+     * @param member - The member, such as "ADMIN = 'admin'".
+     * @throws When the file has no such comment.
+     */
+    static async addEnumMember(path: Path, marker: string, member: string): Promise<void> {
+        const lines: string[] = await FsUtilities.readFileLines(path);
+        const markerIndex: number = lines.findIndex(l => l.trim() === marker);
+        if (markerIndex === -1) {
+            throw new Error(`Could not find "${marker}" in ${path} to add "${member}" above it`);
+        }
+        const previousIndex: number = lines.findLastIndex((l, i) => i < markerIndex && l.trim() !== '' && !l.trim().startsWith('//'));
+        const previous: string = lines[previousIndex].trimEnd();
+        if (!previous.endsWith('{') && !previous.endsWith(',')) {
+            lines[previousIndex] = `${previous},`;
+        }
+        const indentation: string = /^\s*/.exec(lines[markerIndex])?.[0] ?? '';
+        lines.splice(markerIndex, 0, `${indentation}${member}`);
+        await FsUtilities.updateFile(path, lines, 'replace');
+    }
+
+    /**
      * Adds the given content to the start of a class.
      * @param path - The path of the ts file with a class in it.
      * @param content - The content to add.

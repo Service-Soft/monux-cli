@@ -44,7 +44,8 @@ describe('AddAngularWebsiteCommand', () => {
         expect(prerendered).toContain('<title>Imprint | Shop</title>');
         expect(prerendered).toContain('<meta name="description" content="Who runs Shop, and how to reach them.">');
         const home: string = await FsUtilities.readFile(PathUtilities.resolve(browser, 'index.html'));
-        expect(home).toContain('<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Shop"');
+        expect(home).toMatch(/<script type="application\/ld\+json"[^>]*>\{"@context":"https:\/\/schema.org","@type":"WebSite","name":"Shop"/);
+        expect(prerendered).toContain('<link rel="canonical" href="http://localhost:4200/imprint">');
 
         // the goals of the website, measured on the build its docker image runs
         // on the port of development, which the canonical urls of a build for development name

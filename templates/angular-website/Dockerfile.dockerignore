@@ -1,9 +1,0 @@
-# what the build produces or the machine happens to have lying around. node_modules in
-# particular is installed inside the image for the platform it runs on
-**/node_modules
-**/dist
-**/.angular
-**/coverage
-.git
-# the values the projects run on, secrets included. A website only gets the public ones, compiled into its build
-**/.env

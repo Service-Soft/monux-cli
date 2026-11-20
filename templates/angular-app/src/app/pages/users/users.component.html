@@ -1,0 +1,77 @@
+<section class="mx-auto flex max-w-section flex-col gap-8 px-section-padding py-16">
+    <h1 class="font-heading text-headline">Users</h1>
+    @if (mayChooseTenant) {
+        <!-- the members of one tenant, whose memberships the row actions then change -->
+        <ui-input-autocomplete
+            class="max-w-sm"
+            label="Members of"
+            placeholder="Every user"
+            [options]="tenantOptions()"
+            [(query)]="tenantQuery"
+            [(value)]="chosenTenantId"
+        />
+    }
+    <ngx-entity-table
+        #usersTable
+        label="Users"
+        hideLabel
+        [service]="userService"
+        [columns]="columns()"
+        [fixedFilter]="fixedFilter()"
+        [edit]="mayUpdate ? 'dialog' : undefined"
+        [actions]="membershipTenantId() ? memberActions : undefined"
+        [canCreate]="mayCreate"
+        [canDelete]="mayDelete"
+        [canImport]="mayImport"
+    />
+</section>
+
+@if (mayInvite) {
+    <section class="mx-auto flex max-w-section flex-col gap-8 px-section-padding pb-16">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <h2 class="font-heading text-title">Invitations</h2>
+            <button ui-button type="button" (click)="invite()">Invite</button>
+        </div>
+        <!-- deleting one revokes it, and what it created when it was sent goes with it -->
+        <ngx-entity-table
+            #invitationsTable
+            label="Invitations"
+            hideLabel
+            [service]="invitationService"
+            [columns]="invitationColumns"
+            [actions]="invitationActions"
+            canDelete
+        />
+    </section>
+}
+
+<ng-template #memberActions let-user>
+    @if (findMembership(user); as membership) {
+        @if (mayUpdateMemberships) {
+            <button ui-button type="button" variant="text" size="sm" [attr.aria-label]="'Roles of ' + user.name" (click)="changeRoles(user, membership)">
+                Roles
+            </button>
+            <button
+                ui-button
+                type="button"
+                variant="text"
+                size="sm"
+                [attr.aria-label]="(membership.deactivatedAt ? 'Reactivate ' : 'Deactivate ') + user.name"
+                (click)="toggleDeactivated(user, membership)"
+            >
+                {{ membership.deactivatedAt ? 'Reactivate' : 'Deactivate' }}
+            </button>
+        }
+        @if (mayRemoveMembers) {
+            <button ui-button type="button" variant="text" size="sm" [attr.aria-label]="'Remove ' + user.name" (click)="remove(user, membership)">
+                Remove
+            </button>
+        }
+    }
+</ng-template>
+
+<ng-template #invitationActions let-invitation>
+    <button ui-button type="button" variant="text" size="sm" [attr.aria-label]="'Send again to ' + invitation.email" (click)="resend(invitation)">
+        Send again
+    </button>
+</ng-template>

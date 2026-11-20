@@ -178,13 +178,4 @@ export abstract class DefaultEnvKeys {
     static masterKey(apiProjectName: string): EnvironmentVariableKey {
         return `${StringUtilities.toSnakeCase(apiProjectName)}_master_key` as EnvironmentVariableKey;
     }
-
-    /**
-     * The url of the page a password reset mail of an api links to.
-     * @param apiProjectName - The name of the api.
-     * @returns The environment variable key.
-     */
-    static confirmPasswordResetUrl(apiProjectName: string): EnvironmentVariableKey {
-        return `${StringUtilities.toSnakeCase(apiProjectName)}_confirm_password_reset_url` as EnvironmentVariableKey;
-    }
 }

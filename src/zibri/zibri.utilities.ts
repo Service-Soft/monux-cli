@@ -1,42 +1,53 @@
 import { CPUtilities, Path } from '../encapsulation';
-import { optionsToCliString } from '../utilities';
+import { WorkspaceConfig, WorkspaceUtilities } from '../workspace';
 
 /**
- * The `zi new {}` command.
+ * The optional parts of a zibri project, as "zi new" offers them.
  */
-type CliNew = `new ${string}`;
+export type ZibriFeature = 'pages' | 'docs' | 'mailingList' | 'metricsDashboard' | 'logEmail';
 
 /**
- * All possible zibri cli commands.
+ * The features that need the "pages" feature.
  */
-type ZibriCliCommands = CliNew;
-
-/**
- * Cli Options for running zi new.
- */
-type NewOptions = never;
-
-/**
- * Possible zibri cli options, narrowed down based on the provided command.
- */
-type ZibriCliOptions<T extends ZibriCliCommands>
-    = T extends CliNew ? NewOptions
-        : never;
+export const ZIBRI_FEATURES_NEEDING_PAGES: ZibriFeature[] = ['docs', 'mailingList', 'metricsDashboard'];
 
 /**
  * Utilities for zibri specific code generation/manipulation.
  */
 export abstract class ZibriUtilities {
 
-    private static readonly CLI_VERSION: string = '2.3.0';
+    // the zibri a workspace is generated with is the one the tests of Monux generated. The templates in templates/zibri
+    // edit what its "zi new" writes, so a new version needs the add-zibri and add-angular tests to pass first
+    private static readonly CLI_VERSION: string = '3.2.0';
 
     /**
-     * Runs a zibri cli command inside the provided directory.
-     * @param directory - The directory to run the command inside.
-     * @param command - The command to run.
-     * @param options - Options for running the command.
+     * Creates a zibri project inside the given directory, without asking anything.
+     * Monux sets up its own workflows, and every endpoint of the api needs a login unless it says otherwise.
+     * @param directory - The directory to create the project in.
+     * @param name - The name of the project.
+     * @param features - The optional parts of zibri the project gets.
      */
-    static async runCommand(directory: Path, command: ZibriCliCommands, options: ZibriCliOptions<typeof command>): Promise<void> {
-        await CPUtilities.exec(`cd ${directory} && npx --yes zibri-cli@${this.CLI_VERSION} ${command} ${optionsToCliString(options)}`);
+    static async createProject(directory: Path, name: string, features: ZibriFeature[]): Promise<void> {
+        const featureArgument: string = features.length ? features.join(',') : 'none';
+        await CPUtilities.exec(`cd ${directory} && npx --yes zibri-cli@${this.CLI_VERSION} new ${name} none isLoggedIn ${featureArgument}`);
+    }
+
+    /**
+     * Gets the name of the contract library of an api: what the api and its apps agree on, in the libs folder.
+     * @param apiName - The name of the api.
+     * @returns The name of the library, such as "api-contract".
+     */
+    static getContractName(apiName: string): string {
+        return `${apiName}-contract`;
+    }
+
+    /**
+     * Resolves the package name of the contract library of an api, which the api and its apps import it by.
+     * @param apiName - The name of the api.
+     * @returns The package name, such as "@shop/api-contract".
+     */
+    static async resolveContractPackage(apiName: string): Promise<string> {
+        const workspace: WorkspaceConfig = await WorkspaceUtilities.getConfigOrFail();
+        return `@${workspace.name}/${this.getContractName(apiName)}`;
     }
 }

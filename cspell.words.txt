@@ -37,3 +37,10 @@ prerendered
 llms
 applebot
 externalagent
+chartjs
+deactivatable
+eventloop
+jose
+opentelemetry
+pooler
+prometheus

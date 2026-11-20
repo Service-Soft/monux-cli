@@ -92,6 +92,24 @@ export abstract class NpmUtilities {
     }
 
     /**
+     * Resolves the name of the package of a project, which other projects import it by.
+     * @param project - The project.
+     * @returns The name its package.json gives it, such as "@shop/api-contract".
+     */
+    static async resolvePackageName(project: WorkspaceProject): Promise<string> {
+        return (await FsUtilities.parseFileAs<PackageJson>(PathUtilities.resolve(project.path, PACKAGE_JSON_FILE_NAME))).name;
+    }
+
+    /**
+     * Installs a package of the workspace, like a library, into a project, which links it rather than downloading it.
+     * @param projectName - The name of the project to install the package into.
+     * @param packageName - The name of the package, as its package.json names it.
+     */
+    static async installFromWorkspace(projectName: string, packageName: string): Promise<void> {
+        await this.run(projectName, `i ${packageName}`, true);
+    }
+
+    /**
      * Installs the provided packages inside the root directory.
      * @param npmPackages - The packages to install.
      * @param development - Whether or not the packages will be installed with -D or not.

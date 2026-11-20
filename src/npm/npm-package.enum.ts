@@ -4,9 +4,20 @@
 export enum NpmPackage {
     TAILWIND = 'tailwindcss@3',
     // the @service-soft libraries share the major of the Angular they are built for
-    SERVICE_SOFT_UI = '@service-soft/ui@^22.0.0',
-    SERVICE_SOFT_NGX_NAVIGATION = '@service-soft/ngx-navigation@^22.0.0',
-    SERVICE_SOFT_NGX_TRACKING = '@service-soft/ngx-tracking@^22.0.0',
+    SERVICE_SOFT_UI = '@service-soft/ui@^22.2.0',
+    SERVICE_SOFT_NGX_NAVIGATION = '@service-soft/ngx-navigation@^22.2.0',
+    SERVICE_SOFT_NGX_TRACKING = '@service-soft/ngx-tracking@^22.2.0',
+    SERVICE_SOFT_NGX_AUTH = '@service-soft/ngx-auth@^22.2.0',
+    SERVICE_SOFT_NGX_PWA = '@service-soft/ngx-pwa@^22.2.0',
+    SERVICE_SOFT_NGX_ERROR_HANDLING = '@service-soft/ngx-error-handling@^22.2.0',
+    SERVICE_SOFT_NGX_PERSISTENCE_LOGGER = '@service-soft/ngx-persistence-logger@^22.2.0',
+    SERVICE_SOFT_NGX_ENTITY = '@service-soft/ngx-entity@^22.2.0',
+    // what the table, the select and the autocomplete of @service-soft/ui are built on, an optional peer of it
+    ANGULAR_ARIA = '@angular/aria@^22.3.0',
+    // the models the routes of zibri answer and take, which the @service-soft libraries read them as
+    ZIBRI_CONTRACT = 'zibri-contract@^3.2.0',
+    // draws the qr code a user scans with an authenticator app, for ngx-auth
+    UQR = 'uqr@^0.1.3',
     FONTAWESOME_SOLID_ICONS = '@fortawesome/free-solid-svg-icons@^7.3.1',
     TAILWIND_CLI = '@tailwindcss/cli@^4.3.3',
     // cuts the fonts of a website down to the characters it shows
@@ -24,7 +35,6 @@ export enum NpmPackage {
     ESLINT = 'eslint',
     POSTCSS = 'postcss',
     AUTOPREFIXER = 'autoprefixer',
-    VITE_PLUGIN_DTS = 'vite-plugin-dts',
     LBX_JWT = 'lbx-jwt',
     LBX_CHANGE_SETS = 'lbx-change-sets',
     LBX_PERSISTENCE_LOGGER = 'lbx-persistence-logger',
@@ -56,6 +66,5 @@ export enum NpmPackage {
     CLDRJS = 'cldrjs',
     CLDR_DATA = 'cldr-data',
     VITE = 'vite',
-    VITE_TS_CONFIG_PATHS = 'vite-tsconfig-paths',
-    VUE_LANGUAGE_CORE = '@vue/language-core'
+    VITE_TS_CONFIG_PATHS = 'vite-tsconfig-paths'
 }

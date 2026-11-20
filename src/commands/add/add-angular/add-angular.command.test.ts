@@ -1,29 +1,74 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import { FileMockUtilities, getMockConstants, MAX_ADD_TIME, MockConstants, inquireMock } from '../../../__testing__';
-import { InquirerUtilities } from '../../../encapsulation';
+import { FileMockUtilities, GeneratedProjectUtilities, getMockConstants, inquireMock, MAX_ADD_TIME, MockConstants } from '../../../__testing__';
+import { DbType } from '../../../db';
+import { FsUtilities, InquirerUtilities, Path, PathUtilities } from '../../../encapsulation';
+import { NpmUtilities } from '../../../npm';
+import { AddZibriCommand } from '../add-zibri/add-zibri.command';
 import { AddConfiguration, AddType } from '../models';
 import { AddAngularCommand } from './add-angular.command';
 
 const mockConstants: MockConstants = getMockConstants('add-angular-command');
 
 describe('AddAngularCommand', () => {
+    const appPath: Path = PathUtilities.resolve(mockConstants.APPS_DIR, 'admin');
+    const apiSource: Path = PathUtilities.resolve(mockConstants.APPS_DIR, 'api', 'src');
+    const contractPath: Path = PathUtilities.resolve(mockConstants.LIBS_DIR, 'api-contract');
+
     beforeEach(async () => {
         await FileMockUtilities.setup(mockConstants);
-        InquirerUtilities['inquire'] = jest.fn(inquireMock({
-            port: 4200,
-            subDomain: 'admin',
-            titleSuffix: '| Admin',
-            apiName: 'api'
-        }));
     });
 
-    test('should run', async () => {
+    test('adds an app for a zibri api that builds, lints and passes its tests, and connects the api to it', async () => {
+        InquirerUtilities['inquire'] = jest.fn(inquireMock({
+            subDomain: 'api',
+            port: 3000,
+            features: ['pages'],
+            defaultUserEmail: 'ada@example.com',
+            defaultUserPassword: 'a password long enough',
+            dbComposeService: 'NEW',
+            dbComposeServiceName: 'db',
+            databaseName: 'api',
+            dbType: DbType.POSTGRES
+        }));
+        const apiConfig: AddConfiguration = { name: 'api', type: AddType.ZIBRI };
+        await new AddZibriCommand(apiConfig).add();
+
+        InquirerUtilities['inquire'] = jest.fn(inquireMock({
+            apiName: 'api',
+            port: 4200,
+            subDomain: 'admin',
+            title: 'Admin',
+            language: 'en'
+        }));
         const baseConfig: AddConfiguration = { name: 'admin', type: AddType.ANGULAR };
-        const command: AddAngularCommand = new AddAngularCommand(baseConfig);
-        await command.add();
-        expect(true).toBe(true);
-    }, MAX_ADD_TIME);
+        await new AddAngularCommand(baseConfig).add();
+
+        const manifest: string = await FsUtilities.readFile(PathUtilities.resolve(appPath, 'public', 'manifest.webmanifest'));
+        expect(manifest).toContain('"name": "Admin"');
+        const prodCompose: string = await FsUtilities.readFile(mockConstants.DOCKER_COMPOSE_YAML);
+        expect(prodCompose).toContain('NG_ALLOWED_HOSTS: ${admin_sub_domain}.${prod_root_domain}');
+
+        // the api takes the logs of the app, its requests from the browser, and links its password reset mails to it
+        expect(await FsUtilities.readFile(PathUtilities.resolve(contractPath, 'src', 'log-application.enum.ts')))
+            .toContain('    ADMIN = \'admin\'\n    // mx add adds the apps above this line');
+        expect(await FsUtilities.readFile(PathUtilities.resolve(apiSource, 'cors-origins.ts')))
+            .toContain('CORS_ORIGINS: CorsOrigin[] = resolveCorsOrigins([environment.admin_base_url]);');
+        expect(await FsUtilities.readFile(PathUtilities.resolve(apiSource, 'env.ts')))
+            .toContain('CONFIRM_PASSWORD_RESET_URL: `${environment.admin_base_url}/${AppPage.CONFIRM_PASSWORD_RESET}`,\n    ACCEPT_INVITATION_URL: `${environment.admin_base_url}/${AppPage.ACCEPT_INVITATION}`');
+        // the app reads the contract of the api, built before each of its scripts that needs it, and in its image
+        expect(await FsUtilities.readFile(PathUtilities.resolve(appPath, 'package.json')))
+            .toContain('"prebuild": "npm run build --workspace=@add-angular-command/api-contract"');
+        expect(await FsUtilities.readFile(PathUtilities.resolve(appPath, 'Dockerfile')))
+            .toContain('COPY libs/api-contract libs/api-contract');
+        expect(await FsUtilities.readFile(PathUtilities.resolve(mockConstants.APPS_DIR, 'api', '.env')))
+            .toContain('admin_base_url=http://localhost:4200');
+
+        await GeneratedProjectUtilities.validate('admin');
+        // the tests of the api are the ones of its own generator
+        await NpmUtilities.run('api', 'build', false);
+        await NpmUtilities.run('api', 'lint', false);
+    }, MAX_ADD_TIME * 6);
 
     afterEach(() => {
         jest.restoreAllMocks();

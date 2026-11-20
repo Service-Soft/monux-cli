@@ -70,7 +70,7 @@ export class GeneratePageCommand extends BaseCommand<GeneratePageConfiguration> 
         const route: string[] = [
             `path: '${names.fileName}',`,
             `title: '${input.title}',`,
-            `data: { description: '${input.description}' } satisfies SeoRouteData,`,
+            `data: { description: '${input.description}' } satisfies NavRouteData,`,
             `loadComponent: async () => (await import('./pages/${names.fileName}/${names.fileName}.component')).${names.className}`
         ];
         const marker: string = MARKERS[input.placement];

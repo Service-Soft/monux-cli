@@ -58,7 +58,6 @@
         "json5": "^2.2.3"
     },
     "devDependencies": {
-        "@angular/common": "^20.2.1",
         "@faker-js/faker": "^9.0.3",
         "@jest/globals": "^30.3.0",
         "@nestjs/common": "^12.1.2",
@@ -69,7 +68,6 @@
         "eslint": "^9.34.0",
         "jest": "^30.3.0",
         "lighthouse": "^13.6.0",
-        "ngx-material-navigation": "^20.2.2",
         "playwright-core": "^1.65.1",
         "ts-jest": "^29.4.9"
     }
