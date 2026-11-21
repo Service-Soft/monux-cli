@@ -248,6 +248,15 @@ describe('EnvUtilities', () => {
             .toEqual([{ key: DefaultEnvKeys.WEBSERVER_MAIL_PORT, value: EnvValidationErrorMessage.NUMBER }]);
     });
 
+    test('getEnvVariable keeps a "=" in a value, like the padding of a base64 secret', async () => {
+        await EnvUtilities.addStaticVariable(
+            { key: DefaultEnvKeys.WEBSERVER_MAIL_PASSWORD, required: true, type: 'string', value: 'secret==' },
+            false
+        );
+        expect(await EnvUtilities.getEnvVariable(DefaultEnvKeys.WEBSERVER_MAIL_PASSWORD, LOCAL_DOCKER_COMPOSE_FILE_NAME, PathUtilities.resolve('.')))
+            .toBe('secret==');
+    });
+
     test('validate needs the mail server on stage and prod, where a zibri api sends its mails, but not its user', async () => {
         const mailServer: EnvVariable[] = [
             { key: DefaultEnvKeys.WEBSERVER_MAIL_HOST, required: false, type: 'string', value: undefined },

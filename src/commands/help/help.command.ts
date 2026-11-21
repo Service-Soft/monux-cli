@@ -15,8 +15,8 @@ export class HelpCommand extends BaseCommand {
             `${this.getCommandLabel(Command.VERSION, Command.V)} Shows the version of Monux`,
             `${this.getCommandLabel(Command.INIT, Command.I)} Initializes a new workspace`,
             `${this.getCommandLabel(Command.ADD, Command.A)} Adds a project to the workspace`,
-            `${this.getCommandLabel(Command.PREPARE, Command.P)} Validates the environment and writes the environment.ts files,`
-            + ' robots.txt and database scripts',
+            `${this.getCommandLabel(Command.PREPARE, Command.P)} Validates the environment and writes the environment.ts files`
+            + ' and database scripts',
             `${this.getCommandLabel(Command.UP, Command.U)} Starts the services of the workspace.`
             + ` Runs ${ChalkUtilities.secondary(Command.PREPARE)} first`,
             `${this.getCommandLabel(Command.DOWN, Command.D)} Stops the services of the workspace`,

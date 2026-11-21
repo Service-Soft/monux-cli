@@ -34,6 +34,7 @@ const SERVER_ROUTES_MARKER: string = '// mx generate-page adds the pages it gene
  */
 export class GeneratePageCommand extends BaseCommand<GeneratePageConfiguration> {
     protected override readonly insideWorkspace: boolean = true;
+    protected override readonly restoresWorkspace: boolean = true;
 
     protected override async run(input: GeneratePageConfiguration): Promise<void> {
         const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(input.projectName, PathUtilities.resolve('.'));

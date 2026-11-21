@@ -11,6 +11,7 @@ import { GenerateComponentConfiguration, generateComponentConfigurationQuestions
  */
 export class GenerateComponentCommand extends BaseCommand<GenerateComponentConfiguration> {
     protected override readonly insideWorkspace: boolean = true;
+    protected override readonly restoresWorkspace: boolean = true;
 
     protected override async run(input: GenerateComponentConfiguration): Promise<void> {
         const library: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(input.projectName, PathUtilities.resolve('.'));

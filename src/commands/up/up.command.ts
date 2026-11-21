@@ -19,7 +19,11 @@ export class UpCommand extends BaseCommand<UpConfiguration> {
         await new PrepareCommand()['run'](input);
         await this.validateZibriVersions(input);
         const dockerFile: string = input.dockerFilePath ?? input.fileName;
-        const options: string = `-f ${dockerFile} -p ${input.projectName} --env-file ${ENV_FILE_NAME} --env-file ${ENV_PUBLIC_FILE_NAME}`;
+        // the environment of the workspace, also when it is started from another directory
+        const envFiles: string = [ENV_FILE_NAME, ENV_PUBLIC_FILE_NAME]
+            .map(f => `--env-file ${PathUtilities.resolve(input.rootDir, f)}`)
+            .join(' ');
+        const options: string = `-f ${dockerFile} -p ${input.projectName} ${envFiles}`;
         await CPUtilities.exec(`docker compose ${options} up --build -d`);
     }
 

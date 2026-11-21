@@ -11,6 +11,7 @@ import { PrepareConfig, prepareConfigQuestions } from './prepare-config.model';
 
 export class PrepareCommand extends BaseCommand<PrepareConfig> {
     protected override readonly insideWorkspace: boolean = true;
+    protected override readonly restoresWorkspace: boolean = true;
 
     protected override async run(input: PrepareConfig): Promise<void> {
         await this.buildEnv(input.fileName, input.rootDir);

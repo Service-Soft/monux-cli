@@ -153,7 +153,13 @@ export abstract class DbUtilities {
                 type: 'select',
                 name: 'dbComposeService',
                 message: 'Database compose service',
-                choices: ['NEW', ...(await this.getAvailableDatabases(rootDir)).map(db => db.name)],
+                // only those of the type the project uses, when it uses one
+                choices: [
+                    'NEW',
+                    ...(await this.getAvailableDatabases(rootDir))
+                        .filter(db => dbType == undefined || db.image?.startsWith(dbType) === true)
+                        .map(db => db.name)
+                ],
                 default: 'NEW'
             },
             databaseName: {

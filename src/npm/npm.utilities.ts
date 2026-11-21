@@ -60,16 +60,19 @@ export abstract class NpmUtilities {
     /**
      * Runs the given npm command in the project with the provided name.
      * @param projectName - The project to run the npm command in.
-     * @param commands - The npm command to run.
+     * @param command - The npm script to run, or the native command.
      * @param isNativeCommand - Whether or not the npm command is native (like "install") or a custom script defined in the package.json.
+     * @param args - What follows it: the arguments of the script, after "--" so npm does not read them, or those of npm
+     * for a native command, like the package to install.
      */
-    static async run(projectName: string, commands: string, isNativeCommand: boolean): Promise<void> {
+    static async run(projectName: string, command: string, isNativeCommand: boolean, args: string[] = []): Promise<void> {
         const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName, PathUtilities.resolve('.'));
         if (!isNativeCommand) {
-            await CPUtilities.exec(`npm run ${commands} --workspace=${project.npmWorkspaceString}`);
+            const scriptArgs: string = args.length ? ` -- ${args.join(' ')}` : '';
+            await CPUtilities.exec(`npm run ${command} --workspace=${project.npmWorkspaceString}${scriptArgs}`);
             return;
         }
-        await CPUtilities.exec(`npm ${commands} --workspace=${project.npmWorkspaceString}`);
+        await CPUtilities.exec(`npm ${[command, ...args].join(' ')} --workspace=${project.npmWorkspaceString}`);
     }
 
     /**

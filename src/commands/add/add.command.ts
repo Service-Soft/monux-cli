@@ -15,6 +15,7 @@ import { AddConfiguration, addConfigurationQuestions, AddType } from './models';
  */
 export class AddCommand extends BaseCommand<AddConfiguration> {
     protected override readonly insideWorkspace: boolean = true;
+    protected override readonly restoresWorkspace: boolean = true;
 
     protected override async run(config: AddConfiguration): Promise<void> {
         switch (config.type) {

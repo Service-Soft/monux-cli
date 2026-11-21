@@ -428,7 +428,7 @@ export abstract class EnvUtilities {
             if (variableKeys != undefined && !variableKeys.includes(key as EnvironmentVariableKey)) {
                 continue;
             }
-            const v: EnvValue = value.join('');
+            const v: EnvValue = value.join('=');
             const def: OmitStrict<EnvVariable, 'value'> | undefined = staticVariableDefinitions.find(d => d.key === key);
             if (def == undefined) {
                 throw new Error(`Could not find definition for variable "${key}"`);

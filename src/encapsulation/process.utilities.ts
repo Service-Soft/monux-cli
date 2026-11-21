@@ -17,6 +17,25 @@ type ErrorWithSignal = {
  * Encapsulates functionality of the node process.
  */
 export abstract class ProcessUtilities {
+    // what runs before Monux exits with an error or after an interrupt, such as restoring the workspace
+    private static readonly exitHandlers: Set<() => Promise<void>> = new Set();
+
+    /**
+     * Runs the given handler before Monux exits with an error or after an interrupt, until it is removed.
+     * @param handler - What to run, such as restoring the files of the workspace.
+     */
+    static addExitHandler(handler: () => Promise<void>): void {
+        this.exitHandlers.add(handler);
+    }
+
+    /**
+     * Stops running the given handler before Monux exits.
+     * @param handler - The handler that was added.
+     */
+    static removeExitHandler(handler: () => Promise<void>): void {
+        this.exitHandlers.delete(handler);
+    }
+
     /**
      * Exits Monux with the given error message.
      * @param message - The message to show the user, saying what went wrong and what to do about it.
@@ -25,6 +44,7 @@ export abstract class ProcessUtilities {
     static async exitWithError(message: string): Promise<never> {
         LogUtilities.error(message);
         LogUtilities.text(MORE_INFORMATION_MESSAGE);
+        await this.runExitHandlers();
         return await this.exitGracefully(1);
     }
 
@@ -35,7 +55,14 @@ export abstract class ProcessUtilities {
     static async exitWithInterrupt(): Promise<never> {
         LogUtilities.newLine();
         LogUtilities.text('Process interrupted (Ctrl+C)');
+        await this.runExitHandlers();
         return await this.exitGracefully(130);
+    }
+
+    private static async runExitHandlers(): Promise<void> {
+        for (const handler of this.exitHandlers) {
+            await handler();
+        }
     }
 
     /**

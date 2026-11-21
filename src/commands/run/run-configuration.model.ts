@@ -11,7 +11,11 @@ export type RunConfiguration = {
      */
     projectName: string,
     /**
-     * The commands as a single concatenated string.
+     * The npm script, or the native command, like "install".
      */
-    commands: string
+    command: string,
+    /**
+     * What follows it: the arguments of the script, or of npm for a native command, like the package to install.
+     */
+    args: string[]
 };

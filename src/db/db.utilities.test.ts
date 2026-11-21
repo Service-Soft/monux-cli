@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, test } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import { FileMockUtilities, getMockConstants, MockConstants } from '../__testing__';
+import { FileMockUtilities, getMockConstants, inquireMock, MockConstants } from '../__testing__';
 import { DATABASES_DIRECTORY_NAME } from '../constants';
-import { FsUtilities, PathUtilities } from '../encapsulation';
+import { FsUtilities, InquirerUtilities, PathUtilities, Question } from '../encapsulation';
 import { DefaultEnvKeys, EnvUtilities } from '../env';
 import { DbType } from './db-type.enum';
 import { DbUtilities } from './db.utilities';
@@ -202,5 +202,42 @@ describe('DbUtilities', () => {
             '',
             'FLUSH PRIVILEGES;'
         ]);
+    });
+
+    test('configureDb offers only the database services of the type the project uses', async () => {
+        await DbUtilities['createPostgresDatabase']('postgres', 'shop');
+        await DbUtilities['createMariaDbDatabase']('mariadb', 'blog');
+        // each project shares the service of its type, with a database named after the project
+        const projects: string[] = ['api', 'wordpress', 'nest'];
+        const services: string[] = ['postgres', 'mariadb', 'postgres'];
+        const offered: unknown[] = [];
+        const answer: ReturnType<typeof inquireMock> = inquireMock({
+            get dbComposeService(): string {
+                return services[offered.length - 1];
+            },
+            get databaseName(): string {
+                return projects[offered.length - 1];
+            }
+        });
+        InquirerUtilities['inquire'] = jest.fn((question: Question & { choices?: unknown }) => {
+            if (question.name === 'dbComposeService') {
+                offered.push(question.choices);
+            }
+            return answer(question);
+        });
+
+        // like zibri and LoopBack, then Wordpress, then Nest, which may use either
+        await DbUtilities.configureDb('api', DbType.POSTGRES, PathUtilities.resolve('.'));
+        await DbUtilities.configureDb('wordpress', DbType.MARIADB, PathUtilities.resolve('.'));
+        await DbUtilities.configureDb('nest', undefined, PathUtilities.resolve('.'));
+        expect(offered).toEqual([
+            ['NEW', 'postgres'],
+            ['NEW', 'mariadb'],
+            ['NEW', 'postgres', 'mariadb']
+        ]);
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
     });
 });

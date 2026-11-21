@@ -16,6 +16,8 @@ import { initConfigQuestions, InitConfiguration } from './init-configuration.mod
  * Initializes a new Monux monorepo.
  */
 export class InitCommand extends BaseCommand<InitConfiguration> {
+    protected override readonly restoresWorkspace: boolean = true;
+
     protected override async run(config: InitConfiguration): Promise<void> {
         await NpmUtilities.init('root', false);
 
@@ -46,6 +48,8 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
                         'runs-on': 'ubuntu-latest',
                         steps: [
                             { uses: 'actions/checkout@v4' },
+                            // the Node the projects are built for, rather than the one the runner has
+                            { uses: 'actions/setup-node@v4', with: { 'node-version': '24' } },
                             { name: 'npm i', run: 'npm ci' },
                             { name: 'Linting', run: 'npm run lint --workspaces --if-present' },
                             { name: 'Unit Tests', run: 'npm run test --workspaces --if-present' }

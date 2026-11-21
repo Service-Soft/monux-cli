@@ -14,14 +14,15 @@ export class RunCommand extends BaseCommand<RunConfiguration> {
     protected override maxLength: undefined = undefined;
 
     protected override async run(config: RunConfiguration): Promise<void> {
-        await NpmUtilities.run(config.projectName, config.commands, config.isNativeCommand);
+        await NpmUtilities.run(config.projectName, config.command, config.isNativeCommand, config.args);
     }
 
     protected override resolveInput(args: string[]): RunConfiguration {
         return {
             projectName: args[0],
             isNativeCommand: Object.values(NativeNpmCommands).includes(args[1] as NativeNpmCommands),
-            commands: args.slice(1).join(' ')
+            command: args[1],
+            args: args.slice(2)
         };
     }
 

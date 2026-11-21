@@ -72,14 +72,12 @@ export class AddLoopbackCommand extends BaseAddCommand<AddLoopbackConfiguration>
 
     protected override async run(): Promise<void> {
         const config: AddLoopbackConfiguration = await this.getConfig();
-        const { dbComposeServiceName, databaseName, dbType } = await DbUtilities.configureDb(
+        // offers only the Postgres services of the workspace
+        const { dbComposeServiceName, databaseName } = await DbUtilities.configureDb(
             config.name,
             DbType.POSTGRES,
             PathUtilities.resolve('.')
         );
-        if (dbType !== DbType.POSTGRES) {
-            throw new Error('A LoopBack api of Monux uses Postgres as its database');
-        }
         const dbKeys: DbKeys = {
             dbHostKey: DefaultEnvKeys.dbHost(dbComposeServiceName),
             dbUserKey: DefaultEnvKeys.dbUser(dbComposeServiceName, databaseName),
