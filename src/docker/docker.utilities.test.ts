@@ -41,8 +41,12 @@ describe('DockerUtilities', () => {
             '            - 80:80',
             '            - 443:443',
             '        volumes:',
-            '            - ./letsencrypt:/letsencrypt',
-            '            - /var/run/docker.sock:/var/run/docker.sock:ro'
+            '            - letsencrypt:/letsencrypt',
+            '            - /var/run/docker.sock:/var/run/docker.sock:ro',
+            '',
+            // the certificates, in a volume rather than a folder of the workspace
+            'volumes:',
+            '    letsencrypt:'
         ]);
     });
 

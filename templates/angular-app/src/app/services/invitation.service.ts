@@ -19,7 +19,7 @@ export class InvitationService extends EntityService<Invitation> {
 
     // what the sync dialog shows of a change made offline
     override getLabel(invitation: Partial<Invitation>): string {
-        return invitation.email ?? 'New invitation';
+        return invitation.email ?? $localize`:@@invitation.new:New invitation`;
     }
 
     /**

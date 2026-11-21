@@ -58,10 +58,10 @@
         "json5": "^2.2.3"
     },
     "devDependencies": {
-        "@faker-js/faker": "^9.0.3",
+        "@faker-js/faker": "^10.6.0",
         "@jest/globals": "^30.3.0",
         "@nestjs/common": "^12.1.2",
-        "@service-soft/eslint-config": "^2.2.0",
+        "@service-soft/eslint-config": "^2.2.2",
         "@types/death": "^1.1.5",
         "@types/figlet": "^1.7.0",
         "@types/js-yaml": "^4.0.9",

@@ -1,6 +1,8 @@
 /* eslint-disable jsdoc/require-jsdoc */
+import { STAGE_DOCKER_COMPOSE_FILE_NAME } from '../../constants';
 import { DbUtilities } from '../../db';
 import { DockerComposeFileName } from '../../docker';
+import { DockerTraefikUtilities } from '../../docker/docker-traefik.utilities';
 import { InquirerUtilities, ProcessUtilities, PathUtilities } from '../../encapsulation';
 import { EnvUtilities, EnvValidationErrorMessage } from '../../env';
 import { KeyValue } from '../../types';
@@ -13,6 +15,9 @@ export class PrepareCommand extends BaseCommand<PrepareConfig> {
     protected override async run(input: PrepareConfig): Promise<void> {
         await this.buildEnv(input.fileName, input.rootDir);
         await DbUtilities.createInitFiles(input.fileName, input.rootDir);
+        if (input.fileName === STAGE_DOCKER_COMPOSE_FILE_NAME) {
+            await DockerTraefikUtilities.createBasicAuthFile(input.rootDir);
+        }
     }
 
     protected override async resolveInput(): Promise<PrepareConfig> {

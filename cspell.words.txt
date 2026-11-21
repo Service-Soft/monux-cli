@@ -47,3 +47,5 @@ prometheus
 fesm
 errordisplay
 tsgolint
+gdpr
+isready

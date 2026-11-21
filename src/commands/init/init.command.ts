@@ -1,5 +1,6 @@
 import { APPS_DIRECTORY_NAME, ENV_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME } from '../../constants';
 import { DockerUtilities } from '../../docker';
+import { TRAEFIK_BASIC_AUTH_FILE_NAME } from '../../docker/docker-traefik.utilities';
 import { CPUtilities, FsUtilities, InquirerUtilities, ProcessUtilities, PathUtilities } from '../../encapsulation';
 import { EnvUtilities } from '../../env';
 import { EslintUtilities } from '../../eslint';
@@ -77,8 +78,9 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
             '# See http://help.github.com/ignore-files/ for more about ignoring files.',
             ENV_FILE_NAME,
             ENVIRONMENT_TS_FILE_NAME,
+            // the credentials of basic auth on stage, which mx prepare writes from the .env
+            TRAEFIK_BASIC_AUTH_FILE_NAME,
             '**/init/**.sql',
-            'letsencrypt',
             '# compiled output',
             'dist',
             'tmp',

@@ -68,8 +68,9 @@ export abstract class DbUtilities {
         const dbs: ComposeService[] = await this.getAvailableDatabases(rootDir);
         for (const db of dbs) {
             const configs: DbInitConfig[] = await this.getInitConfigsForDb(db.name, rootDir);
+            const initFolder: Path = PathUtilities.resolve(rootDir, DATABASES_DIRECTORY_NAME, StringUtilities.toKebabCase(db.name), 'init');
             for (let i: number = 0; i < configs.length; i++) {
-                const initFileSql: Path = PathUtilities.resolve(rootDir, DATABASES_DIRECTORY_NAME, StringUtilities.toKebabCase(db.name), 'init', `${i}.sql`);
+                const initFileSql: Path = PathUtilities.resolve(initFolder, `${i}.sql`);
                 await FsUtilities.rm(initFileSql);
                 await this.createInitFile(configs[i], initFileSql, fileName, rootDir);
             }
@@ -129,8 +130,12 @@ export abstract class DbUtilities {
     }
 
     private static async getInitConfigsForDb(db: string, rootDir: string): Promise<DbInitConfig[]> {
-        const dbFolder: Dirent[] = await FsUtilities.readdir(PathUtilities.resolve(rootDir, DATABASES_DIRECTORY_NAME, StringUtilities.toKebabCase(db)));
-        const configFilePaths: Path[] = dbFolder.filter(e => e.name.endsWith('.json')).map(e => PathUtilities.resolve(e.parentPath, e.name));
+        const dbFolder: Dirent[] = await FsUtilities.readdir(
+            PathUtilities.resolve(rootDir, DATABASES_DIRECTORY_NAME, StringUtilities.toKebabCase(db))
+        );
+        const configFilePaths: Path[] = dbFolder
+            .filter(e => e.name.endsWith('.json'))
+            .map(e => PathUtilities.resolve(e.parentPath, e.name));
         return await Promise.all(configFilePaths.map(async p => await FsUtilities.parseFileAs(p)));
     }
 

@@ -46,7 +46,8 @@ describe('AddNestCommand', () => {
             api = RunningWorkspaceUtilities.startNodeProcess(apiPath, ['dist/apps/api/src/main.js']);
             const hello: ServiceResponse = await RunningWorkspaceUtilities.waitFor(
                 { host: 'localhost', path: '/', port: 3000 },
-                response => response.status === 200
+                response => response.status === 200,
+                api
             );
             expect(hello.body).toBe('Hello World!');
         }

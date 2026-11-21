@@ -266,7 +266,9 @@ export abstract class EnvUtilities {
                     return `${v.key}=${value}`;
                 }
                 if (value.includes('\'')) {
-                    throw new Error(`The value of the environment variable "${v.key}" needs to be without "'" when it holds "#" or spaces.`);
+                    throw new Error(
+                        `The value of the environment variable "${v.key}" needs to be without "'" when it holds "#" or spaces.`
+                    );
                 }
                 return `${v.key}='${value}'`;
             });

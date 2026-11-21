@@ -2,7 +2,7 @@
 import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { dirname, extname, join } from 'node:path';
+import { basename, dirname, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { brotliCompressSync, constants as zlibConstants, gzipSync } from 'node:zlib';
 
@@ -33,10 +33,11 @@ function generateCss() {
     // the cli only has a bin, which npm installs wherever the workspace hoisted it to
     const cliPackage = require.resolve('@tailwindcss/cli/package.json');
     const cli = join(dirname(cliPackage), JSON.parse(readFileSync(cliPackage, 'utf8')).bin.tailwindcss);
-    for (const stylesheet of readdirSync(browser).filter(f => /^styles-.*\.css$/.test(f))) {
+    // one in the folder of every language, or at the root of a website with one
+    for (const stylesheet of findFiles(browser).filter(f => /^styles-.*\.css$/.test(basename(f)))) {
         execFileSync(
             process.execPath,
-            [cli, '-i', join(root, 'src', 'styles.production.css'), '-o', join(browser, stylesheet), '--minify'],
+            [cli, '-i', join(root, 'src', 'styles.production.css'), '-o', stylesheet, '--minify'],
             { cwd: root, stdio: 'inherit' }
         );
     }

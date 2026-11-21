@@ -6,6 +6,10 @@ import { AddType } from '../commands/add/models/add-type.enum';
  */
 export const SERVER_PROJECT_TYPES: AddType[] = [AddType.ZIBRI, AddType.LOOPBACK, AddType.NEST];
 
+// the lines several readers begin with: the value of the variable, and what they do without one
+const READ_VALUE: string = '\tconst value: string | undefined = process.env[key];';
+const IF_EMPTY: string = '\tif (value == undefined || value === \'\') {';
+
 /**
  * The functions the environment.ts of a server project reads its values with, by their name.
  * Only the ones a project uses are written into its environment.ts.
@@ -13,8 +17,8 @@ export const SERVER_PROJECT_TYPES: AddType[] = [AddType.ZIBRI, AddType.LOOPBACK,
 export const RUNTIME_ENVIRONMENT_READERS: Record<string, string[]> = {
     readString: [
         'function readString(key: string): string {',
-        '\tconst value: string | undefined = process.env[key];',
-        '\tif (value == undefined || value === \'\') {',
+        READ_VALUE,
+        IF_EMPTY,
         '\t\tthrow new Error(`The environment variable "${key}" is not set. Run "mx prepare" to write it.`);',
         '\t}',
         '\treturn value;',
@@ -22,7 +26,7 @@ export const RUNTIME_ENVIRONMENT_READERS: Record<string, string[]> = {
     ],
     readOptionalString: [
         'function readOptionalString(key: string): string | undefined {',
-        '\tconst value: string | undefined = process.env[key];',
+        READ_VALUE,
         '\treturn value === \'\' ? undefined : value;',
         '}'
     ],
@@ -37,8 +41,8 @@ export const RUNTIME_ENVIRONMENT_READERS: Record<string, string[]> = {
     ],
     readOptionalNumber: [
         'function readOptionalNumber(key: string): number | undefined {',
-        '\tconst value: string | undefined = process.env[key];',
-        '\tif (value == undefined || value === \'\') {',
+        READ_VALUE,
+        IF_EMPTY,
         '\t\treturn undefined;',
         '\t}',
         '\tif (Number.isNaN(Number(value))) {',
@@ -58,8 +62,8 @@ export const RUNTIME_ENVIRONMENT_READERS: Record<string, string[]> = {
     ],
     readOptionalBoolean: [
         'function readOptionalBoolean(key: string): boolean | undefined {',
-        '\tconst value: string | undefined = process.env[key];',
-        '\tif (value == undefined || value === \'\') {',
+        READ_VALUE,
+        IF_EMPTY,
         '\t\treturn undefined;',
         '\t}',
         '\tif (value !== \'true\' && value !== \'false\') {',

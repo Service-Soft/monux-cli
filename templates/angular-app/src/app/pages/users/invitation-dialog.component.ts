@@ -57,8 +57,8 @@ export class InvitationDialogComponent {
     protected readonly createOn: WritableSignal<InvitationRequestData['createOn'] | undefined> = signal('accept');
 
     protected readonly createOnOptions: InputOption<InvitationRequestData['createOn']>[] = [
-        { label: 'When the invitation is accepted', value: 'accept' },
-        { label: 'Right away', value: 'invite' }
+        { label: $localize`:@@invitationDialog.createOnAccept:When the invitation is accepted`, value: 'accept' },
+        { label: $localize`:@@invitationDialog.createOnInvite:Right away`, value: 'invite' }
     ];
 
     protected readonly declinable: WritableSignal<boolean> = signal(true);
@@ -89,7 +89,9 @@ export class InvitationDialogComponent {
             this.dialogRef.close(true);
         }
         catch (error) {
-            this.errorParagraphs.set(AuthErrorUtilities.findErrorParagraphs(error) ?? ['The invitation could not be sent.']);
+            this.errorParagraphs.set(
+                AuthErrorUtilities.findErrorParagraphs(error) ?? [$localize`:@@invitationDialog.failed:The invitation could not be sent.`]
+            );
         }
     }
 }

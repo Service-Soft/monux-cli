@@ -1,10 +1,10 @@
-import { APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ESLINT_CONFIG_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME } from '../../../constants';
+import { APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ESLINT_CONFIG_FILE_NAME, PACKAGE_JSON_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME } from '../../../constants';
 import { DbType, DbUtilities } from '../../../db';
 import { DockerUtilities } from '../../../docker';
-import { CryptoUtilities, FsUtilities, LogUtilities, Path, PathUtilities, QuestionsFor } from '../../../encapsulation';
+import { CryptoUtilities, FsUtilities, JsonUtilities, LogUtilities, Path, PathUtilities, QuestionsFor } from '../../../encapsulation';
 import { DefaultEnvKeys, EnvironmentVariableKey, EnvUtilities, EnvVariable } from '../../../env';
 import { EslintUtilities } from '../../../eslint';
-import { NpmPackage, NpmUtilities } from '../../../npm';
+import { NpmPackage, NpmUtilities, PackageJson } from '../../../npm';
 import { TemplateUtilities } from '../../../templates';
 import { TsLibraryUtilities } from '../../../ts-library';
 import { OmitStrict } from '../../../types';
@@ -51,6 +51,9 @@ type FeatureChoice = {
      */
     value: ZibriFeature
 };
+
+// where zibri defines what it injects, which Monux adds to
+const PROVIDERS_FILE_NAME: string = 'providers.ts';
 
 // the controllers of templates/zibri, which the admin app calls
 const MONUX_CONTROLLERS: string[] = ['UserController', 'TenantController', 'InvitationController', 'RoleController', 'LogController'];
@@ -137,6 +140,7 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
         await this.writeTemplate(root, config.name, dbComposeServiceName, databaseName, contract);
         await this.registerControllers(root);
         await this.addInvitationsAndTenantDeletion(root);
+        await this.logMailsOnDevelopmentMachines(root);
         await this.useContract(root, contract);
         await TsLibraryUtilities.install(contract, config.name);
 
@@ -188,7 +192,23 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
         LogUtilities.step('Creating the zibri project');
         await ZibriUtilities.createProject(PathUtilities.resolve(APPS_DIRECTORY_NAME), config.name, config.features);
         const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, PathUtilities.resolve('.'));
+        await this.moveAllowScriptsToRoot(newProject.path);
         return newProject.path;
+    }
+
+    /**
+     * Moves the install scripts zibri decided on to the root of the workspace, the only package.json npm reads them
+     * from there. In the one of the api, npm ignores them and warns about them and about the scripts they decide on.
+     * @param root - The directory of the api.
+     */
+    private async moveAllowScriptsToRoot(root: Path): Promise<void> {
+        const packageJsonPath: Path = PathUtilities.resolve(root, PACKAGE_JSON_FILE_NAME);
+        const { allowScripts, ...packageJson } = await FsUtilities.parseFileAs<PackageJson>(packageJsonPath);
+        if (allowScripts == undefined) {
+            return;
+        }
+        await NpmUtilities.updateRootPackageJson({ allowScripts });
+        await FsUtilities.updateFile(packageJsonPath, JsonUtilities.stringify(packageJson), 'replace');
     }
 
     /**
@@ -219,7 +239,7 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
         const authControllerPath: Path = PathUtilities.resolve(root, 'src', 'controllers', 'auth.controller.ts');
         await FsUtilities.replaceInFile(authControllerPath, '@Controller(\'/auth\'', '@Controller(`/${ApiRoute.AUTH}`');
         await FsUtilities.updateFile(authControllerPath, `import { ApiRoute } from '${contractPackage}';`, 'prepend');
-        const providersPath: Path = PathUtilities.resolve(root, 'src', 'providers.ts');
+        const providersPath: Path = PathUtilities.resolve(root, 'src', PROVIDERS_FILE_NAME);
         await FsUtilities.replaceInFile(providersPath, `minLength: ${MIN_PASSWORD_LENGTH},`, 'minLength: PASSWORD_MIN_LENGTH,');
         await FsUtilities.updateFile(providersPath, `import { PASSWORD_MIN_LENGTH } from '${contractPackage}';`, 'prepend');
     }
@@ -334,7 +354,7 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
             ].join('\n')
         );
 
-        const providersPath: Path = PathUtilities.resolve(source, 'providers.ts');
+        const providersPath: Path = PathUtilities.resolve(source, PROVIDERS_FILE_NAME);
         await FsUtilities.replaceInFile(
             providersPath,
             'GlobalRegistry, JwtAuthOptionsInput',
@@ -363,6 +383,32 @@ export class AddZibriCommand extends BaseAddCommand<AddZibriConfiguration> {
                 '    defineProvider({',
                 '        token: ZIBRI_DI_TOKENS.CONFIRM_PASSWORD_RESET_URL,'
             ].join('\n')
+        );
+    }
+
+    /**
+     * Lets the api log its mails instead of sending them wherever it is not deployed, see SENDS_MAILS in its env.ts.
+     * Zibri decides by its own environment, which is production in the images of the local compose file as well.
+     * @param root - The directory of the api.
+     */
+    private async logMailsOnDevelopmentMachines(root: Path): Promise<void> {
+        const providersPath: Path = PathUtilities.resolve(root, 'src', PROVIDERS_FILE_NAME);
+        await FsUtilities.replaceInFile(
+            providersPath,
+            [
+                '        // in development every mail is logged instead of sent, see the email docs',
+                '        useFactory: () => GlobalRegistry.getAppData(\'environment\') === \'development\''
+            ].join('\n'),
+            [
+                '        // only where the api is deployed. Everywhere else every mail is logged instead, see SENDS_MAILS in env.ts',
+                '        useFactory: () => !SENDS_MAILS'
+            ].join('\n')
+        );
+        await FsUtilities.replaceInFile(providersPath, 'GlobalRegistry, InvitationOptions,', 'InvitationOptions,');
+        await FsUtilities.replaceInFile(
+            providersPath,
+            'import { optionalEnv, requireEnv, requirePortEnv, requireUrlEnv } from \'./env\';',
+            'import { optionalEnv, requireEnv, requirePortEnv, requireUrlEnv, SENDS_MAILS } from \'./env\';'
         );
     }
 

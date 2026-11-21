@@ -1,4 +1,4 @@
-import { AngularJson, AngularUtilities } from '../../../angular';
+import { AngularJson, AngularLanguage, AngularUtilities, LocalizationUtilities } from '../../../angular';
 import { ANGULAR_JSON_FILE_NAME, APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME } from '../../../constants';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, JsonUtilities, LogUtilities, Path, PathUtilities, QuestionsFor } from '../../../encapsulation';
@@ -38,9 +38,10 @@ type AddAngularConfiguration = AddConfiguration & {
      */
     title: string,
     /**
-     * The language the app is written in, such as "en" or "de".
+     * The languages of the app, such as "en" or "de", the one it is written in first. Each other one is built below its
+     * code, and translated in src/locale.
      */
-    language: string
+    languages: string[]
 };
 
 /**
@@ -96,13 +97,7 @@ export class AddAngularCommand extends BaseAddCommand<AddAngularConfiguration> {
             validate: (v?: string) => AngularUtilities.validateTitle(v),
             default: StringUtilities.toPascalCase(this.baseConfig.name)
         },
-        language: {
-            type: 'input',
-            name: 'language',
-            message: 'Language of the app',
-            validate: (v?: string) => AngularUtilities.validateLanguage(v),
-            default: 'en'
-        }
+        languages: LocalizationUtilities.resolveLanguagesQuestion('app')
     };
 
     protected override async run(): Promise<void> {
@@ -110,7 +105,9 @@ export class AddAngularCommand extends BaseAddCommand<AddAngularConfiguration> {
             throw new Error('An app works with a zibri api. Add one with "mx add" first');
         }
         const config: AddAngularConfiguration = await this.getConfig();
+        const languages: AngularLanguage[] = LocalizationUtilities.resolveLanguages(config.languages);
         const root: Path = await this.createProject(config);
+        await AngularUtilities.addLocalization(root);
         const contract: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(
             ZibriUtilities.getContractName(config.apiName),
             PathUtilities.resolve('.')
@@ -118,18 +115,28 @@ export class AddAngularCommand extends BaseAddCommand<AddAngularConfiguration> {
 
         LogUtilities.step('Adding the login, the account and what makes the app work offline');
         await this.cleanUp(root);
-        await TemplateUtilities.write('angular', root, { name: config.name });
-        await TemplateUtilities.write('angular-app', root, {
-            title: config.title,
-            language: config.language,
-            apiPrefix: StringUtilities.toSnakeCase(config.apiName),
-            contractPackage: await ZibriUtilities.resolveContractPackage(config.apiName),
-            logApplication: this.resolveLogApplication(config.name)
+        // languages.ts, which the seo, the server and the language switcher read
+        await TemplateUtilities.write('angular', root, {
+            name: config.name,
+            ...LocalizationUtilities.resolveTemplatePlaceholders(languages)
         });
+        await TemplateUtilities.write(
+            'angular-app',
+            root,
+            {
+                title: config.title,
+                language: languages[0].code,
+                apiPrefix: StringUtilities.toSnakeCase(config.apiName),
+                contractPackage: await ZibriUtilities.resolveContractPackage(config.apiName),
+                logApplication: this.resolveLogApplication(config.name)
+            },
+            { multilingual: languages.length > 1 }
+        );
         await this.updateManifest(root, config.title);
         await this.installDependencies(config.name);
         await this.updatePackageJson(config);
         await this.updateAngularJson(root, config.name);
+        await LocalizationUtilities.configure(root, config.name, languages);
         await EslintUtilities.addLintScripts(root);
 
         await this.addToCompose(root, config);
@@ -137,8 +144,10 @@ export class AddAngularCommand extends BaseAddCommand<AddAngularConfiguration> {
         await this.connectToApi(config, contract);
         // after its scripts are complete, so that each of them that reads the library builds it first
         await TsLibraryUtilities.install(contract, config.name);
+        await LocalizationUtilities.collectTexts(config.name, languages);
 
         LogUtilities.step('Setting up eslint');
+        await EslintUtilities.addWords(LocalizationUtilities.resolveWords(languages));
         await EslintUtilities.fix(root);
         LogUtilities.success(`Added "${config.name}" in ${PathUtilities.getRelative(PathUtilities.resolve('.'), root)}`);
     }
@@ -215,6 +224,8 @@ export class AddAngularCommand extends BaseAddCommand<AddAngularConfiguration> {
         await NpmUtilities.updatePackageJson(config.name, {
             scripts: {
                 start: `ng serve --port ${config.port}`,
+                // the texts of index.html into every language, see scripts/localize-index.mjs
+                build: 'ng build && node scripts/localize-index.mjs',
                 test: 'ng test --watch=false'
             }
         });

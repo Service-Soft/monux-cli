@@ -1,6 +1,6 @@
 
 import { PACKAGE_JSON_FILE_NAME } from '../../constants';
-import { Dirent, FsUtilities, ProcessUtilities, PathUtilities } from '../../encapsulation';
+import { Dirent, FsUtilities, Path, PathUtilities, ProcessUtilities } from '../../encapsulation';
 import { NativeNpmCommands, NpmUtilities, PackageJson } from '../../npm';
 import { WorkspaceProject, WorkspaceUtilities } from '../../workspace';
 import { BaseCommand } from '../base-command.model';
@@ -40,7 +40,8 @@ export class RunCommand extends BaseCommand<RunConfiguration> {
         }
 
         const npmScript: string = args[1];
-        const file: PackageJson = await FsUtilities.parseFileAs<PackageJson>(PathUtilities.resolve(packageJson.parentPath, packageJson.name));
+        const packageJsonPath: Path = PathUtilities.resolve(packageJson.parentPath, packageJson.name);
+        const file: PackageJson = await FsUtilities.parseFileAs<PackageJson>(packageJsonPath);
 
         if (!Object.keys(file.scripts).includes(npmScript)) {
             await ProcessUtilities.exitWithError(`The project "${project}" has no script "${npmScript}".`);

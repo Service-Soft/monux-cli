@@ -41,7 +41,10 @@ export default [
         files: ['**/*.ts'],
         rules: {
             'angular/component-selector': ['warn', { style: 'kebab-case', type: 'element', prefix: 'app' }],
-            'angular/directive-selector': ['warn', { style: 'camelCase', type: 'attribute', prefix: 'app' }]
+            'angular/directive-selector': ['warn', { style: 'camelCase', type: 'attribute', prefix: 'app' }],
+            // the texts are filled in as each language is built, not loaded at runtime, so a $localize outside of a
+            // function, like in the routes, is translated as well
+            'angular/runtime-localize': 'off'
         }
     },
     {

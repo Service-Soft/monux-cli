@@ -21,6 +21,8 @@ bundles, are cached for long. Everything else is revalidated on every visit, whi
 instead of searching. Every page has its own title, description and canonical url, and its content is in the html the
 server sends, as most crawlers do not run scripts. `robots.txt`, the sitemap and `llms.txt` are generated from the
 pages, links are real `<a href>` elements a crawler follows, and structured data describes what the site is about.
+In a site of several languages, every page has its own url in each of them, linked to the others, and the sitemap
+and `llms.txt` list them all.
 Assistants that look a page up to answer a question may always read it; whether AI models may train on it is the
 developer's choice. Imprint and privacy pages exist from the start.
 
@@ -41,7 +43,7 @@ build:
 - **Load time**: a Lighthouse performance score of 100 on mobile, and budgets for the initial JavaScript, the css and
   the fonts in `angular.json`, which fail the build.
 - **Search engines and AI assistants**: a Lighthouse SEO score of 100, the prerendered pages hold their description and
-  structured data, and the sitemap and `llms.txt` list the pages.
+  structured data, and the sitemap and `llms.txt` list the pages, in every language, with their alternates.
 - **Accessibility**: a Lighthouse accessibility score of 100 and no AXE violation on any generated page.
 - **Privacy**: loading every generated page without consent makes no request to another origin.
 

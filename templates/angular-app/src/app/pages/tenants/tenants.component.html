@@ -1,8 +1,9 @@
 <section class="mx-auto flex max-w-section flex-col gap-8 px-section-padding py-16">
-    <h1 class="font-heading text-headline">Tenants</h1>
+    <h1 class="font-heading text-headline" i18n="@@tenants.heading">Tenants</h1>
     <ngx-entity-table
         #table
         label="Tenants"
+        i18n-label="@@tenants.tableLabel"
         hideLabel
         [service]="tenantService"
         [columns]="['name', 'deactivatedAt']"
@@ -19,15 +20,23 @@
             type="button"
             variant="text"
             size="sm"
-            [attr.aria-label]="(tenant.deactivatedAt ? 'Reactivate ' : 'Deactivate ') + tenant.name"
+            [attr.aria-label]="resolveToggleLabel(tenant)"
             (click)="toggleDeactivated(tenant)"
         >
-            {{ tenant.deactivatedAt ? 'Reactivate' : 'Deactivate' }}
+            {{ resolveToggleText(tenant) }}
         </button>
     }
     <!-- only a deactivated tenant, whose requests the api refuses already -->
     @if (mayDelete && tenant.deactivatedAt) {
-        <button ui-button type="button" variant="text" size="sm" [attr.aria-label]="'Delete ' + tenant.name" (click)="delete(tenant)">
+        <button
+            ui-button
+            type="button"
+            variant="text"
+            size="sm"
+            [attr.aria-label]="resolveDeleteLabel(tenant)"
+            (click)="delete(tenant)"
+            i18n="@@tenants.delete"
+        >
             Delete
         </button>
     }

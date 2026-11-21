@@ -30,6 +30,8 @@ export const addConfigurationQuestions: QuestionsFor<AddConfiguration> = {
         type: 'input',
         name: 'name',
         message: 'name',
-        validate: async (input?: string) => input != undefined && await WorkspaceUtilities.findProject(input, PathUtilities.resolve('.')) == undefined
+        validate: async (input?: string) => {
+            return input != undefined && await WorkspaceUtilities.findProject(input, PathUtilities.resolve('.')) == undefined;
+        }
     }
 };

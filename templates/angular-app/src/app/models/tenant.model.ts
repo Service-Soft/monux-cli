@@ -6,12 +6,12 @@ import { TenantData } from '{{=contractPackage}}';
  * the TenantService.
  */
 export class Tenant implements TenantData {
-    @Property.string({ displayName: 'Id', format: 'uuid', omitForCreate: true, readonly: true, display: false })
+    @Property.string({ displayName: $localize`:@@tenant.id:Id`, format: 'uuid', omitForCreate: true, readonly: true, display: false })
     id!: string;
 
-    @Property.string({ displayName: 'Name' })
+    @Property.string({ displayName: $localize`:@@tenant.name:Name` })
     name!: string;
 
-    @Property.date({ displayName: 'Deactivated', required: false, omitForCreate: true, omitForUpdate: true, readonly: true })
+    @Property.date({ displayName: $localize`:@@tenant.deactivatedAt:Deactivated`, required: false, omitForCreate: true, omitForUpdate: true, readonly: true })
     deactivatedAt?: Date | null;
 }

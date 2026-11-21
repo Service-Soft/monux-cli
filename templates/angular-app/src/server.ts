@@ -1,11 +1,17 @@
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { AngularNodeAppEngine, createNodeRequestHandler, isMainModule, writeResponseToNodeResponse } from '@angular/ssr/node';
+import { SeoServerUtilities } from '@service-soft/ngx-navigation/seo-server';
 import express, { Express } from 'express';
+
+import { locales } from './app/languages';
 
 const browserDistFolder: string = join(import.meta.dirname, '..', 'browser');
 // a file whose name holds the hash of its content, like main-AB12CD34.js, never changes under that name
 const HASHED_FILE_REGEX: RegExp = /-[\dA-Z]{8}\.[a-z\d]+$/;
+// the build has every language below its subPath. The dev server builds one, at the root, which redirects to none
+const IS_LOCALIZED_BUILD: boolean = locales.every(locale => existsSync(join(browserDistFolder, locale.subPath)));
 
 const app: Express = express();
 const angularApp: AngularNodeAppEngine = new AngularNodeAppEngine();
@@ -20,6 +26,19 @@ const angularApp: AngularNodeAppEngine = new AngularNodeAppEngine();
 function resolveCacheControl(file: string): string {
     return HASHED_FILE_REGEX.test(file) ? 'public, max-age=31536000, immutable' : 'no-cache';
 }
+
+// an url without a language, like the link of a password reset mail, goes to the language the user's browser prefers
+app.use((req, res, next) => {
+    const localized: string | undefined = IS_LOCALIZED_BUILD
+        ? SeoServerUtilities.findLocaleRedirect(req.originalUrl, req.get('Accept-Language'), locales)
+        : undefined;
+    if (localized != undefined) {
+        res.vary('Accept-Language');
+        res.redirect(302, localized);
+        return;
+    }
+    next();
+});
 
 // the app is for the people who log in to it, so search engines have nothing to find in it
 app.get('/robots.txt', (_, res) => {

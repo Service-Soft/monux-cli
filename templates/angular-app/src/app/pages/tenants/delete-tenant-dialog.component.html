@@ -1,21 +1,33 @@
-<h2 class="font-heading text-title">Delete {{ tenant.name }}?</h2>
+<h2 class="font-heading text-title" i18n="@@deleteTenant.heading">Delete {{ tenant.name }}?</h2>
 @if (deletion(); as deletion) {
     <!-- a live region, so screen readers hear how far it got -->
     <p class="mt-3 text-body" role="status">
-        {{ isFinished() ? 'The tenant was deleted.' : 'Deleting: ' + deletion.deletedRows + ' rows so far.' }}
+        @if (isFinished()) {
+            <ng-container i18n="@@deleteTenant.deleted">The tenant was deleted.</ng-container>
+        } @else {
+            <ng-container i18n="@@deleteTenant.deleting">Deleting: {{ deletion.deletedRows }} rows so far.</ng-container>
+        }
     </p>
     <div class="mt-6 flex justify-end">
-        <button ui-button type="button" (click)="dialogRef.close()">{{ isFinished() ? 'Close' : 'Continue in the background' }}</button>
+        <button ui-button type="button" (click)="dialogRef.close()">
+            @if (isFinished()) {
+                <ng-container i18n="@@deleteTenant.close">Close</ng-container>
+            } @else {
+                <ng-container i18n="@@deleteTenant.continueInBackground">Continue in the background</ng-container>
+            }
+        </button>
     </div>
 } @else {
-    <p class="mt-3 text-body">Every row of the tenant is deleted for good. Its users keep their accounts.</p>
+    <p class="mt-3 text-body" i18n="@@deleteTenant.warning">Every row of the tenant is deleted for good. Its users keep their accounts.</p>
     <ui-form class="mt-4 grid gap-4" (submit)="delete()">
         <!-- the name, so that nobody deletes the wrong tenant by a slip -->
-        <ui-input-string name="name" autocomplete="off" [label]="'Type ' + tenant.name + ' to confirm'" [(value)]="typedName" />
+        <ui-input-string name="name" autocomplete="off" [label]="confirmLabel" [(value)]="typedName" />
         <!-- cancel comes first: the dialog focuses its first button, so pressing enter right away never deletes -->
         <div class="flex flex-wrap justify-end gap-2">
-            <button ui-button type="button" variant="text" (click)="dialogRef.close()">Cancel</button>
-            <button ui-button type="submit" color="error" [disabled]="typedName() !== tenant.name">Delete</button>
+            <button ui-button type="button" variant="text" (click)="dialogRef.close()" i18n="@@deleteTenant.cancel">Cancel</button>
+            <button ui-button type="submit" color="error" [disabled]="typedName() !== tenant.name" i18n="@@deleteTenant.delete">
+                Delete
+            </button>
         </div>
     </ui-form>
     <div class="mt-4 text-body text-error empty:hidden" role="alert">

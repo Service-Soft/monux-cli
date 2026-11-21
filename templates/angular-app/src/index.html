@@ -12,6 +12,7 @@
     </head>
     <body class="bg-surface text-on-surface">
         <app-root></app-root>
-        <noscript>{{=title}} needs JavaScript.</noscript>
+        <!-- translated into every language by scripts/localize-index.mjs, as Angular copies index.html as it is -->
+        <noscript i18n="@@index.noscript">{{=title}} needs JavaScript.</noscript>
     </body>
 </html>

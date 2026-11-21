@@ -1,5 +1,6 @@
 import { DEV_DOCKER_COMPOSE_FILE_NAME, LOCAL_DOCKER_COMPOSE_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, STAGE_DOCKER_COMPOSE_FILE_NAME } from '../constants';
-import { DefaultEnvKeys } from '../env';
+import { CryptoUtilities, FsUtilities, Path, PathUtilities } from '../encapsulation';
+import { DefaultEnvKeys, EnvUtilities } from '../env';
 import { StringUtilities } from '../utilities';
 import { DockerComposeFileName } from './docker-compose-file-name.model';
 
@@ -7,6 +8,33 @@ import { DockerComposeFileName } from './docker-compose-file-name.model';
  * The traefik docker socket volume. Is needed for traefik to take control of routing.
  */
 export const TRAEFIK_DOCKER_SOCK_VOLUME: string = '/var/run/docker.sock:/var/run/docker.sock:ro';
+
+/**
+ * The named volume traefik keeps its letsencrypt certificates in. Named rather than a folder of the workspace, as the
+ * files of the container's user can't be removed there when docker maps that user to another one.
+ */
+export const TRAEFIK_CERTIFICATES_VOLUME_NAME: string = 'letsencrypt';
+
+/**
+ * The mount of the volume of the certificates in the traefik container.
+ */
+export const TRAEFIK_CERTIFICATES_VOLUME: string = `${TRAEFIK_CERTIFICATES_VOLUME_NAME}:/letsencrypt`;
+
+/**
+ * The file of the credentials of basic auth on stage, at the root of the workspace. "mx prepare" writes it from the
+ * .env, as the user of the workspace, and traefik only reads it.
+ */
+export const TRAEFIK_BASIC_AUTH_FILE_NAME: string = '.htpasswd';
+
+/**
+ * Where traefik reads the credentials of basic auth from, which the label of the middleware names.
+ */
+const TRAEFIK_BASIC_AUTH_PATH: string = '/config/.htpasswd';
+
+/**
+ * The mount of the file of the credentials of basic auth in the traefik container.
+ */
+export const TRAEFIK_BASIC_AUTH_VOLUME: string = `./${TRAEFIK_BASIC_AUTH_FILE_NAME}:${TRAEFIK_BASIC_AUTH_PATH}:ro`;
 
 /**
  * The traefik label for enabling routing for that docker service.
@@ -48,6 +76,20 @@ export const TRAEFIK_BASE_DOCKER_COMMANDS: string[] = [
  * Encapsulates functionality for getting docker traefik labels.
  */
 export abstract class DockerTraefikUtilities {
+
+    /**
+     * Writes the credentials of basic auth on stage from the .env to the file traefik reads them from. The password
+     * is hashed with SHA-1, one of the hashes traefik reads, as its plain text is in the .env next to it anyway.
+     * @param rootDir - The directory of the workspace.
+     */
+    static async createBasicAuthFile(rootDir: string): Promise<void> {
+        const [user, password] = await Promise.all([DefaultEnvKeys.BASIC_AUTH_USER, DefaultEnvKeys.BASIC_AUTH_PASSWORD].map(
+            key => EnvUtilities.getEnvVariable<string>(key, STAGE_DOCKER_COMPOSE_FILE_NAME, rootDir)
+        ));
+        const path: Path = PathUtilities.resolve(rootDir, TRAEFIK_BASIC_AUTH_FILE_NAME);
+        const content: string = `${user}:{SHA}${CryptoUtilities.resolveSha1(password)}`;
+        await (await FsUtilities.exists(path) ? FsUtilities.updateFile(path, content, 'replace') : FsUtilities.createFile(path, content));
+    }
 
     /**
      * Gets the traefik labels for the project with the given name.
@@ -136,7 +178,7 @@ export abstract class DockerTraefikUtilities {
         const labels: string[] = [];
         const middlewares: string[] = ['compression'];
         if (traefikBasicAuth) {
-            labels.push('traefik.http.middlewares.auth.basicauth.usersfile=/config/.htpasswd');
+            labels.push(`traefik.http.middlewares.auth.basicauth.usersfile=${TRAEFIK_BASIC_AUTH_PATH}`);
             middlewares.push('auth');
         }
         if (!subDomain) {

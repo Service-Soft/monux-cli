@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, test } from '@jest/globals';
 
 import { FileMockUtilities, getMockConstants, MAX_DOCKER_TIME, MockConstants, RunningWorkspaceUtilities, ServiceResponse } from '../__testing__';
+import { PrepareCommand } from '../commands/prepare';
 import { STAGE_DOCKER_COMPOSE_FILE_NAME } from '../constants';
+import { FsUtilities, PathUtilities } from '../encapsulation';
+import { TRAEFIK_BASIC_AUTH_FILE_NAME } from './docker-traefik.utilities';
 import { DockerUtilities } from './docker.utilities';
 
 const mockConstants: MockConstants = getMockConstants('docker-traefik-utilities');
@@ -18,6 +21,10 @@ describe('DockerTraefikUtilities', () => {
         // a service that answers every request with what it got
         await DockerUtilities.addServiceToCompose({ name: 'whoami', image: 'traefik/whoami:v1.11' }, 80, 8081, true, true, 'whoami');
         try {
+            // mx prepare writes the credentials of the .env for traefik, the password hashed: "password" in the mock environment
+            await new PrepareCommand()['run']({ fileName: STAGE_DOCKER_COMPOSE_FILE_NAME, rootDir: PathUtilities.resolve('.') });
+            expect(await FsUtilities.readFile(PathUtilities.resolve(TRAEFIK_BASIC_AUTH_FILE_NAME))).toBe('user:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g=');
+
             await RunningWorkspaceUtilities.up(STAGE_DOCKER_COMPOSE_FILE_NAME);
 
             // traefik starts and routes the service, which answers once its container runs

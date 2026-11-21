@@ -1,5 +1,6 @@
 import { FsUtilities, InquirerUtilities, LogUtilities, Path, PathUtilities } from '../../encapsulation';
 import { EslintUtilities } from '../../eslint';
+import { NpmUtilities } from '../../npm';
 import { TemplateUtilities } from '../../templates';
 import { StringUtilities } from '../../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../../workspace';
@@ -58,6 +59,8 @@ export class GeneratePageCommand extends BaseCommand<GeneratePageConfiguration> 
         if (input.placement === 'navbar') {
             await this.addNavbarLinkComponent(app);
         }
+        // its texts, into the translation of every other language of the website
+        await NpmUtilities.run(input.projectName, 'i18n', false);
         await EslintUtilities.fix(project.path);
         LogUtilities.success(`Generated the page "${input.pageName}" at /${names.fileName}`);
     }
@@ -67,10 +70,11 @@ export class GeneratePageCommand extends BaseCommand<GeneratePageConfiguration> 
     }
 
     private async addRoute(app: Path, input: GeneratePageConfiguration, names: PageNames): Promise<void> {
+        // the texts marked for translation, like the ones of the pages mx add generates
         const route: string[] = [
             `path: '${names.fileName}',`,
-            `title: '${input.title}',`,
-            `data: { description: '${input.description}' } satisfies NavRouteData,`,
+            `title: $localize\`:@@${names.fileName}.title:${input.title}\`,`,
+            `data: { description: $localize\`:@@${names.fileName}.description:${input.description}\` } satisfies NavRouteData,`,
             `loadComponent: async () => (await import('./pages/${names.fileName}/${names.fileName}.component')).${names.className}`
         ];
         const marker: string = MARKERS[input.placement];
@@ -86,7 +90,7 @@ export class GeneratePageCommand extends BaseCommand<GeneratePageConfiguration> 
         const link: string[] = [
             '{',
             '    type: \'link\',',
-            `    name: '${input.pageName}',`,
+            `    name: $localize\`:@@${names.fileName}.link:${input.pageName}\`,`,
             ...input.placement === 'footer' ? ['    position: \'end\','] : [],
             '    route: {',
             ...route.map(line => `        ${line}`),

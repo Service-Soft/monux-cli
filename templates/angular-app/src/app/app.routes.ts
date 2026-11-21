@@ -14,7 +14,7 @@ export const routes: Routes = [
         routes: [
             // logging in and resetting a password
             { path: '', loadChildren: async () => (await import('./auth.routes')).authRoutes },
-            { path: '**', title: 'Page not found | {{=title}}', component: NotFoundComponent }
+            { path: '**', title: $localize`:@@notFound.title:Page not found | {{=title}}`, component: NotFoundComponent }
         ]
     })
 ];

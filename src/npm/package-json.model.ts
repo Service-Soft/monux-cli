@@ -74,6 +74,10 @@ export type PackageJson = {
      */
     peerDependencies?: Record<string, string>,
     /**
+     * Whether npm runs the install script of a dependency. Npm reads it only from the root of a workspace.
+     */
+    allowScripts?: Record<string, boolean>,
+    /**
      * Prettier configuration. Is used by default by storybook.
      */
     prettier?: unknown

@@ -1,11 +1,13 @@
 <section class="mx-auto flex max-w-section flex-col gap-8 px-section-padding py-16">
-    <h1 class="font-heading text-headline">Users</h1>
+    <h1 class="font-heading text-headline" i18n="@@users.heading">Users</h1>
     @if (mayChooseTenant) {
         <!-- the members of one tenant, whose memberships the row actions then change -->
         <ui-input-autocomplete
             class="max-w-sm"
             label="Members of"
+            i18n-label="@@users.membersOf"
             placeholder="Every user"
+            i18n-placeholder="@@users.everyUser"
             [options]="tenantOptions()"
             [(query)]="tenantQuery"
             [(value)]="chosenTenantId"
@@ -14,6 +16,7 @@
     <ngx-entity-table
         #usersTable
         label="Users"
+        i18n-label="@@users.tableLabel"
         hideLabel
         [service]="userService"
         [columns]="columns()"
@@ -29,13 +32,14 @@
 @if (mayInvite) {
     <section class="mx-auto flex max-w-section flex-col gap-8 px-section-padding pb-16">
         <div class="flex flex-wrap items-center justify-between gap-4">
-            <h2 class="font-heading text-title">Invitations</h2>
-            <button ui-button type="button" (click)="invite()">Invite</button>
+            <h2 class="font-heading text-title" i18n="@@users.invitationsHeading">Invitations</h2>
+            <button ui-button type="button" (click)="invite()" i18n="@@users.invite">Invite</button>
         </div>
         <!-- deleting one revokes it, and what it created when it was sent goes with it -->
         <ngx-entity-table
             #invitationsTable
             label="Invitations"
+            i18n-label="@@users.invitationsTableLabel"
             hideLabel
             [service]="invitationService"
             [columns]="invitationColumns"
@@ -48,7 +52,15 @@
 <ng-template #memberActions let-user>
     @if (findMembership(user); as membership) {
         @if (mayUpdateMemberships) {
-            <button ui-button type="button" variant="text" size="sm" [attr.aria-label]="'Roles of ' + user.name" (click)="changeRoles(user, membership)">
+            <button
+                ui-button
+                type="button"
+                variant="text"
+                size="sm"
+                [attr.aria-label]="resolveRolesLabel(user)"
+                (click)="changeRoles(user, membership)"
+                i18n="@@users.roles"
+            >
                 Roles
             </button>
             <button
@@ -56,14 +68,22 @@
                 type="button"
                 variant="text"
                 size="sm"
-                [attr.aria-label]="(membership.deactivatedAt ? 'Reactivate ' : 'Deactivate ') + user.name"
+                [attr.aria-label]="resolveToggleLabel(user, membership)"
                 (click)="toggleDeactivated(user, membership)"
             >
-                {{ membership.deactivatedAt ? 'Reactivate' : 'Deactivate' }}
+                {{ resolveToggleText(membership) }}
             </button>
         }
         @if (mayRemoveMembers) {
-            <button ui-button type="button" variant="text" size="sm" [attr.aria-label]="'Remove ' + user.name" (click)="remove(user, membership)">
+            <button
+                ui-button
+                type="button"
+                variant="text"
+                size="sm"
+                [attr.aria-label]="resolveRemoveLabel(user)"
+                (click)="remove(user, membership)"
+                i18n="@@users.remove"
+            >
                 Remove
             </button>
         }
@@ -71,7 +91,15 @@
 </ng-template>
 
 <ng-template #invitationActions let-invitation>
-    <button ui-button type="button" variant="text" size="sm" [attr.aria-label]="'Send again to ' + invitation.email" (click)="resend(invitation)">
+    <button
+        ui-button
+        type="button"
+        variant="text"
+        size="sm"
+        [attr.aria-label]="resolveResendLabel(invitation)"
+        (click)="resend(invitation)"
+        i18n="@@users.resend"
+    >
         Send again
     </button>
 </ng-template>

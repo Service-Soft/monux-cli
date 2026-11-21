@@ -109,8 +109,6 @@ export abstract class AngularUtilities {
     // what a title ends up in: typescript strings, html and the meta tags of the pages
     private static readonly TITLE_REGEX: RegExp = /^[^"'<>\\{}`]+$/;
 
-    private static readonly LANGUAGE_REGEX: RegExp = /^[a-z]{2}(-[A-Z]{2})?$/;
-
     /**
      * Validates the name of a project, as the titles of its pages show it.
      * @param title - The name.
@@ -123,23 +121,21 @@ export abstract class AngularUtilities {
     }
 
     /**
-     * Validates the language a project is written in.
-     * @param language - The code of the language.
-     * @returns True, or what is wrong with it.
-     */
-    static validateLanguage(language?: string): true | string {
-        return language != undefined && this.LANGUAGE_REGEX.test(language)
-            ? true
-            : 'The language needs to be a code like "en" or "de-AT"';
-    }
-
-    /**
      * Adds Angular's service worker to a project, which keeps its files on the device so that it opens offline, with
      * its config, its manifest and its icons.
      * @param root - The directory of the project.
      */
     static async addServiceWorker(root: Path): Promise<void> {
         await this.runCommand(root, `add @angular/pwa@${this.CLI_VERSION}`, { '--skip-confirmation': true });
+    }
+
+    /**
+     * Adds Angular's i18n to a project: $localize, its polyfill and its types. The build fills in the texts of each
+     * language the i18n of angular.json has.
+     * @param root - The directory of the project.
+     */
+    static async addLocalization(root: Path): Promise<void> {
+        await this.runCommand(root, `add @angular/localize@${this.CLI_VERSION}`, { '--skip-confirmation': true });
     }
 
     /**

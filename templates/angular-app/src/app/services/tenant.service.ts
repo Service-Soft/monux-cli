@@ -19,7 +19,7 @@ export class TenantService extends EntityService<Tenant, typeof TENANT_FILTER> {
 
     // what the sync dialog shows of a change made offline
     override getLabel(tenant: Partial<Tenant>): string {
-        return tenant.name ?? 'New tenant';
+        return tenant.name ?? $localize`:@@tenant.new:New tenant`;
     }
 
     /**

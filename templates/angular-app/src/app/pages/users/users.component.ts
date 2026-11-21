@@ -73,8 +73,17 @@ export class UsersComponent {
     });
 
     protected readonly columns: Signal<EntityTableColumnInput<User>[]> = computed(() => this.membershipTenantId() == undefined
-        ? ['name', 'email', 'roles', { key: 'memberships', label: 'Tenants', value: user => this.resolveTenantsText(user) }]
-        : ['name', 'email', { key: 'memberships', label: 'Roles', value: user => this.resolveMembershipText(user) }]);
+        ? [
+            'name',
+            'email',
+            'roles',
+            { key: 'memberships', label: $localize`:@@users.tenantsColumn:Tenants`, value: user => this.resolveTenantsText(user) }
+        ]
+        : [
+            'name',
+            'email',
+            { key: 'memberships', label: $localize`:@@users.rolesColumn:Roles`, value: user => this.resolveMembershipText(user) }
+        ]);
 
     // the tenant of each invitation in "All tenants"
     protected readonly invitationColumns: EntityTableColumnInput<Invitation>[] = this.activeTenantId == undefined
@@ -115,6 +124,58 @@ export class UsersComponent {
     }
 
     /**
+     * Resolves what screen readers call the button that changes the roles of a member, with their name, as every row
+     * has one.
+     * @param user - The member.
+     * @returns The name of the button.
+     */
+    protected resolveRolesLabel(user: User): string {
+        return $localize`:@@users.rolesLabel:Roles of ${user.name}:name:`;
+    }
+
+    /**
+     * Resolves what the button that deactivates or reactivates a membership says.
+     * @param membership - The membership in the tenant the page shows.
+     * @returns The text of the button.
+     */
+    protected resolveToggleText(membership: UserMembership): string {
+        return membership.deactivatedAt == undefined
+            ? $localize`:@@users.deactivate:Deactivate`
+            : $localize`:@@users.reactivate:Reactivate`;
+    }
+
+    /**
+     * Resolves what screen readers call the button that deactivates or reactivates a membership, with the name of the
+     * member.
+     * @param user - The member.
+     * @param membership - Their membership in the tenant the page shows.
+     * @returns The name of the button.
+     */
+    protected resolveToggleLabel(user: User, membership: UserMembership): string {
+        return membership.deactivatedAt == undefined
+            ? $localize`:@@users.deactivateLabel:Deactivate ${user.name}:name:`
+            : $localize`:@@users.reactivateLabel:Reactivate ${user.name}:name:`;
+    }
+
+    /**
+     * Resolves what screen readers call the button that takes a member out of the tenant, with their name.
+     * @param user - The member.
+     * @returns The name of the button.
+     */
+    protected resolveRemoveLabel(user: User): string {
+        return $localize`:@@users.removeLabel:Remove ${user.name}:name:`;
+    }
+
+    /**
+     * Resolves what screen readers call the button that mails an invitation again, with its email.
+     * @param invitation - The invitation.
+     * @returns The name of the button.
+     */
+    protected resolveResendLabel(invitation: Invitation): string {
+        return $localize`:@@users.resendLabel:Send again to ${invitation.email}:email:`;
+    }
+
+    /**
      * Changes the roles of a member in a dialog.
      * @param user - The member.
      * @param membership - Their membership in the tenant the page shows.
@@ -143,10 +204,10 @@ export class UsersComponent {
      */
     protected async remove(user: User, membership: UserMembership): Promise<void> {
         const data: ConfirmDialogData = {
-            title: `Remove ${user.name} from ${membership.tenantName}?`,
-            paragraphs: ['They lose their roles there. Their account stays.'],
-            confirmButtonLabel: 'Remove',
-            cancelButtonLabel: 'Cancel',
+            title: $localize`:@@users.removeTitle:Remove ${user.name}:user: from ${membership.tenantName}:tenant:?`,
+            paragraphs: [$localize`:@@users.removeText:They lose their roles there. Their account stays.`],
+            confirmButtonLabel: $localize`:@@users.removeConfirm:Remove`,
+            cancelButtonLabel: $localize`:@@users.removeCancel:Cancel`,
             confirmButtonColor: 'error'
         };
         if (await this.dialogService.open<boolean>(ConfirmDialogComponent, data).closed === true) {
@@ -183,7 +244,8 @@ export class UsersComponent {
         if (membership == undefined) {
             return '';
         }
-        return membership.deactivatedAt == undefined ? membership.roles.join(', ') : `${membership.roles.join(', ')} (deactivated)`;
+        const roles: string = membership.roles.join(', ');
+        return membership.deactivatedAt == undefined ? roles : $localize`:@@users.deactivatedRoles:${roles}:roles: (deactivated)`;
     }
 
     private isAllTenants(permission: PlatformPermission): boolean {

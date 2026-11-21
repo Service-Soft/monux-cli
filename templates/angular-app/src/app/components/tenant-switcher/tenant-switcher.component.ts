@@ -62,11 +62,13 @@ export class TenantSwitcherComponent {
 
     protected readonly currentIcon: IconDefinition = faCheck;
 
+    protected readonly chooseLabel: string = $localize`:@@tenantSwitcher.choose:Choose a tenant`;
+
     protected readonly choices: Signal<TenantChoice[]> = computed(() => {
         const activeTenantId: string | undefined = this.authService.activeTenantId();
         const tenants: OwnTenantData[] = this.ownTenants.hasValue() ? this.ownTenants.value() : [];
         const all: Omit<TenantChoice, 'isCurrent'>[] = this.authService.currentUser()?.platformPermissions.length
-            ? [{ id: undefined, name: 'All tenants' }]
+            ? [{ id: undefined, name: $localize`:@@tenantSwitcher.all:All tenants` }]
             : [];
         return [...all, ...tenants].map(choice => ({ ...choice, isCurrent: choice.id === activeTenantId }));
     });

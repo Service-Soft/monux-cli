@@ -1,11 +1,17 @@
 import { inject, Provider } from '@angular/core';
 import { AuthRouteData, loggedInGuard, permissionGuard } from '@service-soft/ngx-auth/auth';
+{{#multilingual}}
+import { LanguageSwitcherComponent } from '@service-soft/ngx-navigation/language-switcher';
+{{/multilingual}}
 import { NavbarRow, NavRoute, NavRouteData, provideNavigationConfig } from '@service-soft/ngx-navigation/navigation';
 import { CurrentUserProfile } from 'zibri-contract';
 import { Permission, Permissions, PlatformPermission, PlatformPermissions } from '{{=contractPackage}}';
 
 import { AppAuthService } from './app-auth.service';
 import { TenantSwitcherComponent } from './components/tenant-switcher/tenant-switcher.component';
+{{#multilingual}}
+import { languages } from './languages';
+{{/multilingual}}
 
 /**
  * A route of the app: what the navigation reads from it, and the permissions its guard checks, by the names of the api.
@@ -46,11 +52,11 @@ export const navbarRows: NavbarRow[] = [
             { type: 'title', title: '{{=title}}', link: { route: '' }, collapse: 'never' },
             {
                 type: 'link',
-                name: 'Users',
+                name: $localize`:@@users.link:Users`,
                 // every user to an administrator of the application, the members of the active tenant to one of a tenant
                 route: {
                     path: 'users',
-                    title: 'Users | {{=title}}',
+                    title: $localize`:@@users.title:Users | {{=title}}`,
                     canActivate: [permissionGuard],
                     data: {
                         anyLevelPermission: { permission: Permissions.MEMBERS_READ, platformPermission: PlatformPermissions.USERS_READ }
@@ -60,10 +66,10 @@ export const navbarRows: NavbarRow[] = [
             },
             {
                 type: 'link',
-                name: 'Tenants',
+                name: $localize`:@@tenants.link:Tenants`,
                 route: {
                     path: 'tenants',
-                    title: 'Tenants | {{=title}}',
+                    title: $localize`:@@tenants.title:Tenants | {{=title}}`,
                     canActivate: [permissionGuard],
                     data: { platformPermission: PlatformPermissions.TENANTS_READ },
                     loadComponent: async () => (await import('./pages/tenants/tenants.component')).TenantsComponent
@@ -71,10 +77,10 @@ export const navbarRows: NavbarRow[] = [
             },
             {
                 type: 'link',
-                name: 'Logs',
+                name: $localize`:@@logs.link:Logs`,
                 route: {
                     path: 'logs',
-                    title: 'Logs | {{=title}}',
+                    title: $localize`:@@logs.title:Logs | {{=title}}`,
                     canActivate: [permissionGuard],
                     data: {
                         anyLevelPermission: { permission: Permissions.LOGS_READ, platformPermission: PlatformPermissions.LOGS_READ_ALL }
@@ -82,22 +88,26 @@ export const navbarRows: NavbarRow[] = [
                     loadComponent: async () => (await import('./pages/logs/logs.component')).LogsComponent
                 } satisfies AppRoute
             },
+{{#multilingual}}
+            // the page in the other languages
+            { type: 'custom', component: LanguageSwitcherComponent, inputs: { languages }, position: 'end' },
+{{/multilingual}}
             { type: 'custom', component: TenantSwitcherComponent, position: 'end', condition: hasTenantChoice },
             {
                 type: 'link',
-                name: 'Account',
+                name: $localize`:@@account.link:Account`,
                 position: 'end',
                 condition: isLoggedIn,
                 route: {
                     path: 'account',
-                    title: 'Account | {{=title}}',
+                    title: $localize`:@@account.title:Account | {{=title}}`,
                     canActivate: [loggedInGuard],
                     loadComponent: async () => (await import('./pages/account/account.component')).AccountComponent
                 } satisfies AppRoute
             },
             {
                 type: 'button',
-                name: 'Log out',
+                name: $localize`:@@logout.button:Log out`,
                 position: 'end',
                 condition: isLoggedIn,
                 action: () => inject(AppAuthService).logout()

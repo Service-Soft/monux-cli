@@ -34,6 +34,38 @@ export class TenantsComponent {
     protected readonly mayDelete: boolean = this.authService.hasPlatformPermission(PlatformPermissions.TENANTS_DELETE);
 
     /**
+     * Resolves what the button that deactivates or reactivates a tenant says.
+     * @param tenant - The tenant.
+     * @returns The text of the button.
+     */
+    protected resolveToggleText(tenant: Tenant): string {
+        return tenant.deactivatedAt == undefined
+            ? $localize`:@@tenants.deactivate:Deactivate`
+            : $localize`:@@tenants.reactivate:Reactivate`;
+    }
+
+    /**
+     * Resolves what screen readers call the button that deactivates or reactivates a tenant, with its name, as every
+     * row has one.
+     * @param tenant - The tenant.
+     * @returns The name of the button.
+     */
+    protected resolveToggleLabel(tenant: Tenant): string {
+        return tenant.deactivatedAt == undefined
+            ? $localize`:@@tenants.deactivateLabel:Deactivate ${tenant.name}:name:`
+            : $localize`:@@tenants.reactivateLabel:Reactivate ${tenant.name}:name:`;
+    }
+
+    /**
+     * Resolves what screen readers call the button that deletes a tenant, with its name.
+     * @param tenant - The tenant.
+     * @returns The name of the button.
+     */
+    protected resolveDeleteLabel(tenant: Tenant): string {
+        return $localize`:@@tenants.deleteLabel:Delete ${tenant.name}:name:`;
+    }
+
+    /**
      * Deactivates a tenant, or reactivates it.
      * @param tenant - The tenant.
      */

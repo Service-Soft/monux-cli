@@ -1,4 +1,4 @@
-import { AngularJson, AngularUtilities } from '../../../angular';
+import { AngularJson, AngularLanguage, AngularUtilities, LocalizationUtilities } from '../../../angular';
 import { ANGULAR_JSON_FILE_NAME, APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME } from '../../../constants';
 import { DockerUtilities } from '../../../docker';
 import { FsUtilities, LogUtilities, Path, PathUtilities, QuestionsFor } from '../../../encapsulation';
@@ -32,9 +32,10 @@ type AddAngularWebsiteConfiguration = AddConfiguration & {
      */
     title: string,
     /**
-     * The language the website is written in, such as "en" or "de".
+     * The languages of the website, such as "en" or "de", the one it is written in first. Each other one is built below
+     * its code, and translated in src/locale.
      */
-    language: string,
+    languages: string[],
     /**
      * The trackings the website asks its visitors to allow.
      */
@@ -102,22 +103,7 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
             validate: (v?: string) => AngularUtilities.validateTitle(v),
             default: StringUtilities.toPascalCase(this.baseConfig.name)
         },
-        // TODO: localization, set up by mx, for the website and the Angular app alike. What it takes:
-        // - mx add asks for the languages (the first one the source language) instead of one, and a later command adds one
-        // - Angular's i18n, a build per language below /<code>/, which is where the <ngx-language-switcher> of
-        //   @service-soft/ngx-navigation links to by default; LOCALE_ID per build, the texts of the templates marked for it
-        //   and extracted into src/locale, and the labels of the @service-soft libraries translated by their providers
-        // - the server: / redirects to the language of Accept-Language, every language is prerendered
-        // - search engines and AI assistants: <link rel="alternate" hreflang> on every page, the alternates in the
-        //   sitemap, a llms.txt that lists every language, structured data with inLanguage per page
-        // - the generator test builds two languages and checks the alternates and the redirect
-        language: {
-            type: 'input',
-            name: 'language',
-            message: 'Language of the website',
-            validate: (v?: string) => AngularUtilities.validateLanguage(v),
-            default: 'en'
-        },
+        languages: LocalizationUtilities.resolveLanguagesQuestion('website'),
         trackings: {
             type: 'checkbox',
             name: 'trackings',
@@ -138,11 +124,17 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
 
     protected override async run(): Promise<void> {
         const config: AddAngularWebsiteConfiguration = await this.getConfig();
+        const languages: AngularLanguage[] = LocalizationUtilities.resolveLanguages(config.languages);
         const root: Path = await this.createProject(config);
+        await AngularUtilities.addLocalization(root);
 
         LogUtilities.step('Adding the pages, the navigation and what makes the website fast and findable');
         await this.cleanUp(root);
-        await TemplateUtilities.write('angular', root, { name: config.name });
+        // languages.ts, which the seo, the server and the language switcher read
+        await TemplateUtilities.write('angular', root, {
+            name: config.name,
+            ...LocalizationUtilities.resolveTemplatePlaceholders(languages)
+        });
         await TemplateUtilities.write(
             'angular-website',
             root,
@@ -150,28 +142,40 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
                 name: config.name,
                 prefix: StringUtilities.toSnakeCase(config.name),
                 title: config.title,
-                language: config.language
+                language: languages[0].code
             },
             {
                 tracking: config.trackings.length > 0,
                 googleAnalytics: config.trackings.includes('googleAnalytics'),
                 googleTagManager: config.trackings.includes('googleTagManager'),
                 metaPixel: config.trackings.includes('metaPixel'),
-                aiTraining: config.aiTraining
+                aiTraining: config.aiTraining,
+                multilingual: languages.length > 1
             }
         );
         await this.installDependencies(config);
         await this.updatePackageJson(config);
         await this.updateAngularJson(root, config.name);
+        await LocalizationUtilities.configure(root, config.name, languages);
 
         await this.addToCompose(root, config);
         await this.addTrackingVariables(config);
         await this.setupEnvironment(root, config);
+        await LocalizationUtilities.collectTexts(config.name, languages);
 
         LogUtilities.step('Setting up eslint');
         await EslintUtilities.addLintScripts(root);
-        // the build step, the pages angular rendered, the file for AI assistants and the names of AI crawlers
-        await EslintUtilities.addWords(['postbuild', 'prerendered', 'llms', 'applebot', 'externalagent']);
+        // the build step, the pages angular rendered, the file for AI assistants, the names of AI crawlers and the consent
+        // of the GDPR
+        await EslintUtilities.addWords([
+            'gdpr',
+            'postbuild',
+            'prerendered',
+            'llms',
+            'applebot',
+            'externalagent',
+            ...LocalizationUtilities.resolveWords(languages)
+        ]);
         await EslintUtilities.fix(root);
         LogUtilities.success(`Added "${config.name}" in ${PathUtilities.getRelative(PathUtilities.resolve('.'), root)}`);
     }
@@ -226,7 +230,8 @@ export class AddAngularWebsiteCommand extends BaseAddCommand<AddAngularWebsiteCo
         await NpmUtilities.updatePackageJson(config.name, {
             scripts: {
                 start: `ng serve --port ${config.port}`,
-                build: 'ng build && node scripts/postbuild.mjs',
+                // the texts of index.html into every language, then what makes the pages smaller
+                build: 'ng build && node scripts/localize-index.mjs && node scripts/postbuild.mjs',
                 test: 'ng test --watch=false'
             }
         });

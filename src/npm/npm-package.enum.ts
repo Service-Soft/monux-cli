@@ -6,14 +6,14 @@ export enum NpmPackage {
     // runs tailwind in the webpack of storybook
     TAILWIND_POSTCSS = '@tailwindcss/postcss@^4.3.5',
     // the @service-soft libraries share the major of the Angular they are built for
-    SERVICE_SOFT_UI = '@service-soft/ui@^22.2.0',
-    SERVICE_SOFT_NGX_NAVIGATION = '@service-soft/ngx-navigation@^22.2.0',
-    SERVICE_SOFT_NGX_TRACKING = '@service-soft/ngx-tracking@^22.2.0',
-    SERVICE_SOFT_NGX_AUTH = '@service-soft/ngx-auth@^22.2.0',
-    SERVICE_SOFT_NGX_PWA = '@service-soft/ngx-pwa@^22.2.0',
-    SERVICE_SOFT_NGX_ERROR_HANDLING = '@service-soft/ngx-error-handling@^22.2.0',
-    SERVICE_SOFT_NGX_PERSISTENCE_LOGGER = '@service-soft/ngx-persistence-logger@^22.2.0',
-    SERVICE_SOFT_NGX_ENTITY = '@service-soft/ngx-entity@^22.2.0',
+    SERVICE_SOFT_UI = '@service-soft/ui@^22.3.1',
+    SERVICE_SOFT_NGX_NAVIGATION = '@service-soft/ngx-navigation@^22.3.1',
+    SERVICE_SOFT_NGX_TRACKING = '@service-soft/ngx-tracking@^22.3.1',
+    SERVICE_SOFT_NGX_AUTH = '@service-soft/ngx-auth@^22.3.1',
+    SERVICE_SOFT_NGX_PWA = '@service-soft/ngx-pwa@^22.3.1',
+    SERVICE_SOFT_NGX_ERROR_HANDLING = '@service-soft/ngx-error-handling@^22.3.1',
+    SERVICE_SOFT_NGX_PERSISTENCE_LOGGER = '@service-soft/ngx-persistence-logger@^22.3.1',
+    SERVICE_SOFT_NGX_ENTITY = '@service-soft/ngx-entity@^22.3.1',
     // what the table, the select and the autocomplete of @service-soft/ui are built on, an optional peer of it
     ANGULAR_ARIA = '@angular/aria@^22.3.0',
     // what the Angular framework of storybook builds with, a peer of it

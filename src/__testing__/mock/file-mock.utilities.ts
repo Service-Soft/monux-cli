@@ -105,10 +105,10 @@ export abstract class FileMockUtilities {
         mockConstants: MockConstants,
         entry: keyof FileMockConstants,
         hasContentOverride: boolean,
-        content: string | string[] | undefined
+        content: string | string[] = ''
     ): Promise<void> {
         if (hasContentOverride) {
-            await FsUtilities.createFile(PathUtilities.resolve(mockConstants[entry]), content ?? '', true);
+            await FsUtilities.createFile(PathUtilities.resolve(mockConstants[entry]), content, true);
             return;
         }
         await this.mockMethodForFile[entry](mockConstants, entry);
@@ -170,7 +170,7 @@ export abstract class FileMockUtilities {
             '    "devDependencies": {',
             '        "autoprefixer": "^10.4.21",',
             '        "eslint": "^9.25.1",',
-            '        "@service-soft/eslint-config": "^2.2.0",',
+            '        "@service-soft/eslint-config": "^2.2.2",',
             '        "postcss": "^8.5.3",',
             '        "tailwindcss": "^4.1.4"',
             '    },',

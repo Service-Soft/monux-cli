@@ -21,7 +21,7 @@ describe('AddAngularLibraryCommand', () => {
             port: 4200,
             subDomain: undefined,
             title: 'Shop',
-            language: 'en',
+            languages: ['en'],
             trackings: [],
             aiTraining: false,
             scope: '@shop',

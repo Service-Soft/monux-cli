@@ -1,86 +1,27 @@
-/*
- * TODO: sitemap.xml, robots.txt and llms.txt from the routes, in every language, once @service-soft/ngx-navigation has
- * them. Until then this file builds them from the prerendered pages only: a page rendered on the server or in the
- * browser, a page with parameters and every language but the first are missing, and /imprint/ answers like /imprint.
- * Angular i18n builds one server.mjs for every language, next to a main.server.mjs and the browser files of each below
- * dist/<name>/server/<code> and browser/<code>, and prerenders every page below /<code>/. So this file reads the
- * structure of the website from its routes, and what a page says in a language from the page as that language
- * renders it.
- *
- * What ngx-navigation needs for it:
- *
- * 1. @service-soft/ngx-navigation/seo-server, for the server.ts of a website: node only, express or not.
- *    - resolvePages({ routes, serverRoutes, distFolder, appEngine, origin, locales }) finds every url of the website
- *      that search engines may index, in every locale:
- *      - the paths of the router config, its children and its loadChildren included, without redirects, without '**'
- *        and without routes whose data.robots holds noindex. Each with the render mode of its ServerRoute
- *      - a path with parameters gets the urls Angular prerendered for it (prerendered-routes.json), or the paths its
- *        data.sitemap answers, for any render mode, like the products of an api. Without either it is left out, and
- *        named in a warning when the server starts
- *      - in each locale, the url below its subPath, and the title and description the page renders in it: from the
- *        prerendered html, or rendered once through the app engine for RenderMode.Server and kept while the server
- *        runs. A RenderMode.Client page has neither, as only a browser renders it
- *      - lastModified from data.lastModified, or from the entries of data.sitemap. None without, as Google only reads
- *        a lastmod that is always right. No changefreq and no priority, which Google ignores
- *    - resolveSitemap(pages): one <url> per page and locale, with an xhtml:link rel="alternate" hreflang for every
- *      locale of the page and hreflang="x-default" for its url without a locale, which redirects by the language of the
- *      visitor. Absolute https urls, escaped for xml, a <lastmod> when known. Over 50,000 urls or 50 MB a sitemap index
- *      with one sitemap per part
- *    - resolveRobotsTxt({ allowed, disallowedCrawlers, sitemapUrl }), like the robots.txt below
- *    - resolveLlmsTxt(pages, locale): /llms.txt in the source locale and /<code>/llms.txt in each other, listing the
- *      pages that render on the server, see https://llmstxt.org
- *    - resolvePreferredLocale(acceptLanguage, locales): the locale an url without one redirects to, the source locale
- *      when none matches. The redirect is a 302 with Vary: Accept-Language, so search engines index the locales
- *    - a handler that answers an url with a trailing slash with a 301 to the one without, the query kept, so each page
- *      has one url
- * 2. SeoService of @service-soft/ngx-navigation/seo, with locales in provideSeoConfig, each with its code and subPath:
- *    - <link rel="alternate" hreflang> on every page, absolute, for each locale and for x-default, which a navigation
- *      writes like the canonical url
- *    - the canonical url of a page in its own locale, without query, hash and trailing slash
- *    - og:locale, and og:locale:alternate for the other locales
- * 3. NavRouteData: sitemap?: () => Promise<NavSitemapEntry[]>, the paths of a route with parameters without a locale,
- *    each with an optional lastModified, and lastModified?: string, the date of a page as an ISO date
- *
- * Tested in angular-libraries with a router config of every render mode, parameters with and without data.sitemap,
- * noindex, lazy children and two locales, and by the showcase: its prerendered pages hold the alternates, and its
- * sitemap lists every page in both locales.
- */
 import { existsSync, readFileSync } from 'node:fs';
 import { extname, join, resolve, sep } from 'node:path';
 
 import { AngularNodeAppEngine, createNodeRequestHandler, isMainModule, writeResponseToNodeResponse } from '@angular/ssr/node';
+import { SeoServerUtilities, SeoSite } from '@service-soft/ngx-navigation/seo-server';
 import express, { Express } from 'express';
 
+import { serverRoutes } from './app/app.routes.server';
+import { locales } from './app/languages';
 import { environment } from './environment/environment';
 
 /**
  * The routes Angular prerendered, as it lists them next to the build.
  */
 type PrerenderedRoutes = {
-    // eslint-disable-next-line jsdoc/require-jsdoc
+    /**
+     * The urls of the prerendered pages, with their language, as the keys.
+     */
     routes: Record<string, unknown>
-};
-
-/**
- * A page the build prerendered, as search engines and AI assistants find it.
- */
-type PrerenderedPage = {
-    /**
-     * The path of the page, such as "/imprint".
-     */
-    route: string,
-    /**
-     * The title of the page.
-     */
-    title: string,
-    /**
-     * The description of the page.
-     */
-    description: string
 };
 
 const distFolder: string = join(import.meta.dirname, '..');
 const browserDistFolder: string = join(distFolder, 'browser');
+const origin: string = environment.{{=prefix}}_base_url;
 // a file whose name holds the hash of its content, like main-AB12CD34.js, never changes under that name
 const HASHED_FILE_REGEX: RegExp = /-[\dA-Z]{8}\.[a-z\d]+$/;
 // what the build compresses, see scripts/postbuild.mjs
@@ -98,41 +39,53 @@ const CONTENT_TYPES: Record<string, string> = {
 // question, like OAI-SearchBot, Claude-SearchBot or PerplexityBot, are not among them, so the website is still found and cited
 const TRAINING_CRAWLERS: string[] = ['GPTBot', 'ClaudeBot', 'Google-Extended', 'CCBot', 'Applebot-Extended', 'meta-externalagent'];
 {{/aiTraining}}
+// the build has every language below its subPath. The dev server builds one, at the root, which redirects to none
+const IS_LOCALIZED_BUILD: boolean = locales.every(locale => existsSync(join(browserDistFolder, locale.subPath)));
 
 const app: Express = express();
 const angularApp: AngularNodeAppEngine = new AngularNodeAppEngine();
+let site: Promise<SeoSite> | undefined;
 
 /**
- * Finds every page the build prerendered, which is every page of the website that is not for a parameter.
- * @returns The pages, with their title and description as their html holds them.
+ * Finds every page of the website in every language, once while the server runs: the app hands over its routes as it
+ * renders a page, and the server reads the title and description of each page from it, prerendered or rendered once.
+ * @returns The pages.
  */
-function findPrerenderedPages(): PrerenderedPage[] {
+async function findSite(): Promise<SeoSite> {
+    site ??= resolveSite();
+    try {
+        return await site;
+    }
+    catch (error) {
+        // tried again on the next request
+        site = undefined;
+        throw error;
+    }
+}
+
+/**
+ * Resolves every page of the website in every language, and warns about the routes whose pages are missing.
+ * @returns The pages.
+ */
+async function resolveSite(): Promise<SeoSite> {
     // written by the build of this website, in the shape Angular gives it
     const prerendered: PrerenderedRoutes = JSON.parse(
         readFileSync(join(distFolder, 'prerendered-routes.json'), 'utf8')
     ) as PrerenderedRoutes;
-    return Object.keys(prerendered.routes).map(route => {
-        const html: string = readFileSync(join(browserDistFolder, route, 'index.html'), 'utf8');
-        return {
-            route,
-            title: decodeHtml(/<title>([^<]*)<\/title>/.exec(html)?.[1] ?? ''),
-            description: decodeHtml(/<meta name="description" content="([^"]*)"/.exec(html)?.[1] ?? '')
-        };
+    const resolved: SeoSite = await SeoServerUtilities.resolvePages({
+        origin,
+        serverRoutes,
+        prerenderedRoutes: Object.keys(prerendered.routes),
+        appEngine: angularApp,
+        locales
     });
-}
-
-/**
- * Turns the characters html escapes back into text.
- * @param value - Text as html holds it.
- * @returns The text.
- */
-function decodeHtml(value: string): string {
-    return value
-        .replaceAll('&lt;', '<')
-        .replaceAll('&gt;', '>')
-        .replaceAll('&quot;', '"')
-        .replaceAll('&#39;', '\'')
-        .replaceAll('&amp;', '&');
+    for (const route of resolved.unlistedRoutes) {
+        process.stderr.write(`${route} is missing from the sitemap: give it data.sitemap, or prerender it with getPrerenderParams\n`);
+    }
+    for (const route of resolved.errorRoutes) {
+        process.stderr.write(`${route} is missing from the sitemap: without a route in app.routes.server.ts, it answers 404\n`);
+    }
+    return resolved;
 }
 
 /**
@@ -160,55 +113,58 @@ function resolveCacheControl(file: string): string {
     return HASHED_FILE_REGEX.test(file) ? 'public, max-age=31536000, immutable' : 'no-cache';
 }
 
-/**
- * Resolves the url of a page of the website.
- * @param route - The path of the page.
- * @returns The url.
- */
-function resolveUrl(route: string): string {
-    return `${environment.{{=prefix}}_base_url}${route === '/' ? '' : route}`;
-}
+// each page has one url, so search engines index it once: without a slash at its end, and below its language. An url
+// without one goes to the language the visitor prefers, the one search engines know as x-default
+app.use((req, res, next) => {
+    const withoutSlash: string | undefined = SeoServerUtilities.findTrailingSlashRedirect(req.originalUrl);
+    if (withoutSlash != undefined) {
+        res.redirect(301, withoutSlash);
+        return;
+    }
+    const localized: string | undefined = IS_LOCALIZED_BUILD
+        ? SeoServerUtilities.findLocaleRedirect(req.originalUrl, req.get('Accept-Language'), locales)
+        : undefined;
+    if (localized != undefined) {
+        res.vary('Accept-Language');
+        res.redirect(302, localized);
+        return;
+    }
+    next();
+});
 
 // stage is the one environment that is reachable from the internet without being the website. Dev and local are only
 // reachable on the machine of the developer, where they behave like production, so its search engine rating can be checked
 app.get('/robots.txt', (_, res) => {
-    res.type('text/plain').send([
-        'User-agent: *',
-        `${environment.env === 'stage' ? 'Disallow' : 'Allow'}: /`,
-        '',
-{{^aiTraining}}
-        ...TRAINING_CRAWLERS.map(crawler => `User-agent: ${crawler}`),
-        'Disallow: /',
-        '',
+    res.type('text/plain').send(SeoServerUtilities.resolveRobotsTxt({
+        allowed: environment.env !== 'stage',
+{{#aiTraining}}
+        disallowedCrawlers: [],
 {{/aiTraining}}
-        `Sitemap: ${environment.{{=prefix}}_base_url}/sitemap.xml`
-    ].join('\n'));
+{{^aiTraining}}
+        disallowedCrawlers: TRAINING_CRAWLERS,
+{{/aiTraining}}
+        sitemapUrl: `${origin}/sitemap.xml`
+    }));
 });
 
-app.get('/sitemap.xml', (_, res) => {
-    res.type('application/xml').send([
-        '<?xml version="1.0" encoding="UTF-8"?>',
-        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-        ...findPrerenderedPages().map(page => `    <url><loc>${resolveUrl(page.route)}</loc></url>`),
-        '</urlset>'
-    ].join('\n'));
+// every page in every language, however it renders, linked to itself in the other languages. Over 50,000 urls an
+// index of parts
+app.get(/^\/sitemap(-\d+)?\.xml$/, async (req, res, next) => {
+    const file: string | undefined = SeoServerUtilities.resolveSitemapFiles((await findSite()).pages, origin)[req.path];
+    if (file == undefined) {
+        next();
+        return;
+    }
+    res.type('application/xml').send(file);
 });
 
 // what the website is and which pages it has, written for the AI assistants that read it to answer about it, see
-// https://llmstxt.org
-app.get('/llms.txt', (_, res) => {
-    const pages: PrerenderedPage[] = findPrerenderedPages();
-    const home: PrerenderedPage | undefined = pages.find(page => page.route === '/');
-    res.type('text/markdown').send([
-        `# ${home?.title ?? '{{=title}}'}`,
-        '',
-        `> ${home?.description ?? ''}`,
-        '',
-        '## Pages',
-        '',
-        ...pages.map(page => `- [${page.title}](${resolveUrl(page.route)}): ${page.description}`)
-    ].join('\n'));
-});
+// https://llmstxt.org: /llms.txt in the language the website is written in, /<subPath>/llms.txt in each other
+for (const locale of locales) {
+    app.get(locale === locales[0] ? '/llms.txt' : `/${locale.subPath}/llms.txt`, async (_, res) => {
+        res.type('text/markdown').send(SeoServerUtilities.resolveLlmsTxt((await findSite()).pages, locale, locales, origin));
+    });
+}
 
 // the files and prerendered pages the build compressed, in the compression the browser takes. Traefik leaves a response
 // that is compressed already as it is

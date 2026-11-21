@@ -1,14 +1,24 @@
-<h2 class="font-heading text-title">{{ toTenant ? 'Invite to the tenant' : 'Invite to the application' }}</h2>
+@if (toTenant) {
+    <h2 class="font-heading text-title" i18n="@@invitationDialog.headingTenant">Invite to the tenant</h2>
+} @else {
+    <h2 class="font-heading text-title" i18n="@@invitationDialog.headingApplication">Invite to the application</h2>
+}
 <ui-form class="mt-4 grid gap-4" (submit)="invite()">
-    <ui-input-string name="email" type="email" autocomplete="off" label="Email" [(value)]="email" />
-    <ui-input-string name="name" autocomplete="off" label="Name" [(value)]="name" />
-    <ui-input-chips label="Roles" [required]="false" [options]="roleOptions.hasValue() ? roleOptions.value() : []" [(value)]="roles" />
-    <ui-input-select label="Account created" [options]="createOnOptions" [(value)]="createOn" />
-    <ui-input-boolean label="Can be declined" [(value)]="declinable" />
+    <ui-input-string name="email" type="email" autocomplete="off" label="Email" i18n-label="@@invitationDialog.email" [(value)]="email" />
+    <ui-input-string name="name" autocomplete="off" label="Name" i18n-label="@@invitationDialog.name" [(value)]="name" />
+    <ui-input-chips
+        label="Roles"
+        i18n-label="@@invitationDialog.roles"
+        [required]="false"
+        [options]="roleOptions.hasValue() ? roleOptions.value() : []"
+        [(value)]="roles"
+    />
+    <ui-input-select label="Account created" i18n-label="@@invitationDialog.createOn" [options]="createOnOptions" [(value)]="createOn" />
+    <ui-input-boolean label="Can be declined" i18n-label="@@invitationDialog.declinable" [(value)]="declinable" />
     <!-- cancel comes first: the dialog focuses its first button, so pressing enter right away never sends -->
     <div class="flex flex-wrap justify-end gap-2">
-        <button ui-button type="button" variant="text" (click)="dialogRef.close(false)">Cancel</button>
-        <button ui-button type="submit">Invite</button>
+        <button ui-button type="button" variant="text" (click)="dialogRef.close(false)" i18n="@@invitationDialog.cancel">Cancel</button>
+        <button ui-button type="submit" i18n="@@invitationDialog.invite">Invite</button>
     </div>
 </ui-form>
 <div class="mt-4 text-body text-error empty:hidden" role="alert">

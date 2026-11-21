@@ -3,6 +3,7 @@ import { ClientRequest, IncomingMessage, request as httpRequest } from 'node:htt
 import { request as httpsRequest, RequestOptions as HttpsRequestOptions } from 'node:https';
 
 import { UpCommand } from '../../commands/up';
+import { DEV_DOCKER_COMPOSE_FILE_NAME } from '../../constants';
 import { DockerComposeFileName } from '../../docker';
 import { CPUtilities, Path, PathUtilities } from '../../encapsulation';
 import { EnvUtilities, EnvValidationErrorMessage } from '../../env';
@@ -66,8 +67,15 @@ export type RunningProcess = {
     /**
      * Stops the process.
      */
-    stop: () => void
+    stop: () => void,
+    /**
+     * Resolves the last of what the process wrote to stdout and stderr, which tells why it does not answer.
+     */
+    resolveOutput: () => string
 };
+
+// how much of the output of a process a test keeps, the end of it, where the error of a process that stopped is
+const MAX_PROCESS_OUTPUT_LENGTH: number = 5000;
 
 // how long a test waits for a service to answer as expected, such as an image that builds and a database that starts
 const WAIT_TIMEOUT_IN_MS: number = 120_000;
@@ -86,7 +94,8 @@ export abstract class RunningWorkspaceUtilities {
         // what mx up refuses with an exit, which a test would wait for until its timeout, as jest keeps the output open
         const errors: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(PathUtilities.resolve('.'));
         if (errors.length) {
-            throw new Error(`The environment is not valid: ${errors.map(e => `${e.key} ${e.value}`).join(', ')}`);
+            const details: string = errors.map(e => [e.key, e.value].join(' ')).join(', ');
+            throw new Error(`The environment is not valid: ${details}`);
         }
         await new UpCommand()['run']({
             fileName,
@@ -165,10 +174,16 @@ export abstract class RunningWorkspaceUtilities {
      * Sends a request until its answer is the expected one, such as while an image builds or a database starts.
      * @param serviceRequest - Where the request goes.
      * @param isExpected - Whether an answer is the expected one.
+     * @param process - The process that answers, when it is no container.
      * @returns The expected answer.
-     * @throws When the answer is not the expected one in time, with the last answer.
+     * @throws When the answer is not the expected one in time, with the last answer and what the containers of the
+     * workspace and the process did, as the test removes them afterwards.
      */
-    static async waitFor(serviceRequest: ServiceRequest, isExpected: (response: ServiceResponse) => boolean): Promise<ServiceResponse> {
+    static async waitFor(
+        serviceRequest: ServiceRequest,
+        isExpected: (response: ServiceResponse) => boolean,
+        process?: RunningProcess
+    ): Promise<ServiceResponse> {
         const end: number = Date.now() + WAIT_TIMEOUT_IN_MS;
         let response: ServiceResponse = await this.request(serviceRequest);
         while (!isExpected(response) && Date.now() < end) {
@@ -176,11 +191,33 @@ export abstract class RunningWorkspaceUtilities {
             response = await this.request(serviceRequest);
         }
         if (!isExpected(response)) {
-            throw new Error(
-                `${serviceRequest.host}${serviceRequest.path} answered ${response.status} in the end: ${response.body.slice(0, 500)}`
-            );
+            throw new Error([
+                `${serviceRequest.host}${serviceRequest.path} answered ${response.status} in the end: ${response.body.slice(0, 500)}`,
+                process == undefined ? '' : `The process wrote:\n${process.resolveOutput()}`,
+                await this.resolveContainerReport()
+            ].join('\n\n'));
         }
         return response;
+    }
+
+    /**
+     * Resolves the state of the containers of the workspace and what they logged last.
+     * @returns The report, empty when no container of the workspace runs, such as while a test waits for a process.
+     */
+    private static async resolveContainerReport(): Promise<string> {
+        const projectName: string = await this.resolveProjectName();
+        try {
+            if (!await CPUtilities.resolveOutput(`docker compose -p ${projectName} ps -a -q`)) {
+                return '';
+            }
+            return [
+                await CPUtilities.resolveOutput(`docker compose -p ${projectName} ps -a --format "table {{.Service}}\t{{.Status}}"`),
+                await CPUtilities.resolveOutput(`docker compose -p ${projectName} logs --no-color --tail 30`)
+            ].join('\n\n');
+        }
+        catch {
+            return '';
+        }
     }
 
     /**
@@ -205,14 +242,45 @@ export abstract class RunningWorkspaceUtilities {
     }
 
     /**
+     * Starts a built zibri api once in development, against the database of the dev compose file, the way a developer
+     * does before the first release: that records the version it runs in its "versions" folder. Its image is built
+     * with that folder, and only reads it.
+     * @param apiPath - The directory of the api, built.
+     * @param port - The port the api listens on in development.
+     * @param dbServiceName - The compose service of the database of the api.
+     */
+    static async recordZibriVersion(apiPath: Path, port: number, dbServiceName: string): Promise<void> {
+        let api: RunningProcess | undefined;
+        try {
+            await this.up(DEV_DOCKER_COMPOSE_FILE_NAME);
+            // the api stops when its database does not answer yet, like a developer's does. Over tcp, which postgres
+            // only listens on once it ran the scripts of its first start
+            const projectName: string = await this.resolveProjectName();
+            await this.waitForCommand(
+                `docker compose -f ${DEV_DOCKER_COMPOSE_FILE_NAME} -p ${projectName} exec -T ${dbServiceName} pg_isready -h 127.0.0.1`
+            );
+            api = this.startNodeProcess(apiPath, ['dist/bundle.js']);
+            await this.waitFor({ host: 'localhost', path: '/health/ready', port }, response => response.status === 200, api);
+        }
+        finally {
+            api?.stop();
+            await this.down(DEV_DOCKER_COMPOSE_FILE_NAME, true);
+        }
+    }
+
+    /**
      * Starts a process of a project, such as an api in development, which runs until it is stopped.
      * @param projectPath - The directory of the project, which the process runs in.
      * @param args - The arguments of node, such as the file of the api.
      * @returns The running process.
      */
     static startNodeProcess(projectPath: Path, args: string[]): RunningProcess {
-        const process: ChildProcess = spawn(globalThis.process.execPath, args, { cwd: projectPath, stdio: 'ignore' });
-        return { stop: () => process.kill() };
+        const process: ChildProcess = spawn(globalThis.process.execPath, args, { cwd: projectPath, stdio: ['ignore', 'pipe', 'pipe'] });
+        let output: string = '';
+        const keep: (chunk: Buffer) => void = chunk => output = (output + chunk.toString()).slice(-MAX_PROCESS_OUTPUT_LENGTH);
+        process.stdout?.on('data', keep);
+        process.stderr?.on('data', keep);
+        return { stop: () => process.kill(), resolveOutput: () => output };
     }
 
     private static async resolveProjectName(): Promise<string> {

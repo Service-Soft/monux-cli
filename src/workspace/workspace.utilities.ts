@@ -137,7 +137,8 @@ export abstract class WorkspaceUtilities {
     }
 
     private static async getApps(rootDir: string): Promise<WorkspaceProject[]> {
-        const dirs: Dirent[] = (await FsUtilities.readdir(PathUtilities.resolve(rootDir, APPS_DIRECTORY_NAME))).filter(d => d.isDirectory());
+        const entries: Dirent[] = await FsUtilities.readdir(PathUtilities.resolve(rootDir, APPS_DIRECTORY_NAME));
+        const dirs: Dirent[] = entries.filter(d => d.isDirectory());
         return dirs.map(d => {
             const res: WorkspaceProject = {
                 name: d.name,
@@ -149,7 +150,8 @@ export abstract class WorkspaceUtilities {
     }
 
     private static async getLibs(rootDir: string): Promise<WorkspaceProject[]> {
-        const dirs: Dirent[] = (await FsUtilities.readdir(PathUtilities.resolve(rootDir, LIBS_DIRECTORY_NAME))).filter(d => d.isDirectory());
+        const entries: Dirent[] = await FsUtilities.readdir(PathUtilities.resolve(rootDir, LIBS_DIRECTORY_NAME));
+        const dirs: Dirent[] = entries.filter(d => d.isDirectory());
         return dirs.map(d => {
             const res: WorkspaceProject = {
                 name: d.name,

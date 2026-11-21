@@ -17,7 +17,7 @@ describe('AddAngularWebsiteCommand', () => {
             port: 4200,
             subDomain: undefined,
             title: 'Shop',
-            language: 'en',
+            languages: ['en', 'de'],
             trackings: ['googleAnalytics'],
             aiTraining: false
         }));
@@ -38,30 +38,62 @@ describe('AddAngularWebsiteCommand', () => {
         const stageCompose: string = await FsUtilities.readFile(mockConstants.STAGE_DOCKER_COMPOSE_YAML);
         expect(stageCompose).toContain('NG_ALLOWED_HOSTS: ${stage_root_domain},www.${stage_root_domain}');
 
+        // every text marked for translation, in the translation of the other language, which shows them in english
+        // until someone translates them
+        const translation: string = await FsUtilities.readFile(PathUtilities.resolve(websitePath, 'src', 'locale', 'messages.de.xlf'));
+        expect(translation).toContain('target-language="de"');
+        expect(translation).toMatch(/<trans-unit id="imprint.heading"[^>]*>\s*<source>Imprint<\/source>\s*<target state="new">Imprint<\/target>/);
+        // and the ones of the libraries, like the consent dialog of ngx-tracking
+        expect(translation).toContain('<trans-unit id="ngx-tracking.consent.title"');
+
         await GeneratedProjectUtilities.validate('website');
 
+        // a build of each language, below its code
         const browser: Path = PathUtilities.resolve(websitePath, 'dist', 'website', 'browser');
-        const prerendered: string = await FsUtilities.readFile(PathUtilities.resolve(browser, 'imprint', 'index.html'));
+        const prerendered: string = await FsUtilities.readFile(PathUtilities.resolve(browser, 'en', 'imprint', 'index.html'));
         expect(prerendered).toContain('<title>Imprint | Shop</title>');
         expect(prerendered).toContain('<meta name="description" content="Who runs Shop, and how to reach them.">');
-        const home: string = await FsUtilities.readFile(PathUtilities.resolve(browser, 'index.html'));
+        expect(prerendered).toContain('<link rel="canonical" href="http://localhost:4200/en/imprint">');
+        // the page in the other language, and its url without one, which redirects by the language of the visitor
+        expect(prerendered).toContain('<link rel="alternate" hreflang="de" href="http://localhost:4200/de/imprint">');
+        expect(prerendered).toContain('<link rel="alternate" hreflang="x-default" href="http://localhost:4200/imprint">');
+        const home: string = await FsUtilities.readFile(PathUtilities.resolve(browser, 'en', 'index.html'));
         expect(home).toMatch(/<script type="application\/ld\+json"[^>]*>\{"@context":"https:\/\/schema.org","@type":"WebSite","name":"Shop"/);
-        expect(prerendered).toContain('<link rel="canonical" href="http://localhost:4200/imprint">');
+        expect(home).toContain('ngx-language-switcher');
+        const germanHome: string = await FsUtilities.readFile(PathUtilities.resolve(browser, 'de', 'index.html'));
+        expect(germanHome).toContain('<html lang="de"');
+        expect(germanHome).toContain('"inLanguage":"de"');
+        expect(germanHome).toContain('<link rel="canonical" href="http://localhost:4200/de">');
 
         // the goals of the website, measured on the build its docker image runs
         // on the port of development, which the canonical urls of a build for development name
         const website: RunningWebsite = await WebsiteUtilities.start(websitePath, 'website', 4200);
         try {
             const sitemap: string = await (await fetch(`${website.url}/sitemap.xml`)).text();
-            expect(sitemap).toContain('<url><loc>http://localhost:4200/imprint</loc></url>');
+            expect(sitemap).toContain('<loc>http://localhost:4200/en/imprint</loc>');
+            expect(sitemap).toContain('<loc>http://localhost:4200/de/imprint</loc>');
+            expect(sitemap).toContain('<xhtml:link rel="alternate" hreflang="x-default" href="http://localhost:4200/imprint"/>');
             const llms: string = await (await fetch(`${website.url}/llms.txt`)).text();
-            expect(llms).toContain('- [Imprint | Shop](http://localhost:4200/imprint): Who runs Shop, and how to reach them.');
-            expect((await fetch(`${website.url}/unknown`)).status).toBe(404);
+            expect(llms).toContain('- [Imprint | Shop](http://localhost:4200/en/imprint): Who runs Shop, and how to reach them.');
+            expect(llms).toContain('- [de](http://localhost:4200/de/llms.txt)');
+            expect(await (await fetch(`${website.url}/de/llms.txt`)).text()).toContain('(http://localhost:4200/de/imprint)');
+            expect((await fetch(`${website.url}/en/unknown`)).status).toBe(404);
 
-            expect(await WebsiteUtilities.findThirdPartyRequests(website.url)).toEqual([]);
+            // each page has one url: below its language, which an url without one redirects to by the browser's language
+            const withoutLanguage: Response = await fetch(`${website.url}/imprint?from=search`, {
+                redirect: 'manual',
+                headers: { 'Accept-Language': 'de-AT,de;q=0.9,en;q=0.8' }
+            });
+            expect([withoutLanguage.status, withoutLanguage.headers.get('location')]).toEqual([302, '/de/imprint?from=search']);
+            expect(withoutLanguage.headers.get('vary')).toContain('Accept-Language');
+            const withSlash: Response = await fetch(`${website.url}/en/imprint/`, { redirect: 'manual' });
+            expect([withSlash.status, withSlash.headers.get('location')]).toEqual([301, '/en/imprint']);
+
+            const page: string = `${website.url}/en`;
+            expect(await WebsiteUtilities.findThirdPartyRequests(page)).toEqual([]);
             // a new visitor sees the page first, and has to decide as soon as they do anything with it
-            expect(await WebsiteUtilities.resolveConsentDialog(website.url)).toEqual({ openOnLoad: false, openAfterInteraction: true });
-            const rating: LighthouseRating = await WebsiteUtilities.resolveLighthouseRating(website.url);
+            expect(await WebsiteUtilities.resolveConsentDialog(page)).toEqual({ openOnLoad: false, openAfterInteraction: true });
+            const rating: LighthouseRating = await WebsiteUtilities.resolveLighthouseRating(page);
             // the audits first, so a failure says what to fix
             expect(rating.failedAudits).toEqual([]);
             expect(rating.scores).toEqual({ performance: 1, accessibility: 1, seo: 1 });
@@ -74,7 +106,7 @@ describe('AddAngularWebsiteCommand', () => {
         try {
             await RunningWorkspaceUtilities.up(LOCAL_DOCKER_COMPOSE_FILE_NAME);
             const local: ServiceResponse = await RunningWorkspaceUtilities.waitFor(
-                { host: 'localhost', path: '/', port: 80 },
+                { host: 'localhost', path: '/en', port: 80 },
                 response => response.status === 200
             );
             expect(local.body).toContain('Shop</h1>');

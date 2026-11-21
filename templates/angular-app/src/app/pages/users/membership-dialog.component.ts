@@ -61,7 +61,9 @@ export class MembershipDialogComponent {
             this.dialogRef.close(true);
         }
         catch (error) {
-            this.errorParagraphs.set(AuthErrorUtilities.findErrorParagraphs(error) ?? ['The roles could not be saved.']);
+            this.errorParagraphs.set(
+                AuthErrorUtilities.findErrorParagraphs(error) ?? [$localize`:@@membershipDialog.failed:The roles could not be saved.`]
+            );
         }
     }
 }

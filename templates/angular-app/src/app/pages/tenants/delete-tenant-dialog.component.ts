@@ -30,6 +30,8 @@ export class DeleteTenantDialogComponent implements OnDestroy {
 
     protected readonly dialogRef: DialogRef = inject(DialogRef);
 
+    protected readonly confirmLabel: string = $localize`:@@deleteTenant.confirmLabel:Type ${this.tenant.name}:name: to confirm`;
+
     protected readonly typedName: WritableSignal<string> = signal('');
 
     protected readonly deletion: WritableSignal<TenantDeletion | undefined> = signal(undefined);
@@ -49,7 +51,9 @@ export class DeleteTenantDialogComponent implements OnDestroy {
             this.interval = setInterval(() => void this.follow(), PROGRESS_INTERVAL_IN_MS);
         }
         catch (error) {
-            this.errorParagraphs.set(AuthErrorUtilities.findErrorParagraphs(error) ?? ['The tenant could not be deleted.']);
+            this.errorParagraphs.set(
+                AuthErrorUtilities.findErrorParagraphs(error) ?? [$localize`:@@deleteTenant.failed:The tenant could not be deleted.`]
+            );
         }
     }
 

@@ -6,7 +6,7 @@ import { WorkspaceConfig, WorkspaceUtilities } from '../workspace';
 import { ComposeBuild, ComposeDefinition, ComposePort, ComposeService, ComposeServiceEnvironment } from './compose-file.model';
 import { DockerComposeFileName, dockerComposeFileNames } from './docker-compose-file-name.model';
 import { DockerLabel } from './docker-labels.enum';
-import { DockerTraefikUtilities, TRAEFIK_BASE_DOCKER_COMMANDS, TRAEFIK_CERT_RESOLVER, TRAEFIK_DOCKER_IMAGE, TRAEFIK_DOCKER_SOCK_VOLUME, TRAEFIK_SECURE_ENTRYPOINT } from './docker-traefik.utilities';
+import { DockerTraefikUtilities, TRAEFIK_BASE_DOCKER_COMMANDS, TRAEFIK_BASIC_AUTH_VOLUME, TRAEFIK_CERT_RESOLVER, TRAEFIK_CERTIFICATES_VOLUME, TRAEFIK_CERTIFICATES_VOLUME_NAME, TRAEFIK_DOCKER_IMAGE, TRAEFIK_DOCKER_SOCK_VOLUME, TRAEFIK_SECURE_ENTRYPOINT } from './docker-traefik.utilities';
 import { ParsedDockerCompose, ParsedDockerComposeEnvironment, ParsedDockerComposeService, ParsedDockerComposeServiceNetwork } from './parsed-docker-compose.model';
 import { FullyParsedDockerService, isFullyParsedDockerService, StringifiedDockerService, StringifiedDockerServiceWithParsedLabels } from './stringified-docker-service.model';
 
@@ -169,30 +169,14 @@ export abstract class DockerUtilities {
                         }
                     ],
                     volumes: [
-                        './config:/config',
-                        './letsencrypt:/letsencrypt',
-                        TRAEFIK_DOCKER_SOCK_VOLUME
-                    ],
-                    environment: [
-                        {
-                            key: DefaultEnvKeys.BASIC_AUTH_USER,
-                            value: `\${${DefaultEnvKeys.BASIC_AUTH_USER}}`
-                        },
-                        {
-                            key: DefaultEnvKeys.BASIC_AUTH_PASSWORD,
-                            value: `\${${DefaultEnvKeys.BASIC_AUTH_PASSWORD}}`
-                        }
-                    ],
-                    entrypoint: [
-                        '/bin/sh',
-                        '-c',
-                        // eslint-disable-next-line stylistic/max-len
-                        `htpasswd -nbB "$$${DefaultEnvKeys.BASIC_AUTH_USER}" "$$${DefaultEnvKeys.BASIC_AUTH_PASSWORD}" > /config/.htpasswd && exec traefik`
+                        TRAEFIK_CERTIFICATES_VOLUME,
+                        TRAEFIK_DOCKER_SOCK_VOLUME,
+                        TRAEFIK_BASIC_AUTH_VOLUME
                     ],
                     labels: []
                 }
             ],
-            volumes: [],
+            volumes: [TRAEFIK_CERTIFICATES_VOLUME_NAME],
             networks: []
         };
         const yaml: string[] = this.composeDefinitionToYaml(compose);
@@ -226,13 +210,13 @@ export abstract class DockerUtilities {
                         }
                     ],
                     volumes: [
-                        './letsencrypt:/letsencrypt',
+                        TRAEFIK_CERTIFICATES_VOLUME,
                         TRAEFIK_DOCKER_SOCK_VOLUME
                     ],
                     labels: []
                 }
             ],
-            volumes: [],
+            volumes: [TRAEFIK_CERTIFICATES_VOLUME_NAME],
             networks: []
         };
         const yaml: string[] = this.composeDefinitionToYaml(compose);
@@ -454,8 +438,8 @@ export abstract class DockerUtilities {
     }
 
     /**
-     *
-     * @param volume
+     * Adds a named volume to every compose file of the workspace.
+     * @param volume - The name of the volume.
      */
     static async addVolumeToComposeFiles(volume: string): Promise<void> {
         await Promise.all(dockerComposeFileNames.map(d => this.addVolumeToCompose(volume, d)));
@@ -609,8 +593,9 @@ export abstract class DockerUtilities {
     }
 
     private static parseServicePort(portStr: string): ComposePort {
-        const [external, internal] = portStr.split(':').map(Number);
-        return { internal: internal ?? external, external };
+        // a single port is the same inside and outside of the container
+        const [external, internal = external] = portStr.split(':').map(Number);
+        return { internal, external };
     }
 
     private static parseServiceNetworks(networks: ParsedDockerComposeServiceNetwork | undefined): string[] | undefined {

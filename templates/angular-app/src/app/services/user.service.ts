@@ -33,7 +33,7 @@ export class UserService extends EntityService<User, typeof USER_FILTER> {
 
     // what the sync dialog shows of a change made offline
     override getLabel(user: Partial<User>): string {
-        return user.name ?? user.email ?? 'New user';
+        return user.name ?? user.email ?? $localize`:@@user.new:New user`;
     }
 
     /**

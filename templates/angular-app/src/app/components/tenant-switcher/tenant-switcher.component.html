@@ -1,14 +1,14 @@
 <!-- named by what it is for and the tenant it shows, so a voice command with what it shows hits it -->
 <button ui-button type="button" variant="text" [uiMenuTrigger]="menu">
     <ui-icon [icon]="icon" />
-    <span class="sr-only">Tenant: </span>{{ current()?.name ?? 'Choose a tenant' }}
+    <span class="sr-only" i18n="@@tenantSwitcher.tenant">Tenant: </span>{{ current()?.name ?? chooseLabel }}
 </button>
 <ui-menu #menu>
     @for (choice of choices(); track choice.id) {
         <!-- the check marks the current tenant by more than its color. The others keep its space, so the names line up -->
         <ui-menu-item (click)="choose(choice.id)">
             @if (choice.isCurrent) {
-                <ui-icon [icon]="currentIcon" /><span class="sr-only">Current: </span>
+                <ui-icon [icon]="currentIcon" /><span class="sr-only" i18n="@@tenantSwitcher.current">Current: </span>
             } @else {
                 <span class="inline-block size-[1.25em] shrink-0"></span>
             }

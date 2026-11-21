@@ -17,7 +17,8 @@ describe('GeneratePageCommand', () => {
             port: 4200,
             subDomain: undefined,
             title: 'Shop',
-            language: 'en',
+            // one language, at the root, as before a website had more
+            languages: ['en'],
             trackings: [],
             aiTraining: false,
             projectName: 'website',
@@ -38,6 +39,10 @@ describe('GeneratePageCommand', () => {
             .toBe(true);
         expect(await FsUtilities.readFile(PathUtilities.resolve(websitePath, 'src', 'app', 'app.component.ts')))
             .toContain('{ title: NavTitleComponent, link: NavLinkComponent }');
+        // its texts, ready for a translation once the website has another language
+        const texts: string = await FsUtilities.readFile(PathUtilities.resolve(websitePath, 'src', 'locale', 'messages.xlf'));
+        expect(texts).toContain('<trans-unit id="about-us.heading"');
+        expect(texts).toContain('<trans-unit id="about-us.title"');
 
         await GeneratedProjectUtilities.validate('website');
 

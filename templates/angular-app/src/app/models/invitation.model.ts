@@ -6,40 +6,40 @@ import { InvitationData } from '{{=contractPackage}}';
  * InvitationDialogComponent, and the api never changes it.
  */
 export class Invitation implements InvitationData {
-    @Property.string({ displayName: 'Id', format: 'uuid', readonly: true, display: false })
+    @Property.string({ displayName: $localize`:@@invitation.id:Id`, format: 'uuid', readonly: true, display: false })
     id!: string;
 
-    @Property.string({ displayName: 'Email', format: 'email' })
+    @Property.string({ displayName: $localize`:@@invitation.email:Email`, format: 'email' })
     email!: string;
 
-    @Property.string({ displayName: 'Name' })
+    @Property.string({ displayName: $localize`:@@invitation.name:Name` })
     name!: string;
 
-    @Property.array({ displayName: 'Roles', items: { type: 'string' } })
+    @Property.array({ displayName: $localize`:@@invitation.roles:Roles`, items: { type: 'string' } })
     roles!: string[];
 
-    @Property.string({ displayName: 'Tenant id', format: 'uuid', required: false, display: false })
+    @Property.string({ displayName: $localize`:@@invitation.tenantId:Tenant id`, format: 'uuid', required: false, display: false })
     tenantId?: string | null;
 
     // empty for an invitation to the application only
-    @Property.string({ displayName: 'Tenant', required: false })
+    @Property.string({ displayName: $localize`:@@invitation.tenantName:Tenant`, required: false })
     tenantName?: string | null;
 
-    @Property.string({ displayName: 'Account created', enum: { invite: 'When invited', accept: 'When accepted' } })
+    @Property.string({ displayName: $localize`:@@invitation.createOn:Account created`, enum: { invite: $localize`:@@invitation.createOn.invite:When invited`, accept: $localize`:@@invitation.createOn.accept:When accepted` } })
     createOn!: 'invite' | 'accept';
 
-    @Property.boolean({ displayName: 'Can be declined' })
+    @Property.boolean({ displayName: $localize`:@@invitation.declinable:Can be declined` })
     declinable!: boolean;
 
-    @Property.string({ displayName: 'Invited by', format: 'uuid', display: false })
+    @Property.string({ displayName: $localize`:@@invitation.invitedBy:Invited by`, format: 'uuid', display: false })
     invitedBy!: string;
 
-    @Property.date({ displayName: 'Link works until' })
+    @Property.date({ displayName: $localize`:@@invitation.tokenExpiresAt:Link works until` })
     tokenExpiresAt!: Date;
 
-    @Property.date({ displayName: 'Ends', required: false })
+    @Property.date({ displayName: $localize`:@@invitation.expiresAt:Ends`, required: false })
     expiresAt?: Date | null;
 
-    @Property.string({ displayName: 'Created account', format: 'uuid', required: false, display: false })
+    @Property.string({ displayName: $localize`:@@invitation.createdUserId:Created account`, format: 'uuid', required: false, display: false })
     createdUserId?: string | null;
 }

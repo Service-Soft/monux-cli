@@ -38,6 +38,13 @@ const variables: Record<string, string | undefined> = {
 };
 
 /**
+ * Whether the api sends its mails, which it does where it is deployed. On the machine of a developer, in development
+ * and from the images of the local compose file, it logs them instead: no mail server is there, and their links lead
+ * to localhost.
+ */
+export const SENDS_MAILS: boolean = environment.env === 'stage' || environment.env === 'prod';
+
+/**
  * Reads a variable the application cannot run without.
  * @param key - The name of the variable.
  * @returns Its value.

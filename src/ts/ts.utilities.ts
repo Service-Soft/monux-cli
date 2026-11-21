@@ -312,6 +312,8 @@ export abstract class TsUtilities {
         if (imp.defaultImport) {
             return existingImport.replace('{', `${imp.element}, {`);
         }
-        return existingImport.includes('{') ? existingImport.replace('import {', `import { ${imp.element},`) : existingImport.replace('import ', `import { ${imp.element} }, `);
+        return existingImport.includes('{')
+            ? existingImport.replace('import {', `import { ${imp.element},`)
+            : existingImport.replace('import ', `import { ${imp.element} }, `);
     }
 }

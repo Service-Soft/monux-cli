@@ -4,6 +4,7 @@ import { provideRouter, withInMemoryScrolling } from '@angular/router';
 import { provideSeoConfig } from '@service-soft/ngx-navigation/seo';
 
 import { routes } from './app.routes';
+import { locales } from './languages';
 {{#tracking}}
 import { provideTracking } from './tracking.provider';
 {{/tracking}}
@@ -19,7 +20,8 @@ export const appConfig: ApplicationConfig = {
         provideTracking(),
 {{/tracking}}
         // what each page tells search engines and AI assistants about itself, from the data of its route: its
-        // description, canonical url, structured data and the preview of a shared link, in the prerendered html too
-        provideSeoConfig({ origin: environment.{{=prefix}}_base_url })
+        // description, canonical url, structured data, the preview of a shared link and the page in the other
+        // languages, in the prerendered html too. On the server, it hands server.ts the pages for the sitemap
+        provideSeoConfig({ origin: environment.{{=prefix}}_base_url, locales })
     ]
 };

@@ -33,8 +33,8 @@ describe('AppComponent', () => {
         expect(router.parseUrl(router.url).queryParams).toEqual({ returnUrl: '/account' });
         expect(router.url.startsWith('/login')).toBe(true);
         expect(page.querySelector('input[type="email"]')).not.toBeNull();
-        // the navbar shows only the title to somebody who is not logged in
-        expect([...page.querySelectorAll('header a')].map(a => a.getAttribute('href'))).toEqual(['/']);
+        // the navbar shows only the title to somebody who is not logged in, next to the languages of the language switcher
+        expect([...page.querySelectorAll('header a:not([hreflang])')].map(a => a.getAttribute('href'))).toEqual(['/']);
     });
 
     it('opens the link of an invitation without a login', async () => {
