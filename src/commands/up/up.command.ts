@@ -1,7 +1,8 @@
-import { CLI_BASE_COMMAND, ENV_FILE_NAME, ENV_PUBLIC_FILE_NAME } from '../../constants';
+import { CLI_BASE_COMMAND, DEV_DOCKER_COMPOSE_FILE_NAME, ENV_FILE_NAME, ENV_PUBLIC_FILE_NAME } from '../../constants';
 import { DockerComposeFileName, DockerUtilities, FullyParsedDockerService } from '../../docker';
 import { CPUtilities, InquirerUtilities, ProcessUtilities, PathUtilities } from '../../encapsulation';
 import { WorkspaceUtilities } from '../../workspace';
+import { UnrecordedZibriVersion, ZibriUtilities } from '../../zibri';
 import { BaseCommand } from '../base-command.model';
 import { PrepareCommand, prepareConfigQuestions } from '../prepare';
 import { UpConfiguration } from './up-configuration.model';
@@ -16,9 +17,29 @@ export class UpCommand extends BaseCommand<UpConfiguration> {
 
     protected override async run(input: UpConfiguration): Promise<void> {
         await new PrepareCommand()['run'](input);
+        await this.validateZibriVersions(input);
         const dockerFile: string = input.dockerFilePath ?? input.fileName;
         const options: string = `-f ${dockerFile} -p ${input.projectName} --env-file ${ENV_FILE_NAME} --env-file ${ENV_PUBLIC_FILE_NAME}`;
         await CPUtilities.exec(`docker compose ${options} up --build -d`);
+    }
+
+    /**
+     * Refuses to start the images of zibri apis that would stop right away, as their "versions" folder does not record
+     * the version they run. In development the api runs on the machine and records it itself.
+     * @param input - What to start.
+     */
+    private async validateZibriVersions(input: UpConfiguration): Promise<void> {
+        if (input.fileName === DEV_DOCKER_COMPOSE_FILE_NAME) {
+            return;
+        }
+        const unrecorded: UnrecordedZibriVersion[] = await ZibriUtilities.findUnrecordedVersions(input.rootDir);
+        if (unrecorded.length) {
+            await ProcessUtilities.exitWithError(
+                unrecorded.map(u => `The "versions" folder of ${u.project} does not record its version ${u.version} as the latest.`)
+                    .join('\n')
+                    + '\nIts image only reads the record. Start it once in development, which records the version, and commit the folder.'
+            );
+        }
     }
 
     protected override async validate(args: string[]): Promise<void> {

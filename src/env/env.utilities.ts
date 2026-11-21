@@ -66,9 +66,15 @@ export type CalculatedEnvVariable = OmitStrict<EnvVariable, 'value'> & {
 export enum EnvValidationErrorMessage {
     FILE_DOES_NOT_EXIST = 'File does not exist',
     REQUIRED = 'should not be empty',
+    REQUIRED_WHERE_DEPLOYED = 'should not be empty on stage and prod',
     NUMBER = 'should be a valid number',
     BOOLEAN = 'should be a valid boolean'
 }
+
+// the optional variables a workspace that defines them needs where it is deployed, and a machine of a developer does
+// without: the mail server, which a zibri api sends its mails with only on stage and prod, see SENDS_MAILS in its env.ts.
+// Its user and password stay optional, as a mail server may take mails without them
+const REQUIRED_WHERE_DEPLOYED_KEYS: EnvironmentVariableKey[] = [DefaultEnvKeys.WEBSERVER_MAIL_HOST, DefaultEnvKeys.WEBSERVER_MAIL_PORT];
 
 /**
  * Provides functionality around handling environment variables.
@@ -560,11 +566,13 @@ export abstract class EnvUtilities {
     }
 
     /**
-     * Validates the .env files.
+     * Validates the .env files for the environment of a docker compose file.
      * @param rootDir - The directory of the Monux monorepo.
+     * @param fileName - The docker compose file the environment is for, as stage and prod need more than the others.
      * @returns An array of error messages mapped to the keys that caused them.
      */
-    static async validate(rootDir: string): Promise<KeyValue<EnvValidationErrorMessage>[]> {
+    static async validate(rootDir: string, fileName: DockerComposeFileName): Promise<KeyValue<EnvValidationErrorMessage>[]> {
+        const isDeployment: boolean = fileName === STAGE_DOCKER_COMPOSE_FILE_NAME || fileName === PROD_DOCKER_COMPOSE_FILE_NAME;
         if (!await FsUtilities.exists(PathUtilities.resolve(rootDir, ENV_FILE_NAME))) {
             return [
                 {
@@ -592,25 +600,35 @@ export abstract class EnvUtilities {
         const res: KeyValue<EnvValidationErrorMessage>[] = [];
         for (const d of staticVariableDefinitions) {
             const foundValue: EnvValue | undefined = envValues.find(v => v.key === d.key)?.value;
-            const isEmpty: boolean = foundValue == undefined || foundValue === '' || foundValue === 'undefined';
-            if (d.required && isEmpty) {
-                res.push({ key: d.key, value: EnvValidationErrorMessage.REQUIRED });
-                continue;
-            }
-            // an optional variable without a value, like the mail server of a workspace that sends no mails, has no
-            // type to check
-            if (isEmpty) {
-                continue;
-            }
-            if (d.type === 'number' && typeof foundValue !== 'number') {
-                res.push({ key: d.key, value: EnvValidationErrorMessage.NUMBER });
-                continue;
-            }
-            if (d.type === 'boolean' && typeof foundValue !== 'boolean') {
-                res.push({ key: d.key, value: EnvValidationErrorMessage.BOOLEAN });
+            const error: EnvValidationErrorMessage | undefined = this.resolveValidationError(d, foundValue, isDeployment);
+            if (error != undefined) {
+                res.push({ key: d.key, value: error });
             }
         }
         return res;
+    }
+
+    private static resolveValidationError(
+        definition: OmitStrict<EnvVariable, 'value'>,
+        value: EnvValue | undefined,
+        isDeployment: boolean
+    ): EnvValidationErrorMessage | undefined {
+        const isEmpty: boolean = value == undefined || value === '' || value === 'undefined';
+        if (definition.required && isEmpty) {
+            return EnvValidationErrorMessage.REQUIRED;
+        }
+        if (isDeployment && isEmpty && REQUIRED_WHERE_DEPLOYED_KEYS.includes(definition.key)) {
+            return EnvValidationErrorMessage.REQUIRED_WHERE_DEPLOYED;
+        }
+        // an optional variable without a value, like the mail server of a workspace that sends no mails, has no
+        // type to check
+        if (isEmpty) {
+            return undefined;
+        }
+        if (definition.type === 'number' && typeof value !== 'number') {
+            return EnvValidationErrorMessage.NUMBER;
+        }
+        return definition.type === 'boolean' && typeof value !== 'boolean' ? EnvValidationErrorMessage.BOOLEAN : undefined;
     }
 
     private static async getVariableDefinitions(

@@ -1,5 +1,33 @@
-import { CPUtilities, Path } from '../encapsulation';
-import { WorkspaceConfig, WorkspaceUtilities } from '../workspace';
+import { AddType } from '../commands/add/models/add-type.enum';
+import { PACKAGE_JSON_FILE_NAME } from '../constants';
+import { CPUtilities, FsUtilities, Path, PathUtilities } from '../encapsulation';
+import { PackageJson } from '../npm';
+import { WorkspaceConfig, WorkspaceProject, WorkspaceUtilities } from '../workspace';
+
+/**
+ * A zibri api whose image does not start: its "versions" folder does not record the version it runs as the latest.
+ * Zibri writes the record when it starts in development, and only reads it in production.
+ */
+export type UnrecordedZibriVersion = {
+    /**
+     * The name of the api.
+     */
+    project: string,
+    /**
+     * The version of its package.json, which the record lacks.
+     */
+    version: string
+};
+
+/**
+ * What zibri records of a version, in "versions/<version>.json", as far as Monux reads it.
+ */
+type ZibriVersionRecord = {
+    /**
+     * When the version stopped being the latest. Unset for the latest.
+     */
+    endsAt?: string
+};
 
 /**
  * The optional parts of a zibri project, as "zi new" offers them.
@@ -19,6 +47,31 @@ export abstract class ZibriUtilities {
     // the zibri a workspace is generated with is the one the tests of Monux generated. The templates in templates/zibri
     // edit what its "zi new" writes, so a new version needs the add-zibri and add-angular tests to pass first
     private static readonly CLI_VERSION: string = '3.2.0';
+
+    /**
+     * Finds the zibri apis of the workspace whose image does not start, as their "versions" folder does not record the
+     * version of their package.json as the latest.
+     * @param rootDir - The directory of the workspace.
+     * @returns The apis, with the version their record lacks.
+     */
+    static async findUnrecordedVersions(rootDir: string): Promise<UnrecordedZibriVersion[]> {
+        const res: UnrecordedZibriVersion[] = [];
+        const apps: WorkspaceProject[] = await WorkspaceUtilities.getProjects('apps', rootDir);
+        for (const app of apps) {
+            if (await WorkspaceUtilities.findProjectType(app.name, rootDir) !== AddType.ZIBRI) {
+                continue;
+            }
+            const { version = '' } = await FsUtilities.parseFileAs<PackageJson>(PathUtilities.resolve(app.path, PACKAGE_JSON_FILE_NAME));
+            const recordPath: Path = PathUtilities.resolve(app.path, 'versions', `${version}.json`);
+            const record: ZibriVersionRecord | undefined = await FsUtilities.exists(recordPath)
+                ? await FsUtilities.parseFileAs<ZibriVersionRecord>(recordPath)
+                : undefined;
+            if (record == undefined || record.endsAt != undefined) {
+                res.push({ project: app.name, version });
+            }
+        }
+        return res;
+    }
 
     /**
      * Creates a zibri project inside the given directory, without asking anything.

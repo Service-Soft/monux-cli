@@ -30,7 +30,7 @@ export class PrepareCommand extends BaseCommand<PrepareConfig> {
     }
 
     private async buildEnv(fileName: DockerComposeFileName, rootDir: string): Promise<void> {
-        const validationErrors: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(rootDir);
+        const validationErrors: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(rootDir, fileName);
         if (validationErrors.length) {
             await ProcessUtilities.exitWithError(
                 'The environment is not valid:\n'

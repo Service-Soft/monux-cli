@@ -4,6 +4,7 @@ import { FileMockUtilities, GeneratedProjectUtilities, getMockConstants, inquire
 import { LOCAL_DOCKER_COMPOSE_FILE_NAME } from '../../../constants';
 import { DbType } from '../../../db';
 import { FsUtilities, InquirerUtilities, Path, PathUtilities } from '../../../encapsulation';
+import { ZibriUtilities } from '../../../zibri';
 import { AddConfiguration, AddType } from '../models';
 import { AddZibriCommand } from './add-zibri.command';
 
@@ -68,10 +69,11 @@ describe('AddZibriCommand', () => {
 
         await GeneratedProjectUtilities.validate('api');
 
-        // started once in development, the api records the version it runs, which its image only reads
+        // its image only reads the record of the version it runs, which mx up checks before it starts it. Started once
+        // in development, the api records it
+        expect(await ZibriUtilities.findUnrecordedVersions(PathUtilities.resolve('.'))).toEqual([{ project: 'api', version: '1.0.0' }]);
         await RunningWorkspaceUtilities.recordZibriVersion(apiPath, 3000, 'db');
-        const versions: string[] = await FsUtilities.findFilesRecursive(PathUtilities.resolve(apiPath, 'versions'));
-        expect(versions.filter(f => f.endsWith('.json'))).toHaveLength(1);
+        expect(await ZibriUtilities.findUnrecordedVersions(PathUtilities.resolve('.'))).toEqual([]);
 
         // locally the api runs from its image, behind traefik, and is ready once it reached its database
         try {

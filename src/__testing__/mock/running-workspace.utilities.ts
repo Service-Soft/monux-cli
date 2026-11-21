@@ -9,6 +9,7 @@ import { CPUtilities, Path, PathUtilities } from '../../encapsulation';
 import { EnvUtilities, EnvValidationErrorMessage } from '../../env';
 import { KeyValue } from '../../types';
 import { WorkspaceUtilities } from '../../workspace';
+import { UnrecordedZibriVersion, ZibriUtilities } from '../../zibri';
 
 /**
  * What a service of a running workspace answered.
@@ -92,10 +93,17 @@ export abstract class RunningWorkspaceUtilities {
      */
     static async up(fileName: DockerComposeFileName): Promise<void> {
         // what mx up refuses with an exit, which a test would wait for until its timeout, as jest keeps the output open
-        const errors: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(PathUtilities.resolve('.'));
+        const errors: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(PathUtilities.resolve('.'), fileName);
         if (errors.length) {
             const details: string = errors.map(e => [e.key, e.value].join(' ')).join(', ');
             throw new Error(`The environment is not valid: ${details}`);
+        }
+        const unrecorded: UnrecordedZibriVersion[] = fileName === DEV_DOCKER_COMPOSE_FILE_NAME
+            ? []
+            : await ZibriUtilities.findUnrecordedVersions(PathUtilities.resolve('.'));
+        if (unrecorded.length) {
+            const details: string = unrecorded.map(u => [u.project, u.version].join(' ')).join(', ');
+            throw new Error(`The versions of zibri apis are not recorded: ${details}`);
         }
         await new UpCommand()['run']({
             fileName,

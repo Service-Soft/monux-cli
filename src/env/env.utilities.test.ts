@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from '@jest/globals';
 
 import { fakeEnvVariable, FileMockUtilities, getMockConstants, MockConstants } from '../__testing__';
 import { AddType } from '../commands/add/models/add-type.enum';
-import { GLOBAL_ENVIRONMENT_MODEL_FILE_NAME } from '../constants';
+import { GLOBAL_ENVIRONMENT_MODEL_FILE_NAME, LOCAL_DOCKER_COMPOSE_FILE_NAME, STAGE_DOCKER_COMPOSE_FILE_NAME } from '../constants';
 import { FsUtilities, PathUtilities, Path } from '../encapsulation';
 import { KeyValue } from '../types';
 import { WorkspaceUtilities } from '../workspace';
@@ -219,21 +219,21 @@ describe('EnvUtilities', () => {
     test('validate', async () => {
         const variable: EnvVariable = fakeEnvVariable({ required: true, type: 'number', value: 42 });
         await EnvUtilities.addStaticVariable(variable, false);
-        const errorMessages: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(PathUtilities.resolve('.'));
+        const errorMessages: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(PathUtilities.resolve('.'), LOCAL_DOCKER_COMPOSE_FILE_NAME);
         expect(errorMessages.length).toEqual(0);
 
         await FsUtilities.replaceInFile(mockConstants.ENV, '42', 'test');
-        const errorMessages2: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(PathUtilities.resolve('.'));
+        const errorMessages2: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(PathUtilities.resolve('.'), LOCAL_DOCKER_COMPOSE_FILE_NAME);
         expect(errorMessages2.length).toEqual(1);
         expect(errorMessages2[0].value).toEqual(EnvValidationErrorMessage.NUMBER);
 
         await FsUtilities.updateFile(mockConstants.ENV, '', 'replace');
-        const errorMessages3: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(PathUtilities.resolve('.'));
+        const errorMessages3: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(PathUtilities.resolve('.'), LOCAL_DOCKER_COMPOSE_FILE_NAME);
         expect(errorMessages3.length).toEqual(3);
         expect(errorMessages3[0].value).toEqual(EnvValidationErrorMessage.REQUIRED);
 
         await FsUtilities.rm(mockConstants.ENV);
-        const errorMessages4: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(PathUtilities.resolve('.'));
+        const errorMessages4: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(PathUtilities.resolve('.'), LOCAL_DOCKER_COMPOSE_FILE_NAME);
         expect(errorMessages4.length).toEqual(1);
         expect(errorMessages4[0].value).toEqual(EnvValidationErrorMessage.FILE_DOES_NOT_EXIST);
     });
@@ -241,11 +241,31 @@ describe('EnvUtilities', () => {
     test('validate takes an optional variable without a value, and checks the type of one with a value', async () => {
         // like the port of the mail server of a workspace that sends no mails, which mx add zibri adds empty
         await EnvUtilities.addStaticVariable({ key: DefaultEnvKeys.WEBSERVER_MAIL_PORT, required: false, type: 'number', value: undefined }, false);
-        expect(await EnvUtilities.validate(PathUtilities.resolve('.'))).toEqual([]);
+        expect(await EnvUtilities.validate(PathUtilities.resolve('.'), LOCAL_DOCKER_COMPOSE_FILE_NAME)).toEqual([]);
 
         await FsUtilities.replaceInFile(mockConstants.ENV, `${DefaultEnvKeys.WEBSERVER_MAIL_PORT}=`, `${DefaultEnvKeys.WEBSERVER_MAIL_PORT}=smtp`);
-        expect(await EnvUtilities.validate(PathUtilities.resolve('.')))
+        expect(await EnvUtilities.validate(PathUtilities.resolve('.'), LOCAL_DOCKER_COMPOSE_FILE_NAME))
             .toEqual([{ key: DefaultEnvKeys.WEBSERVER_MAIL_PORT, value: EnvValidationErrorMessage.NUMBER }]);
+    });
+
+    test('validate needs the mail server on stage and prod, where a zibri api sends its mails, but not its user', async () => {
+        const mailServer: EnvVariable[] = [
+            { key: DefaultEnvKeys.WEBSERVER_MAIL_HOST, required: false, type: 'string', value: undefined },
+            { key: DefaultEnvKeys.WEBSERVER_MAIL_PORT, required: false, type: 'number', value: undefined },
+            { key: DefaultEnvKeys.WEBSERVER_MAIL_USER, required: false, type: 'string', value: undefined }
+        ];
+        for (const variable of mailServer) {
+            await EnvUtilities.addStaticVariable(variable, false);
+        }
+        expect(await EnvUtilities.validate(PathUtilities.resolve('.'), LOCAL_DOCKER_COMPOSE_FILE_NAME)).toEqual([]);
+        expect(await EnvUtilities.validate(PathUtilities.resolve('.'), STAGE_DOCKER_COMPOSE_FILE_NAME)).toEqual([
+            { key: DefaultEnvKeys.WEBSERVER_MAIL_HOST, value: EnvValidationErrorMessage.REQUIRED_WHERE_DEPLOYED },
+            { key: DefaultEnvKeys.WEBSERVER_MAIL_PORT, value: EnvValidationErrorMessage.REQUIRED_WHERE_DEPLOYED }
+        ]);
+
+        await FsUtilities.replaceInFile(mockConstants.ENV, `${DefaultEnvKeys.WEBSERVER_MAIL_HOST}=`, `${DefaultEnvKeys.WEBSERVER_MAIL_HOST}=smtp.example.com`);
+        await FsUtilities.replaceInFile(mockConstants.ENV, `${DefaultEnvKeys.WEBSERVER_MAIL_PORT}=`, `${DefaultEnvKeys.WEBSERVER_MAIL_PORT}=587`);
+        expect(await EnvUtilities.validate(PathUtilities.resolve('.'), STAGE_DOCKER_COMPOSE_FILE_NAME)).toEqual([]);
     });
 
     test('setupProjectEnvironment', async () => {
