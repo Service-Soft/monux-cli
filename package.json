@@ -1,6 +1,6 @@
 {
     "name": "monux-cli",
-    "version": "2.5.8",
+    "version": "3.0.0",
     "license": "MIT",
     "main": "index.js",
     "engines": {
@@ -28,7 +28,7 @@
         "vite"
     ],
     "author": "Tim Fabian",
-    "description": "",
+    "description": "CLI for TypeScript monorepos: generates apis, Angular apps and websites, and runs them with Docker Compose behind traefik",
     "bin": {
         "mx": "dist/index.js"
     },
