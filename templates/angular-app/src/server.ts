@@ -51,8 +51,7 @@ if (isMainModule(import.meta.url)) {
     const port: string = process.env['PORT'] ?? '4000';
     // a port that is taken ends the process, which is what a container should do then
     app.listen(port);
-    // eslint-disable-next-line no-console
-    console.log(`Listening on http://localhost:${port}`);
+    process.stdout.write(`Listening on http://localhost:${port}\n`);
 }
 
 /**

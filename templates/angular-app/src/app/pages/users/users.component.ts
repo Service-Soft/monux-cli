@@ -132,10 +132,7 @@ export class UsersComponent {
      * @param membership - Their membership in the tenant the page shows.
      */
     protected async toggleDeactivated(user: User, membership: UserMembership): Promise<void> {
-        // null is how the api reactivates a membership, with the roles it kept
-        // eslint-disable-next-line unicorn/no-null
-        const deactivatedAt: Date | null = membership.deactivatedAt == undefined ? new Date() : null;
-        await this.userService.updateMembership(user, membership.tenantId, { deactivatedAt });
+        await this.userService.updateMembership(user, membership.tenantId, { deactivated: membership.deactivatedAt == undefined });
         this.usersTable().reload();
     }
 

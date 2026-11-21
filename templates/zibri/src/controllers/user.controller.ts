@@ -230,8 +230,8 @@ export class UserController {
             if (data.roles != undefined) {
                 await this.updateRoles(caller, membership, data.roles, transaction);
             }
-            if (data.deactivatedAt !== undefined) {
-                await this.membershipService.updateDeactivatedAt(id, tenantId, data.deactivatedAt, transaction);
+            if (data.deactivated !== undefined) {
+                await this.membershipService.updateDeactivatedAt(id, tenantId, data.deactivated ? new Date() : null, transaction);
             }
         }));
         return await this.findById(caller, id);
@@ -317,12 +317,12 @@ export class UserController {
         }) : [];
         const tenantNames: Map<string, string> = await findTenantNames(memberships.map(m => m.tenantId));
         const mayReadEveryUser: boolean = caller.platformPermissions.includes(PlatformPermissions.USERS_READ);
-        // the change sets of a row are added by resolveRow
-        // eslint-disable-next-line unusedImports/no-unused-vars
-        return users.map(({ roles, changeSets, ...account }) => ({
-            ...account,
-            ...mayReadEveryUser ? { roles } : {},
-            memberships: memberships.filter(m => m.userId === account.id).map(m => ({
+        return users.map(user => ({
+            ...user,
+            roles: mayReadEveryUser ? user.roles : undefined,
+            // added by resolveRow, for a caller who reads one user
+            changeSets: undefined,
+            memberships: memberships.filter(m => m.userId === user.id).map(m => ({
                 tenantId: m.tenantId,
                 tenantName: tenantNames.get(m.tenantId) ?? '',
                 roles: m.roles,

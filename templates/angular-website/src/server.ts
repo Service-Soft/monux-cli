@@ -1,3 +1,50 @@
+/*
+ * TODO: sitemap.xml, robots.txt and llms.txt from the routes, in every language, once @service-soft/ngx-navigation has
+ * them. Until then this file builds them from the prerendered pages only: a page rendered on the server or in the
+ * browser, a page with parameters and every language but the first are missing, and /imprint/ answers like /imprint.
+ * Angular i18n builds one server.mjs for every language, next to a main.server.mjs and the browser files of each below
+ * dist/<name>/server/<code> and browser/<code>, and prerenders every page below /<code>/. So this file reads the
+ * structure of the website from its routes, and what a page says in a language from the page as that language
+ * renders it.
+ *
+ * What ngx-navigation needs for it:
+ *
+ * 1. @service-soft/ngx-navigation/seo-server, for the server.ts of a website: node only, express or not.
+ *    - resolvePages({ routes, serverRoutes, distFolder, appEngine, origin, locales }) finds every url of the website
+ *      that search engines may index, in every locale:
+ *      - the paths of the router config, its children and its loadChildren included, without redirects, without '**'
+ *        and without routes whose data.robots holds noindex. Each with the render mode of its ServerRoute
+ *      - a path with parameters gets the urls Angular prerendered for it (prerendered-routes.json), or the paths its
+ *        data.sitemap answers, for any render mode, like the products of an api. Without either it is left out, and
+ *        named in a warning when the server starts
+ *      - in each locale, the url below its subPath, and the title and description the page renders in it: from the
+ *        prerendered html, or rendered once through the app engine for RenderMode.Server and kept while the server
+ *        runs. A RenderMode.Client page has neither, as only a browser renders it
+ *      - lastModified from data.lastModified, or from the entries of data.sitemap. None without, as Google only reads
+ *        a lastmod that is always right. No changefreq and no priority, which Google ignores
+ *    - resolveSitemap(pages): one <url> per page and locale, with an xhtml:link rel="alternate" hreflang for every
+ *      locale of the page and hreflang="x-default" for its url without a locale, which redirects by the language of the
+ *      visitor. Absolute https urls, escaped for xml, a <lastmod> when known. Over 50,000 urls or 50 MB a sitemap index
+ *      with one sitemap per part
+ *    - resolveRobotsTxt({ allowed, disallowedCrawlers, sitemapUrl }), like the robots.txt below
+ *    - resolveLlmsTxt(pages, locale): /llms.txt in the source locale and /<code>/llms.txt in each other, listing the
+ *      pages that render on the server, see https://llmstxt.org
+ *    - resolvePreferredLocale(acceptLanguage, locales): the locale an url without one redirects to, the source locale
+ *      when none matches. The redirect is a 302 with Vary: Accept-Language, so search engines index the locales
+ *    - a handler that answers an url with a trailing slash with a 301 to the one without, the query kept, so each page
+ *      has one url
+ * 2. SeoService of @service-soft/ngx-navigation/seo, with locales in provideSeoConfig, each with its code and subPath:
+ *    - <link rel="alternate" hreflang> on every page, absolute, for each locale and for x-default, which a navigation
+ *      writes like the canonical url
+ *    - the canonical url of a page in its own locale, without query, hash and trailing slash
+ *    - og:locale, and og:locale:alternate for the other locales
+ * 3. NavRouteData: sitemap?: () => Promise<NavSitemapEntry[]>, the paths of a route with parameters without a locale,
+ *    each with an optional lastModified, and lastModified?: string, the date of a page as an ISO date
+ *
+ * Tested in angular-libraries with a router config of every render mode, parameters with and without data.sitemap,
+ * noindex, lazy children and two locales, and by the showcase: its prerendered pages hold the alternates, and its
+ * sitemap lists every page in both locales.
+ */
 import { existsSync, readFileSync } from 'node:fs';
 import { extname, join, resolve, sep } from 'node:path';
 
@@ -209,8 +256,7 @@ if (isMainModule(import.meta.url)) {
     const port: string = process.env['PORT'] ?? '4000';
     // a port that is taken ends the process, which is what a container should do then
     app.listen(port);
-    // eslint-disable-next-line no-console
-    console.log(`Listening on http://localhost:${port}`);
+    process.stdout.write(`Listening on http://localhost:${port}\n`);
 }
 
 /**

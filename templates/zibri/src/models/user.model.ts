@@ -57,9 +57,9 @@ export class MembershipUpdateDto {
     @Property.array({ items: { type: 'string' }, required: false })
     roles?: string[];
 
-    // null reactivates the membership, with the roles it kept
-    @Property.date({ required: false })
-    deactivatedAt?: Date | null;
+    // false reactivates the membership, with the roles it kept
+    @Property.boolean({ required: false })
+    deactivated?: boolean;
 }
 
 // what gives a user a membership in a tenant

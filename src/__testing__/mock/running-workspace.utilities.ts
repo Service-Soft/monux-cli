@@ -5,6 +5,8 @@ import { request as httpsRequest, RequestOptions as HttpsRequestOptions } from '
 import { UpCommand } from '../../commands/up';
 import { DockerComposeFileName } from '../../docker';
 import { CPUtilities, Path, PathUtilities } from '../../encapsulation';
+import { EnvUtilities, EnvValidationErrorMessage } from '../../env';
+import { KeyValue } from '../../types';
 import { WorkspaceUtilities } from '../../workspace';
 
 /**
@@ -81,6 +83,11 @@ export abstract class RunningWorkspaceUtilities {
      * @param fileName - The compose file.
      */
     static async up(fileName: DockerComposeFileName): Promise<void> {
+        // what mx up refuses with an exit, which a test would wait for until its timeout, as jest keeps the output open
+        const errors: KeyValue<EnvValidationErrorMessage>[] = await EnvUtilities.validate(PathUtilities.resolve('.'));
+        if (errors.length) {
+            throw new Error(`The environment is not valid: ${errors.map(e => `${e.key} ${e.value}`).join(', ')}`);
+        }
         await new UpCommand()['run']({
             fileName,
             projectName: await this.resolveProjectName(),

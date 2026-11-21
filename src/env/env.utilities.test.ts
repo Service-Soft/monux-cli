@@ -238,6 +238,16 @@ describe('EnvUtilities', () => {
         expect(errorMessages4[0].value).toEqual(EnvValidationErrorMessage.FILE_DOES_NOT_EXIST);
     });
 
+    test('validate takes an optional variable without a value, and checks the type of one with a value', async () => {
+        // like the port of the mail server of a workspace that sends no mails, which mx add zibri adds empty
+        await EnvUtilities.addStaticVariable({ key: DefaultEnvKeys.WEBSERVER_MAIL_PORT, required: false, type: 'number', value: undefined }, false);
+        expect(await EnvUtilities.validate(PathUtilities.resolve('.'))).toEqual([]);
+
+        await FsUtilities.replaceInFile(mockConstants.ENV, `${DefaultEnvKeys.WEBSERVER_MAIL_PORT}=`, `${DefaultEnvKeys.WEBSERVER_MAIL_PORT}=smtp`);
+        expect(await EnvUtilities.validate(PathUtilities.resolve('.')))
+            .toEqual([{ key: DefaultEnvKeys.WEBSERVER_MAIL_PORT, value: EnvValidationErrorMessage.NUMBER }]);
+    });
+
     test('setupProjectEnvironment', async () => {
         await EnvUtilities.setupProjectEnvironment(mockConstants.ANGULAR_APP_DIR, true);
 

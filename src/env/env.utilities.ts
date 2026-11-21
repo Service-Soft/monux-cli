@@ -590,8 +590,14 @@ export abstract class EnvUtilities {
         const res: KeyValue<EnvValidationErrorMessage>[] = [];
         for (const d of staticVariableDefinitions) {
             const foundValue: EnvValue | undefined = envValues.find(v => v.key === d.key)?.value;
-            if (d.required && (foundValue == undefined || foundValue === '' || foundValue === 'undefined')) {
+            const isEmpty: boolean = foundValue == undefined || foundValue === '' || foundValue === 'undefined';
+            if (d.required && isEmpty) {
                 res.push({ key: d.key, value: EnvValidationErrorMessage.REQUIRED });
+                continue;
+            }
+            // an optional variable without a value, like the mail server of a workspace that sends no mails, has no
+            // type to check
+            if (isEmpty) {
                 continue;
             }
             if (d.type === 'number' && typeof foundValue !== 'number') {

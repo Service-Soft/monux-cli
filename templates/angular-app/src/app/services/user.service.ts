@@ -16,9 +16,9 @@ export type MembershipChange = {
      */
     roles?: string[],
     /**
-     * When the membership was deactivated, or null to reactivate it.
+     * Whether the membership is deactivated. A reactivated one keeps its roles.
      */
-    deactivatedAt?: Date | null
+    deactivated?: boolean
 };
 
 /**
