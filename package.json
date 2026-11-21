@@ -25,7 +25,8 @@
         "code generation",
         "angular",
         "loopback 4",
-        "vite"
+        "vite",
+        "zibri"
     ],
     "author": "Tim Fabian",
     "description": "CLI for TypeScript monorepos: generates apis, Angular apps and websites, and runs them with Docker Compose behind traefik",
