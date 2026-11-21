@@ -19,6 +19,12 @@ library. Code the developer writes per entity is code for what is special about 
 offline and syncs them through `@service-soft/ngx-pwa` once it is back online, telling the user what was synced and
 what failed.
 
+**It speaks the language of its users.** An app of several languages is a build per language, each below its code,
+with a language switcher in the navbar. A link without a language, like the one in a password reset mail, opens the
+language of the browser. Every text is marked for translation, the ones of the `@service-soft` libraries included,
+and `npm run i18n` brings new and changed texts into the translation of every language without losing what was
+translated. It is localized the same way as the [website](../add-angular-website/GOALS.md).
+
 The app follows [the code style of angular-libraries](https://github.com/Service-Soft/angular-libraries/blob/release/CODE_STYLE.md),
 its accessibility rules included, like every Angular project Monux generates.
 
@@ -28,9 +34,12 @@ Each goal needs a test on the app the tests generate, next to a generated zibri 
 
 - **With its api**: logging in, creating, editing and deleting an entity, and reading its change sets work against the
   running api.
-- **Per entity**: the tests add an entity the way the README describes, and its table and form work with nothing else
-  written.
+- **Per entity**: the tests add an entity the way [Adding an entity](../../../../docs/project-types/angular-app.md#adding-an-entity)
+  describes, and its table and form work with nothing else written.
 - **Offline**: a change made offline is synced once the connection is back, and the app opens without a connection.
+- **Languages**: the tests generate the app in two languages. The translation of each holds the texts of the app and
+  of the libraries, and a translated text shows in the build of its language. The app answers below each language,
+  and a link without one is redirected.
 
 # Changing it
 
