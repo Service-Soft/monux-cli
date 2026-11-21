@@ -1,6 +1,9 @@
 import inquirer, { Question, Answers } from 'inquirer';
 
-import { exitWithInterrupt, isErrorWithSignal, isExitPromptError } from '../utilities';
+import { ProcessUtilities } from './process.utilities';
+
+// eslint-disable-next-line jsdoc/require-jsdoc
+export type { Question };
 
 /**
  * Inquirer Questions to get the generic object result.
@@ -33,8 +36,8 @@ export abstract class InquirerUtilities {
                 return res;
             }
             catch (error) {
-                if (isExitPromptError(error) || (isErrorWithSignal(error) && error.signal === 'SIGINT')) {
-                    return await exitWithInterrupt();
+                if (ProcessUtilities.isInterrupt(error)) {
+                    return await ProcessUtilities.exitWithInterrupt();
                 }
                 else {
                     throw error;

@@ -1,0 +1,7 @@
+/* The css of the production build, generated a second time from what the build holds: only the classes of the
+   components the website uses, rather than of every component of the libraries. See scripts/postbuild.mjs */
+@import "tailwindcss" source(none);
+@import "@service-soft/ui/theme.css";
+@import "../../../theme.css";
+@import "./fonts.css";
+@source "../dist/{{=name}}/browser/**/*.js";

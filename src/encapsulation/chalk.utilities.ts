@@ -47,6 +47,15 @@ export abstract class ChalkUtilities {
     }
 
     /**
+     * Used to log warnings in yellow.
+     * @param value - The value that should be logged as a warning.
+     * @returns The string to log.
+     */
+    static warning(...value: string[]): string {
+        return chalk.yellow(value);
+    }
+
+    /**
      * Used to log something in bold and underlined.
      * @param value - The value that should be logged bold and underlined.
      * @returns The string to log.

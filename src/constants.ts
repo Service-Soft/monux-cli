@@ -1,5 +1,5 @@
 import { Command } from './commands/command.enum';
-import { ChalkUtilities } from './encapsulation';
+import { ChalkUtilities } from './encapsulation/chalk.utilities';
 
 /**
  * The base command of the cli.
@@ -86,6 +86,9 @@ export const GLOBAL_ENVIRONMENT_MODEL_FILE_NAME: string = 'global-environment.mo
  */
 export const ESLINT_CONFIG_FILE_NAME: string = 'eslint.config.mjs';
 
+// eslint-disable-next-line jsdoc/require-jsdoc
+export const CSPELL_WORDS_FILE_NAME: string = 'cspell.words.txt';
+
 /**
  * The name of the tailwind config file.
  */
@@ -127,16 +130,6 @@ export const ANGULAR_APP_COMPONENT_FILE_NAME: string = 'app.ts';
 export const GIT_IGNORE_FILE_NAME: string = '.gitignore';
 
 /**
- * The name of the robots txt file.
- */
-export const ROBOTS_FILE_NAME: string = 'robots.txt';
-
-/**
- * The name of the sitemap file.
- */
-export const SITEMAP_FILE_NAME: string = 'sitemap.xml';
-
-/**
  * The name of the angular app config file.
  */
 export const APP_CONFIG_FILE_NAME: string = 'app.config.ts';
@@ -157,18 +150,8 @@ export const NG_PACKAGE_FILE_NAME: string = 'ng-package.json';
 export const NEST_CLI_FILE_NAME: string = 'nest-cli.json';
 
 /**
- * The name of the webpack config file.
- */
-export const WEBPACK_CONFIG: string = 'webpack.config.js';
-
-/**
- * The name of the vite config file.
- */
-export const VITE_CONFIG: string = 'vite.config.ts';
-
-/**
  * The message to notify the user of the help command.
  */
-export const MORE_INFORMATION_MESSAGE: string = `run ${ChalkUtilities.secondary(
+export const MORE_INFORMATION_MESSAGE: string = `Run ${ChalkUtilities.secondary(
     `${CLI_BASE_COMMAND} ${Command.HELP}`
 )} for more information.`;

@@ -1,43 +1,40 @@
-import { initConfigQuestions, InitConfiguration } from './init-configuration.model';
-import { APPS_DIRECTORY_NAME, ENV_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, ESLINT_CONFIG_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME, ROBOTS_FILE_NAME, TAILWIND_CONFIG_FILE_NAME } from '../../constants';
+import { APPS_DIRECTORY_NAME, ENV_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, GIT_IGNORE_FILE_NAME, LIBS_DIRECTORY_NAME } from '../../constants';
 import { DockerUtilities } from '../../docker';
-import { CPUtilities, FsUtilities, InquirerUtilities } from '../../encapsulation';
+import { TRAEFIK_BASIC_AUTH_FILE_NAME } from '../../docker/docker-traefik.utilities';
+import { CPUtilities, FsUtilities, InquirerUtilities, ProcessUtilities, PathUtilities } from '../../encapsulation';
 import { EnvUtilities } from '../../env';
+import { EslintUtilities } from '../../eslint';
 import { GithubUtilities } from '../../github';
 import { NpmPackage, NpmUtilities } from '../../npm';
+import { TemplateUtilities } from '../../templates';
 import { TsConfigUtilities } from '../../tsconfig';
-import { exitWithError, getPath } from '../../utilities';
 import { WorkspaceConfig, WorkspaceUtilities } from '../../workspace';
 import { BaseCommand } from '../base-command.model';
-import { tailwindConfigJsContent } from './tailwind-config-js.content';
+import { initConfigQuestions, InitConfiguration } from './init-configuration.model';
 
 /**
  * Initializes a new Monux monorepo.
  */
 export class InitCommand extends BaseCommand<InitConfiguration> {
+    protected override readonly restoresWorkspace: boolean = true;
+
     protected override async run(config: InitConfiguration): Promise<void> {
         await NpmUtilities.init('root', false);
 
-        await NpmUtilities.installInRoot([
-            NpmPackage.ESLINT_CONFIG_SERVICE_SOFT,
-            NpmPackage.ESLINT,
-            NpmPackage.TAILWIND,
-            NpmPackage.POSTCSS,
-            NpmPackage.AUTOPREFIXER
-        ], true);
+        // tailwind is a dependency of each project that uses it, the theme they share is a css file
+        await NpmUtilities.installInRoot([NpmPackage.SERVICE_SOFT_ESLINT_CONFIG, NpmPackage.ESLINT], true);
 
         await EnvUtilities.init(config.prodRootDomain, config.stageRootDomain, 'user', 'password');
 
         await Promise.all([
             WorkspaceUtilities.createConfig(),
             TsConfigUtilities.createBaseTsConfig(),
-            this.createEslintConfig(),
-            this.createCspellWords(),
+            EslintUtilities.setupRootEslint(),
             DockerUtilities.createComposeFiles(config.email),
-            FsUtilities.mkdir(getPath(APPS_DIRECTORY_NAME)),
-            FsUtilities.mkdir(getPath(LIBS_DIRECTORY_NAME)),
+            FsUtilities.mkdir(PathUtilities.resolve(APPS_DIRECTORY_NAME)),
+            FsUtilities.mkdir(PathUtilities.resolve(LIBS_DIRECTORY_NAME)),
             this.createGitIgnore(),
-            this.createTailwindConfig(),
+            TemplateUtilities.write('workspace', PathUtilities.resolve('.'), {}),
             this.addNpmWorkspaces()
         ]);
 
@@ -51,6 +48,8 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
                         'runs-on': 'ubuntu-latest',
                         steps: [
                             { uses: 'actions/checkout@v4' },
+                            // the Node the projects are built for, rather than the one the runner has
+                            { uses: 'actions/setup-node@v4', with: { 'node-version': '24' } },
                             { name: 'npm i', run: 'npm ci' },
                             { name: 'Linting', run: 'npm run lint --workspaces --if-present' },
                             { name: 'Unit Tests', run: 'npm run test --workspaces --if-present' }
@@ -70,7 +69,7 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
         await super.validate(args);
         const config: WorkspaceConfig | undefined = await WorkspaceUtilities.getConfig();
         if (config?.isWorkspace === true) {
-            await exitWithError('Error: The current directory is already a monorepo workspace');
+            await ProcessUtilities.exitWithError('The current directory is already a workspace.');
         }
     }
 
@@ -79,17 +78,18 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
     }
 
     private async createGitIgnore(): Promise<void> {
-        await FsUtilities.createFile(getPath(GIT_IGNORE_FILE_NAME), [
+        await FsUtilities.createFile(PathUtilities.resolve(GIT_IGNORE_FILE_NAME), [
             '# See http://help.github.com/ignore-files/ for more about ignoring files.',
             ENV_FILE_NAME,
             ENVIRONMENT_TS_FILE_NAME,
-            ROBOTS_FILE_NAME,
+            // the credentials of basic auth on stage, which mx prepare writes from the .env
+            TRAEFIK_BASIC_AUTH_FILE_NAME,
             '**/init/**.sql',
-            'letsencrypt',
             '# compiled output',
             'dist',
             'tmp',
-            '/out-tsc',
+            'out-tsc',
+            'storybook-static',
             '.angular',
             'tsconfig.tsbuildinfo',
             '# node_modules',
@@ -97,24 +97,4 @@ export class InitCommand extends BaseCommand<InitConfiguration> {
         ]);
     }
 
-    private async createCspellWords(): Promise<void> {
-        await FsUtilities.createFile(getPath('cspell.words.txt'), '');
-    }
-
-    private async createEslintConfig(): Promise<void> {
-        await FsUtilities.createFile(getPath(ESLINT_CONFIG_FILE_NAME), [
-            `import { configs } from '${NpmPackage.ESLINT_CONFIG_SERVICE_SOFT}';`,
-            '',
-            '// eslint-disable-next-line jsdoc/require-description',
-            '/** @type {import(\'eslint\').Linter.Config} */',
-            'export default [...configs , { ignores: [\'./global-environment.model.ts\'] }];'
-        ]);
-    }
-
-    private async createTailwindConfig(): Promise<void> {
-        await FsUtilities.createFile(
-            getPath(TAILWIND_CONFIG_FILE_NAME),
-            tailwindConfigJsContent
-        );
-    }
 }

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="{{=language}}">
+    <head>
+        <meta charset="utf-8">
+        <title>{{=title}}</title>
+        <base href="/">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="icon" type="image/x-icon" href="favicon.ico">
+        <!-- what installs the app, see public/manifest.webmanifest -->
+        <link rel="manifest" href="manifest.webmanifest">
+        <meta name="theme-color" content="#1976d2">
+    </head>
+    <body class="bg-surface text-on-surface">
+        <app-root></app-root>
+        <!-- translated into every language by scripts/localize-index.mjs, as Angular copies index.html as it is -->
+        <noscript i18n="@@index.noscript">{{=title}} needs JavaScript.</noscript>
+    </body>
+</html>

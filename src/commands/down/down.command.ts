@@ -1,7 +1,6 @@
-import { getDockerServices } from '../../docker/get-docker-services.function';
-import { FullyParsedDockerService } from '../../docker/stringified-docker-service.model';
-import { CPUtilities } from '../../encapsulation';
-import { exitWithError } from '../../utilities';
+import { CLI_BASE_COMMAND } from '../../constants';
+import { DockerUtilities, FullyParsedDockerService } from '../../docker';
+import { CPUtilities, ProcessUtilities } from '../../encapsulation';
 import { WorkspaceUtilities } from '../../workspace';
 import { BaseCommand } from '../base-command.model';
 import { DownConfiguration } from './down-configuration.model';
@@ -28,7 +27,7 @@ export class DownCommand extends BaseCommand<DownConfiguration> {
 
     protected override async resolveInput(args: string[]): Promise<DownConfiguration> {
         const projectName: string = args.length === 1 ? (await WorkspaceUtilities.getConfigOrFail()).name : args[1];
-        const dockerServices: FullyParsedDockerService[] = await getDockerServices(false);
+        const dockerServices: FullyParsedDockerService[] = await DockerUtilities.findServices(false);
 
         const dockerFilePaths: string[] = dockerServices
             .filter(d => d.config.name === projectName)
@@ -36,7 +35,10 @@ export class DownCommand extends BaseCommand<DownConfiguration> {
             .filter(d => d != undefined);
 
         if (!dockerFilePaths.length) {
-            await exitWithError(`Error: Could not find any running docker services for "${projectName}"`);
+            await ProcessUtilities.exitWithError(
+                `Could not find any running docker services for "${projectName}".`
+                + ` Run ${CLI_BASE_COMMAND} ls to see the workspaces with running services.`
+            );
         }
 
         return {

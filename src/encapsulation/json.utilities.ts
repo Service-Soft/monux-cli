@@ -78,12 +78,8 @@ export abstract class JsonUtilities {
             return this.parseObjectAsTs(strippedValue) as T;
         }
 
-        // Handle quoted strings
-        if (this.isQuotedString(strippedValue)) {
-            return strippedValue.slice(1, -1) as T; // Remove quotes
-        }
-
-        return strippedValue as T;
+        // a quoted string without its quotes
+        return (this.isQuotedString(strippedValue) ? strippedValue.slice(1, -1) : strippedValue) as T;
     }
 
     private static formatFunctionBody(strippedValue: string, currentIndent: number): string {
@@ -102,10 +98,7 @@ export abstract class JsonUtilities {
 
         // Format lines: remove the calculated indentation from each line (except the first)
         const formattedLines: string[] = lines.map((line, index) => {
-            if (index === 0) {
-                return line;
-            }
-            return ' '.repeat(currentIndent) + line.slice(indentToRemove);
+            return index === 0 ? line : ' '.repeat(currentIndent) + line.slice(indentToRemove);
         });
 
         return formattedLines.join('\n');
@@ -131,10 +124,7 @@ export abstract class JsonUtilities {
                 return this.functionToTsString(value, currentIndent);
             }
             case 'object': {
-                if (Array.isArray(value)) {
-                    return this.arrayToTsString(value, currentIndent);
-                }
-                return this.objectToTsString(value, currentIndent);
+                return Array.isArray(value) ? this.arrayToTsString(value, currentIndent) : this.objectToTsString(value, currentIndent);
             }
             case 'boolean':
             case 'number':
@@ -305,22 +295,17 @@ export abstract class JsonUtilities {
         const modulePath: string | undefined = funcString.match(/require\(["'`](.*)["'`]\)/)?.[1];
         const component: string | undefined = funcString.match(/m => m\.(\w+)/)?.[1];
 
-        if (!modulePath || !component) {
-            return this.formatFunctionBody(funcString, currentIndent);
-        }
-
-        return `() => import('${modulePath}').then(m => m.${component})`;
+        return !modulePath || !component
+            ? this.formatFunctionBody(funcString, currentIndent)
+            : `() => import('${modulePath}').then(m => m.${component})`;
     }
 
     private static stringToTsString(value: string): string {
         if (this.isCustomTsString(value)) {
             return customTsValueToString[value];
         }
-        // Detect template literals
-        if (/^`.*`$/.test(value)) {
-            return value;
-        }
-        return `'${value.replaceAll('\'', '\\\'')}'`; // Escape single quotes in strings
+        // a template literal stays as it is, any other string is quoted, with its single quotes escaped
+        return /^`.*`$/.test(value) ? value : `'${value.replaceAll('\'', '\\\'')}'`;
     }
 
     private static isCustomTsString(value: string): value is CustomTsValues {

@@ -1,0 +1,10 @@
+/* The fonts of the website. Without any, it uses the font of the operating system, which needs no download.
+   A font of your own goes into public/fonts as woff2 and is declared here; the build cuts it down to the characters the
+   website uses, see scripts/postbuild.mjs. Then name it first in --font-body of the theme.css of the workspace:
+
+@font-face {
+    font-family: "Brand";
+    src: url("/fonts/brand.woff2") format("woff2");
+    font-display: swap;
+}
+*/

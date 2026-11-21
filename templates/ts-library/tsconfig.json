@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "strict": true,
+        "declaration": true,
+        "declarationMap": true,
+        "sourceMap": true,
+        "target": "ES2022",
+        "lib": ["ES2022"],
+        "rootDir": "src",
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "noImplicitOverride": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "useUnknownInCatchVariables": true,
+        "module": "ES2022",
+        "moduleResolution": "bundler"
+    },
+    "include": ["src"]
+}

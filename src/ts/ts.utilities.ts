@@ -1,5 +1,4 @@
-import { FileLine, FsUtilities, JsonUtilities } from '../encapsulation';
-import { Path } from '../utilities';
+import { FileLine, FsUtilities, JsonUtilities, Path } from '../encapsulation';
 import { TsImportDefinition } from './ts-import-definition.model';
 
 /**
@@ -48,6 +47,30 @@ const constructorLineIdentifier: string = 'constructor(';
  * Utilities for handling typescript files.
  */
 export abstract class TsUtilities {
+
+    /**
+     * Adds a member to an enum, above the comment that marks where Monux adds them. The member before it gets the comma
+     * it needs, and every other line, comments included, stays as it is.
+     * @param path - The ts file of the enum.
+     * @param marker - The comment inside the enum, such as "// mx add adds the apps above this line".
+     * @param member - The member, such as "ADMIN = 'admin'".
+     * @throws When the file has no such comment.
+     */
+    static async addEnumMember(path: Path, marker: string, member: string): Promise<void> {
+        const lines: string[] = await FsUtilities.readFileLines(path);
+        const markerIndex: number = lines.findIndex(l => l.trim() === marker);
+        if (markerIndex === -1) {
+            throw new Error(`Could not find "${marker}" in ${path} to add "${member}" above it`);
+        }
+        const previousIndex: number = lines.findLastIndex((l, i) => i < markerIndex && l.trim() !== '' && !l.trim().startsWith('//'));
+        const previous: string = lines[previousIndex].trimEnd();
+        if (!previous.endsWith('{') && !previous.endsWith(',')) {
+            lines[previousIndex] = `${previous},`;
+        }
+        const indentation: string = /^\s*/.exec(lines[markerIndex])?.[0] ?? '';
+        lines.splice(markerIndex, 0, `${indentation}${member}`);
+        await FsUtilities.updateFile(path, lines, 'replace');
+    }
 
     /**
      * Adds the given content to the start of a class.
@@ -289,9 +312,8 @@ export abstract class TsUtilities {
         if (imp.defaultImport) {
             return existingImport.replace('{', `${imp.element}, {`);
         }
-        if (existingImport.includes('{')) {
-            return existingImport.replace('import {', `import { ${imp.element},`);
-        }
-        return existingImport.replace('import ', `import { ${imp.element} }, `);
+        return existingImport.includes('{')
+            ? existingImport.replace('import {', `import { ${imp.element},`)
+            : existingImport.replace('import ', `import { ${imp.element} }, `);
     }
 }

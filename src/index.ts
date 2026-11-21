@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-import { Command, DownCommand, HelpCommand, VersionCommand, InitCommand, UpCommand, PrepareCommand, GeneratePageCommand, AddCommand, ListCommand, RunCommand, RunAllCommand } from './commands';
-import { resolveCommand } from './commands/resolve-command.function';
+import { Command, CommandUtilities, DownCommand, HelpCommand, VersionCommand, InitCommand, UpCommand, PrepareCommand, GeneratePageCommand, GenerateComponentCommand, AddCommand, ListCommand, RunCommand, RunAllCommand } from './commands';
 import { DeathUtilities, FigletUtilities } from './encapsulation';
 
 DeathUtilities.death();
@@ -11,7 +10,7 @@ async function main(): Promise<void> {
 
     FigletUtilities.displayLogo();
 
-    const command: Command | 'run' = await resolveCommand(args);
+    const command: Command | 'run' = await CommandUtilities.resolve(args);
 
     switch (command) {
         case Command.H:
@@ -52,6 +51,11 @@ async function main(): Promise<void> {
         case Command.GENERATE_PAGE:
         case Command.GP: {
             await new GeneratePageCommand().start(args);
+            return;
+        }
+        case Command.GENERATE_COMPONENT:
+        case Command.GC: {
+            await new GenerateComponentCommand().start(args);
             return;
         }
         case Command.RUN_ALL:

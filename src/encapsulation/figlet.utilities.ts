@@ -1,20 +1,16 @@
-/* eslint-disable no-console */
 import figlet from 'figlet';
 
-import { ChalkUtilities } from '.';
+import { ChalkUtilities } from './chalk.utilities';
+import { LogUtilities } from './log.utilities';
 
 /**
  * Encapsulates functionality of the figlet package.
  */
 export abstract class FigletUtilities {
     /**
-     * Displays the logo "Monorepo" in full width.
+     * Displays the logo "Monux" in full width.
      */
     static displayLogo(): void {
-        console.log(
-            ChalkUtilities.primary(
-                figlet.textSync('Monux', { horizontalLayout: 'full' })
-            )
-        );
+        LogUtilities.text(ChalkUtilities.primary(figlet.textSync('Monux', { horizontalLayout: 'full' })));
     }
 }

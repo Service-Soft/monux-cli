@@ -1,9 +1,12 @@
 /* eslint-disable jsdoc/require-jsdoc */
 import { ANGULAR_JSON_FILE_NAME, ANGULAR_ROUTES_FILE_NAME, APP_CONFIG_FILE_NAME, APPS_DIRECTORY_NAME, DEV_DOCKER_COMPOSE_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, ENV_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME, ENVIRONMENT_TS_FILE_NAME, ESLINT_CONFIG_FILE_NAME, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME, LIBS_DIRECTORY_NAME, PACKAGE_JSON_FILE_NAME, LOCAL_DOCKER_COMPOSE_FILE_NAME, WORKSPACE_FILE_NAME, BASE_TS_CONFIG_FILE_NAME, STAGE_DOCKER_COMPOSE_FILE_NAME, ENV_PUBLIC_FILE_NAME, ANGULAR_APP_COMPONENT_FILE_NAME, ANGULAR_SERVER_ROUTES_FILE_NAME, APP_CONFIG_SERVER_FILE_NAME } from '../../constants';
+import { PathUtilities, Path } from '../../encapsulation';
 import { OmitStrict } from '../../types';
-import { getPath, Path } from '../../utilities';
 
 export const MAX_ADD_TIME: number = 100000;
+
+// what starting the services of a workspace with docker compose may take: building its images and starting a database
+export const MAX_DOCKER_TIME: number = 300000;
 
 export const MAX_GEN_CODE_TIME: number = 10000;
 
@@ -46,7 +49,9 @@ export type MockConstants = {
     readonly GLOBAL_ENV_MODEL: Path,
     readonly GITHUB_WORKFLOW_DIR: Path,
     readonly WORKSPACE_JSON: Path,
-    readonly BASE_TS_CONFIG_JSON: Path
+    readonly BASE_TS_CONFIG_JSON: Path,
+    readonly ROOT_ESLINT_CONFIG_MJS: Path,
+    readonly THEME_CSS: Path
 };
 
 export type FileMockConstants = OmitStrict<
@@ -68,49 +73,51 @@ export type DirMockConstants = OmitStrict<
  * @returns Constant values.
  */
 export function getMockConstants(projectName: string): MockConstants {
-    const TMP_DIR: Path = getPath(__dirname, '..', 'tmp');
-    const PROJECT_DIR: Path = getPath(TMP_DIR, projectName);
-    const APPS_DIR: Path = getPath(PROJECT_DIR, APPS_DIRECTORY_NAME);
-    const LIBS_DIR: Path = getPath(PROJECT_DIR, LIBS_DIRECTORY_NAME);
+    const TMP_DIR: Path = PathUtilities.resolve(__dirname, '..', 'tmp');
+    const PROJECT_DIR: Path = PathUtilities.resolve(TMP_DIR, projectName);
+    const APPS_DIR: Path = PathUtilities.resolve(PROJECT_DIR, APPS_DIRECTORY_NAME);
+    const LIBS_DIR: Path = PathUtilities.resolve(PROJECT_DIR, LIBS_DIRECTORY_NAME);
     const ANGULAR_APP_NAME: string = 'angular';
-    const ANGULAR_APP_DIR: Path = getPath(APPS_DIR, ANGULAR_APP_NAME);
+    const ANGULAR_APP_DIR: Path = PathUtilities.resolve(APPS_DIR, ANGULAR_APP_NAME);
     const TS_LIBRARY_NAME: string = 'library';
-    const TS_LIBRARY_DIR: Path = getPath(LIBS_DIR, TS_LIBRARY_NAME);
+    const TS_LIBRARY_DIR: Path = PathUtilities.resolve(LIBS_DIR, TS_LIBRARY_NAME);
 
     const mockConstants: MockConstants = {
         PROJECT_DIR: PROJECT_DIR,
         APPS_DIR: APPS_DIR,
         LIBS_DIR: LIBS_DIR,
-        DOCKER_COMPOSE_YAML: getPath(PROJECT_DIR, PROD_DOCKER_COMPOSE_FILE_NAME),
-        DEV_DOCKER_COMPOSE_YAML: getPath(PROJECT_DIR, DEV_DOCKER_COMPOSE_FILE_NAME),
-        LOCAL_DOCKER_COMPOSE_YAML: getPath(PROJECT_DIR, LOCAL_DOCKER_COMPOSE_FILE_NAME),
-        STAGE_DOCKER_COMPOSE_YAML: getPath(PROJECT_DIR, STAGE_DOCKER_COMPOSE_FILE_NAME),
-        ANGULAR_PACKAGE_JSON: getPath(ANGULAR_APP_DIR, PACKAGE_JSON_FILE_NAME),
-        ANGULAR_ESLINT_CONFIG_MJS: getPath(ANGULAR_APP_DIR, ESLINT_CONFIG_FILE_NAME),
+        DOCKER_COMPOSE_YAML: PathUtilities.resolve(PROJECT_DIR, PROD_DOCKER_COMPOSE_FILE_NAME),
+        DEV_DOCKER_COMPOSE_YAML: PathUtilities.resolve(PROJECT_DIR, DEV_DOCKER_COMPOSE_FILE_NAME),
+        LOCAL_DOCKER_COMPOSE_YAML: PathUtilities.resolve(PROJECT_DIR, LOCAL_DOCKER_COMPOSE_FILE_NAME),
+        STAGE_DOCKER_COMPOSE_YAML: PathUtilities.resolve(PROJECT_DIR, STAGE_DOCKER_COMPOSE_FILE_NAME),
+        ANGULAR_PACKAGE_JSON: PathUtilities.resolve(ANGULAR_APP_DIR, PACKAGE_JSON_FILE_NAME),
+        ANGULAR_ESLINT_CONFIG_MJS: PathUtilities.resolve(ANGULAR_APP_DIR, ESLINT_CONFIG_FILE_NAME),
         ANGULAR_APP_NAME: ANGULAR_APP_NAME,
         ANGULAR_APP_DIR: ANGULAR_APP_DIR,
-        ANGULAR_APP_COMPONENT_TS: getPath(ANGULAR_APP_DIR, 'src', 'app', ANGULAR_APP_COMPONENT_FILE_NAME),
-        ANGULAR_APP_COMPONENT_HTML: getPath(ANGULAR_APP_DIR, 'src', 'app', 'app.html'),
-        ANGULAR_APP_ROUTES_TS: getPath(ANGULAR_APP_DIR, 'src', 'app', 'app.routes.ts'),
-        ANGULAR_ROUTES_TS: getPath(ANGULAR_APP_DIR, 'src', 'app', ANGULAR_ROUTES_FILE_NAME),
-        ANGULAR_APP_ROUTES_SERVER_TS: getPath(ANGULAR_APP_DIR, 'src', 'app', 'app.routes.server.ts'),
-        ANGULAR_SERVER_ROUTES_TS: getPath(ANGULAR_APP_DIR, 'src', 'app', ANGULAR_SERVER_ROUTES_FILE_NAME),
-        ANGULAR_APP_CONFIG_TS: getPath(ANGULAR_APP_DIR, 'src', 'app', APP_CONFIG_FILE_NAME),
-        ANGULAR_APP_CONFIG_SERVER_TS: getPath(ANGULAR_APP_DIR, 'src', 'app', APP_CONFIG_SERVER_FILE_NAME),
-        ANGULAR_JSON: getPath(ANGULAR_APP_DIR, ANGULAR_JSON_FILE_NAME),
-        ANGULAR_ENVIRONMENT: getPath(ANGULAR_APP_DIR, 'src', 'environment', ENVIRONMENT_TS_FILE_NAME),
-        ANGULAR_ENVIRONMENT_MODEL: getPath(ANGULAR_APP_DIR, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
+        ANGULAR_APP_COMPONENT_TS: PathUtilities.resolve(ANGULAR_APP_DIR, 'src', 'app', ANGULAR_APP_COMPONENT_FILE_NAME),
+        ANGULAR_APP_COMPONENT_HTML: PathUtilities.resolve(ANGULAR_APP_DIR, 'src', 'app', 'app.html'),
+        ANGULAR_APP_ROUTES_TS: PathUtilities.resolve(ANGULAR_APP_DIR, 'src', 'app', 'app.routes.ts'),
+        ANGULAR_ROUTES_TS: PathUtilities.resolve(ANGULAR_APP_DIR, 'src', 'app', ANGULAR_ROUTES_FILE_NAME),
+        ANGULAR_APP_ROUTES_SERVER_TS: PathUtilities.resolve(ANGULAR_APP_DIR, 'src', 'app', 'app.routes.server.ts'),
+        ANGULAR_SERVER_ROUTES_TS: PathUtilities.resolve(ANGULAR_APP_DIR, 'src', 'app', ANGULAR_SERVER_ROUTES_FILE_NAME),
+        ANGULAR_APP_CONFIG_TS: PathUtilities.resolve(ANGULAR_APP_DIR, 'src', 'app', APP_CONFIG_FILE_NAME),
+        ANGULAR_APP_CONFIG_SERVER_TS: PathUtilities.resolve(ANGULAR_APP_DIR, 'src', 'app', APP_CONFIG_SERVER_FILE_NAME),
+        ANGULAR_JSON: PathUtilities.resolve(ANGULAR_APP_DIR, ANGULAR_JSON_FILE_NAME),
+        ANGULAR_ENVIRONMENT: PathUtilities.resolve(ANGULAR_APP_DIR, 'src', 'environment', ENVIRONMENT_TS_FILE_NAME),
+        ANGULAR_ENVIRONMENT_MODEL: PathUtilities.resolve(ANGULAR_APP_DIR, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
         TS_LIBRARY_NAME: TS_LIBRARY_NAME,
         TS_LIBRARY_DIR: TS_LIBRARY_DIR,
         TS_LIBRARY_SCOPE: `@${TS_LIBRARY_NAME}`,
-        TS_LIBRARY_PACKAGE_JSON: getPath(TS_LIBRARY_DIR, PACKAGE_JSON_FILE_NAME),
-        ROOT_PACKAGE_JSON: getPath(PROJECT_DIR, PACKAGE_JSON_FILE_NAME),
-        ENV: getPath(PROJECT_DIR, ENV_FILE_NAME),
-        ENV_PUBLIC: getPath(PROJECT_DIR, ENV_PUBLIC_FILE_NAME),
-        GLOBAL_ENV_MODEL: getPath(PROJECT_DIR, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
-        GITHUB_WORKFLOW_DIR: getPath(PROJECT_DIR, '.github', 'workflows'),
-        WORKSPACE_JSON: getPath(PROJECT_DIR, WORKSPACE_FILE_NAME),
-        BASE_TS_CONFIG_JSON: getPath(PROJECT_DIR, BASE_TS_CONFIG_FILE_NAME)
+        TS_LIBRARY_PACKAGE_JSON: PathUtilities.resolve(TS_LIBRARY_DIR, PACKAGE_JSON_FILE_NAME),
+        ROOT_PACKAGE_JSON: PathUtilities.resolve(PROJECT_DIR, PACKAGE_JSON_FILE_NAME),
+        ENV: PathUtilities.resolve(PROJECT_DIR, ENV_FILE_NAME),
+        ENV_PUBLIC: PathUtilities.resolve(PROJECT_DIR, ENV_PUBLIC_FILE_NAME),
+        GLOBAL_ENV_MODEL: PathUtilities.resolve(PROJECT_DIR, GLOBAL_ENVIRONMENT_MODEL_FILE_NAME),
+        GITHUB_WORKFLOW_DIR: PathUtilities.resolve(PROJECT_DIR, '.github', 'workflows'),
+        WORKSPACE_JSON: PathUtilities.resolve(PROJECT_DIR, WORKSPACE_FILE_NAME),
+        BASE_TS_CONFIG_JSON: PathUtilities.resolve(PROJECT_DIR, BASE_TS_CONFIG_FILE_NAME),
+        ROOT_ESLINT_CONFIG_MJS: PathUtilities.resolve(PROJECT_DIR, ESLINT_CONFIG_FILE_NAME),
+        THEME_CSS: PathUtilities.resolve(PROJECT_DIR, 'theme.css')
     } as const;
     return mockConstants;
 }

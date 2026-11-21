@@ -1,12 +1,40 @@
 import { DEV_DOCKER_COMPOSE_FILE_NAME, LOCAL_DOCKER_COMPOSE_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, STAGE_DOCKER_COMPOSE_FILE_NAME } from '../constants';
-import { DefaultEnvKeys } from '../env';
-import { toSnakeCase } from '../utilities';
+import { CryptoUtilities, FsUtilities, Path, PathUtilities } from '../encapsulation';
+import { DefaultEnvKeys, EnvUtilities } from '../env';
+import { StringUtilities } from '../utilities';
 import { DockerComposeFileName } from './docker-compose-file-name.model';
 
 /**
  * The traefik docker socket volume. Is needed for traefik to take control of routing.
  */
 export const TRAEFIK_DOCKER_SOCK_VOLUME: string = '/var/run/docker.sock:/var/run/docker.sock:ro';
+
+/**
+ * The named volume traefik keeps its letsencrypt certificates in. Named rather than a folder of the workspace, as the
+ * files of the container's user can't be removed there when docker maps that user to another one.
+ */
+export const TRAEFIK_CERTIFICATES_VOLUME_NAME: string = 'letsencrypt';
+
+/**
+ * The mount of the volume of the certificates in the traefik container.
+ */
+export const TRAEFIK_CERTIFICATES_VOLUME: string = `${TRAEFIK_CERTIFICATES_VOLUME_NAME}:/letsencrypt`;
+
+/**
+ * The file of the credentials of basic auth on stage, at the root of the workspace. "mx prepare" writes it from the
+ * .env, as the user of the workspace, and traefik only reads it.
+ */
+export const TRAEFIK_BASIC_AUTH_FILE_NAME: string = '.htpasswd';
+
+/**
+ * Where traefik reads the credentials of basic auth from, which the label of the middleware names.
+ */
+const TRAEFIK_BASIC_AUTH_PATH: string = '/config/.htpasswd';
+
+/**
+ * The mount of the file of the credentials of basic auth in the traefik container.
+ */
+export const TRAEFIK_BASIC_AUTH_VOLUME: string = `./${TRAEFIK_BASIC_AUTH_FILE_NAME}:${TRAEFIK_BASIC_AUTH_PATH}:ro`;
 
 /**
  * The traefik label for enabling routing for that docker service.
@@ -24,6 +52,16 @@ export const TRAEFIK_COMPRESSION_LABEL: string = 'traefik.http.middlewares.compr
 export const TRAEFIK_DOCKER_IMAGE: string = 'traefik:v3.6';
 
 /**
+ * The entrypoint of traefik for https, which the routers of the services use.
+ */
+export const TRAEFIK_SECURE_ENTRYPOINT: string = 'websecure';
+
+/**
+ * The resolver of the certificates of traefik, which the routers of the services use.
+ */
+export const TRAEFIK_CERT_RESOLVER: string = 'sslresolver';
+
+/**
  * The base traefik commands.
  * Includes things such as http and https ports etc.
  */
@@ -31,13 +69,27 @@ export const TRAEFIK_BASE_DOCKER_COMMANDS: string[] = [
     '--providers.docker=true',
     '--providers.docker.exposedbydefault=false',
     '--entryPoints.web.address=:80',
-    '--entryPoints.websecure.address=:443'
+    `--entryPoints.${TRAEFIK_SECURE_ENTRYPOINT}.address=:443`
 ];
 
 /**
  * Encapsulates functionality for getting docker traefik labels.
  */
 export abstract class DockerTraefikUtilities {
+
+    /**
+     * Writes the credentials of basic auth on stage from the .env to the file traefik reads them from. The password
+     * is hashed with SHA-1, one of the hashes traefik reads, as its plain text is in the .env next to it anyway.
+     * @param rootDir - The directory of the workspace.
+     */
+    static async createBasicAuthFile(rootDir: string): Promise<void> {
+        const [user, password] = await Promise.all([DefaultEnvKeys.BASIC_AUTH_USER, DefaultEnvKeys.BASIC_AUTH_PASSWORD].map(
+            key => EnvUtilities.getEnvVariable<string>(key, STAGE_DOCKER_COMPOSE_FILE_NAME, rootDir)
+        ));
+        const path: Path = PathUtilities.resolve(rootDir, TRAEFIK_BASIC_AUTH_FILE_NAME);
+        const content: string = `${user}:{SHA}${CryptoUtilities.resolveSha1(password)}`;
+        await (await FsUtilities.exists(path) ? FsUtilities.updateFile(path, content, 'replace') : FsUtilities.createFile(path, content));
+    }
 
     /**
      * Gets the traefik labels for the project with the given name.
@@ -76,36 +128,75 @@ export abstract class DockerTraefikUtilities {
         }
     }
 
+    /**
+     * Resolves the hosts the service with the given name is reached under, as docker compose interpolates them.
+     * Without a sub domain, that is the root domain and its www.
+     * @param projectName - The name of the project.
+     * @param composeFileName - The compose file the hosts are for.
+     * @param subDomain - The sub domain of the service.
+     * @returns The hosts, empty for the dev compose file, which has no traefik.
+     */
+    static resolveHosts(projectName: string, composeFileName: DockerComposeFileName, subDomain: string | undefined): string[] {
+        const rootDomain: string | undefined = this.resolveRootDomain(composeFileName);
+        if (rootDomain == undefined) {
+            return [];
+        }
+        return subDomain
+            ? [`\${${DefaultEnvKeys.subDomain(projectName)}}.${rootDomain}`]
+            : [rootDomain, `www.${rootDomain}`];
+    }
+
+    private static resolveRootDomain(composeFileName: DockerComposeFileName): string | undefined {
+        switch (composeFileName) {
+            case DEV_DOCKER_COMPOSE_FILE_NAME: {
+                return undefined;
+            }
+            case LOCAL_DOCKER_COMPOSE_FILE_NAME: {
+                return 'localhost';
+            }
+            case STAGE_DOCKER_COMPOSE_FILE_NAME: {
+                return `\${${DefaultEnvKeys.STAGE_ROOT_DOMAIN}}`;
+            }
+            case PROD_DOCKER_COMPOSE_FILE_NAME: {
+                return `\${${DefaultEnvKeys.PROD_ROOT_DOMAIN}}`;
+            }
+        }
+    }
+
+    private static resolveHostRule(projectName: string, composeFileName: DockerComposeFileName, subDomain: string | undefined): string {
+        return this.resolveHosts(projectName, composeFileName, subDomain).map(h => `Host(\`${h}\`)`)
+            .join(' || ');
+    }
+
     private static getTraefikLabelsForStage(
         projectName: string,
         subDomain: string | undefined,
         port: number,
         traefikBasicAuth: boolean
     ): string[] {
-        let host: string = `Host(\`\${${DefaultEnvKeys.subDomain(projectName)}}.\${${DefaultEnvKeys.STAGE_ROOT_DOMAIN}}\`)`;
+        const host: string = this.resolveHostRule(projectName, STAGE_DOCKER_COMPOSE_FILE_NAME, subDomain);
         const labels: string[] = [];
         const middlewares: string[] = ['compression'];
         if (traefikBasicAuth) {
-            labels.push('traefik.http.middlewares.auth.basicauth.usersfile=/config/.htpasswd');
+            labels.push(`traefik.http.middlewares.auth.basicauth.usersfile=${TRAEFIK_BASIC_AUTH_PATH}`);
             middlewares.push('auth');
         }
         if (!subDomain) {
-            host = `Host(\`\${${DefaultEnvKeys.STAGE_ROOT_DOMAIN}}\`) || Host(\`www.\${${DefaultEnvKeys.STAGE_ROOT_DOMAIN}}\`)`;
             labels.push(
-                'traefik.http.middlewares.wwwredirect.redirectregex.regex=^https://www\.(.*)',
+                'traefik.http.middlewares.wwwredirect.redirectregex.regex=^https://www\\.(.*)',
                 'traefik.http.middlewares.wwwredirect.redirectregex.replacement=https://$${1}'
             );
             middlewares.push('wwwredirect');
         }
         labels.push(
             TRAEFIK_ENABLE_LABEL,
-            `traefik.http.routers.${toSnakeCase(projectName)}.rule=${host}`,
-            `traefik.http.routers.${toSnakeCase(projectName)}.entrypoints=web_secure`,
-            `traefik.http.routers.${toSnakeCase(projectName)}.tls.certresolver=ssl_resolver`,
-            `traefik.http.services.${toSnakeCase(projectName)}.loadbalancer.server.port=${port}`,
+            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.rule=${host}`,
+            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.entrypoints=${TRAEFIK_SECURE_ENTRYPOINT}`,
+            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.tls.certresolver=${TRAEFIK_CERT_RESOLVER}`,
+            `traefik.http.services.${StringUtilities.toSnakeCase(projectName)}.loadbalancer.server.port=${port}`,
             TRAEFIK_COMPRESSION_LABEL
         );
-        labels.push(`traefik.http.routers.${toSnakeCase(projectName)}.middlewares=${middlewares.join(',')}`);
+        labels.push(`traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.middlewares=${middlewares.join(',')}`);
         return labels;
     }
 
@@ -114,49 +205,47 @@ export abstract class DockerTraefikUtilities {
         subDomain: string | undefined,
         port: number
     ): string[] {
-        let host: string = `Host(\`\${${DefaultEnvKeys.subDomain(projectName)}}.\${${DefaultEnvKeys.PROD_ROOT_DOMAIN}}\`)`;
+        const host: string = this.resolveHostRule(projectName, PROD_DOCKER_COMPOSE_FILE_NAME, subDomain);
         const labels: string[] = [];
         const middlewares: string[] = ['compression'];
         if (!subDomain) {
-            host = `Host(\`\${${DefaultEnvKeys.PROD_ROOT_DOMAIN}}\`) || Host(\`www.\${${DefaultEnvKeys.PROD_ROOT_DOMAIN}}\`)`;
             labels.push(
-                'traefik.http.middlewares.wwwredirect.redirectregex.regex=^https://www\.(.*)',
+                'traefik.http.middlewares.wwwredirect.redirectregex.regex=^https://www\\.(.*)',
                 'traefik.http.middlewares.wwwredirect.redirectregex.replacement=https://$${1}'
             );
             middlewares.push('wwwredirect');
         }
         labels.push(
             TRAEFIK_ENABLE_LABEL,
-            `traefik.http.routers.${toSnakeCase(projectName)}.rule=${host}`,
-            `traefik.http.routers.${toSnakeCase(projectName)}.entrypoints=web_secure`,
-            `traefik.http.routers.${toSnakeCase(projectName)}.tls.certresolver=ssl_resolver`,
-            `traefik.http.services.${toSnakeCase(projectName)}.loadbalancer.server.port=${port}`,
+            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.rule=${host}`,
+            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.entrypoints=${TRAEFIK_SECURE_ENTRYPOINT}`,
+            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.tls.certresolver=${TRAEFIK_CERT_RESOLVER}`,
+            `traefik.http.services.${StringUtilities.toSnakeCase(projectName)}.loadbalancer.server.port=${port}`,
             TRAEFIK_COMPRESSION_LABEL
         );
-        labels.push(`traefik.http.routers.${toSnakeCase(projectName)}.middlewares=${middlewares.join(',')}`);
+        labels.push(`traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.middlewares=${middlewares.join(',')}`);
         return labels;
     }
 
     private static getTraefikLabelsForLocal(projectName: string, subDomain: string | undefined, port: number): string[] {
-        let host: string = `Host(\`\${${DefaultEnvKeys.subDomain(projectName)}}.localhost\`)`;
+        const host: string = this.resolveHostRule(projectName, LOCAL_DOCKER_COMPOSE_FILE_NAME, subDomain);
         const labels: string[] = [];
         const middlewares: string[] = ['compression'];
         if (!subDomain) {
-            host = 'Host(`localhost`) || Host(`www.localhost`)';
             labels.push(
-                'traefik.http.middlewares.wwwredirect.redirectregex.regex=^http://www\.(.*)',
+                'traefik.http.middlewares.wwwredirect.redirectregex.regex=^http://www\\.(.*)',
                 'traefik.http.middlewares.wwwredirect.redirectregex.replacement=http://$${1}'
             );
             middlewares.push('wwwredirect');
         }
         labels.push(
             TRAEFIK_ENABLE_LABEL,
-            `traefik.http.routers.${toSnakeCase(projectName)}.rule=${host}`,
-            `traefik.http.routers.${toSnakeCase(projectName)}.entrypoints=web`,
-            `traefik.http.services.${toSnakeCase(projectName)}.loadbalancer.server.port=${port}`,
+            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.rule=${host}`,
+            `traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.entrypoints=web`,
+            `traefik.http.services.${StringUtilities.toSnakeCase(projectName)}.loadbalancer.server.port=${port}`,
             TRAEFIK_COMPRESSION_LABEL
         );
-        labels.push(`traefik.http.routers.${toSnakeCase(projectName)}.middlewares=${middlewares.join(',')}`);
+        labels.push(`traefik.http.routers.${StringUtilities.toSnakeCase(projectName)}.middlewares=${middlewares.join(',')}`);
         return labels;
     }
 }

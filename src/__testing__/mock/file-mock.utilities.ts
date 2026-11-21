@@ -1,15 +1,23 @@
 /* eslint-disable jsdoc/require-jsdoc */
-import { MockConstants, FileMockConstants, DirMockConstants } from './constants';
 import { AngularJson } from '../../angular';
-import { CPUtilities, FsUtilities, JsonUtilities } from '../../encapsulation';
+import { DEV_DOCKER_COMPOSE_FILE_NAME, LOCAL_DOCKER_COMPOSE_FILE_NAME, PROD_DOCKER_COMPOSE_FILE_NAME, STAGE_DOCKER_COMPOSE_FILE_NAME } from '../../constants';
+import { DockerUtilities } from '../../docker';
+import { CPUtilities, FsUtilities, JsonUtilities, PathUtilities } from '../../encapsulation';
 import { EnvUtilities } from '../../env';
+import { EslintUtilities } from '../../eslint';
+import { TemplateUtilities } from '../../templates';
 import { TsConfigUtilities } from '../../tsconfig';
-import { getPath } from '../../utilities';
 import { WorkspaceUtilities } from '../../workspace';
+import { MockConstants, FileMockConstants, DirMockConstants } from './constants';
+
+// the email the letsencrypt of the compose files of a test workspace would register with
+const MOCK_EMAIL: string = 'test@test.com';
 
 export const defaultFilesToMock: (keyof FileMockConstants)[] = [
     'WORKSPACE_JSON',
     'BASE_TS_CONFIG_JSON',
+    'ROOT_ESLINT_CONFIG_MJS',
+    'THEME_CSS',
     'ENV',
     'ENV_PUBLIC',
     'GLOBAL_ENV_MODEL',
@@ -32,10 +40,11 @@ export abstract class FileMockUtilities {
         keyof FileMockConstants,
         (mockConstants: MockConstants, entry: keyof MockConstants) => void | Promise<void>
     > = {
-        DOCKER_COMPOSE_YAML: this.createEmptyFile,
-        DEV_DOCKER_COMPOSE_YAML: this.createEmptyFile,
-        LOCAL_DOCKER_COMPOSE_YAML: this.createEmptyFile,
-        STAGE_DOCKER_COMPOSE_YAML: this.createEmptyFile,
+        // the compose files of mx init, with their traefik, so that a test can start what it generated
+        DOCKER_COMPOSE_YAML: async () => await DockerUtilities.createComposeFile(PROD_DOCKER_COMPOSE_FILE_NAME, MOCK_EMAIL),
+        DEV_DOCKER_COMPOSE_YAML: async () => await DockerUtilities.createComposeFile(DEV_DOCKER_COMPOSE_FILE_NAME, MOCK_EMAIL),
+        LOCAL_DOCKER_COMPOSE_YAML: async () => await DockerUtilities.createComposeFile(LOCAL_DOCKER_COMPOSE_FILE_NAME, MOCK_EMAIL),
+        STAGE_DOCKER_COMPOSE_YAML: async () => await DockerUtilities.createComposeFile(STAGE_DOCKER_COMPOSE_FILE_NAME, MOCK_EMAIL),
         ANGULAR_ESLINT_CONFIG_MJS: this.createEmptyFile,
         ANGULAR_PACKAGE_JSON: this.createAngularPackageJson,
         ANGULAR_APP_COMPONENT_TS: this.createAppComponentTsFile,
@@ -55,7 +64,9 @@ export abstract class FileMockUtilities {
         ENV_PUBLIC: this.createEnvPublic,
         GLOBAL_ENV_MODEL: this.createGlobalEnvModel,
         WORKSPACE_JSON: WorkspaceUtilities.createConfig,
-        BASE_TS_CONFIG_JSON: TsConfigUtilities.createBaseTsConfig
+        BASE_TS_CONFIG_JSON: TsConfigUtilities.createBaseTsConfig,
+        ROOT_ESLINT_CONFIG_MJS: EslintUtilities.setupRootEslint,
+        THEME_CSS: async () => await TemplateUtilities.write('workspace', PathUtilities.resolve('.'), {})
     };
 
     static async setup(
@@ -72,7 +83,7 @@ export abstract class FileMockUtilities {
 
     private static async mockFolders(foldersToMock: (keyof DirMockConstants)[], mockConstants: MockConstants): Promise<void> {
         for (const entry of foldersToMock) {
-            await FsUtilities.mkdir(mockConstants[entry], true, false);
+            await FsUtilities.mkdir(mockConstants[entry], true);
         }
     }
 
@@ -94,17 +105,17 @@ export abstract class FileMockUtilities {
         mockConstants: MockConstants,
         entry: keyof FileMockConstants,
         hasContentOverride: boolean,
-        content: string | string[] | undefined
+        content: string | string[] = ''
     ): Promise<void> {
         if (hasContentOverride) {
-            await FsUtilities.createFile(getPath(mockConstants[entry]), content ?? '', true, false);
+            await FsUtilities.createFile(PathUtilities.resolve(mockConstants[entry]), content, true);
             return;
         }
         await this.mockMethodForFile[entry](mockConstants, entry);
     }
 
     private static async createEmptyFile(mockConstants: MockConstants, entry: keyof MockConstants): Promise<void> {
-        await FsUtilities.createFile(getPath(mockConstants[entry]), '', true, false);
+        await FsUtilities.createFile(PathUtilities.resolve(mockConstants[entry]), '', true);
     }
 
     private static async createAngularJson(mockConstants: MockConstants): Promise<void> {
@@ -140,7 +151,7 @@ export abstract class FileMockUtilities {
     }
 
     private static async createAngularPackageJson(mockConstants: MockConstants): Promise<void> {
-        await FsUtilities.createFile(mockConstants.ANGULAR_PACKAGE_JSON, '{}', true, false);
+        await FsUtilities.createFile(mockConstants.ANGULAR_PACKAGE_JSON, '{}', true);
     }
 
     private static async createRootPackageJson(mockConstants: MockConstants): Promise<void> {
@@ -159,7 +170,7 @@ export abstract class FileMockUtilities {
             '    "devDependencies": {',
             '        "autoprefixer": "^10.4.21",',
             '        "eslint": "^9.25.1",',
-            '        "eslint-config-service-soft": "^2.0.8",',
+            '        "@service-soft/eslint-config": "^2.2.2",',
             '        "postcss": "^8.5.3",',
             '        "tailwindcss": "^4.1.4"',
             '    },',
@@ -168,7 +179,7 @@ export abstract class FileMockUtilities {
             '        "libs/*"',
             '    ]',
             '}'
-        ], true, false);
+        ], true);
     }
 
     private static async createAppComponentTsFile(mockConstants: MockConstants): Promise<void> {
@@ -184,7 +195,7 @@ export abstract class FileMockUtilities {
             '\tstyleUrl: \'./app.css\'',
             '})',
             'export class AppComponent {}'
-        ], true, false);
+        ], true);
     }
 
     private static async createAppRoutesTs(mockConstants: MockConstants): Promise<void> {
@@ -192,7 +203,7 @@ export abstract class FileMockUtilities {
             'import { Routes } from \'@angular/router\';',
             '',
             'export const routes: Routes = [];'
-        ], true, false);
+        ], true);
     }
 
     private static async createAppRoutesServerTs(mockConstants: MockConstants): Promise<void> {
@@ -205,7 +216,7 @@ export abstract class FileMockUtilities {
             '\t\trenderMode: RenderMode.Prerender',
             '\t}',
             '];'
-        ], true, false);
+        ], true);
     }
 
     private static async createAppConfig(mockConstants: MockConstants): Promise<void> {
@@ -223,7 +234,7 @@ export abstract class FileMockUtilities {
             '\t\tprovideClientHydration(withEventReplay())',
             '\t]',
             '};'
-        ], true, false);
+        ], true);
     }
 
     private static async createAppConfigServer(mockConstants: MockConstants): Promise<void> {
@@ -239,7 +250,7 @@ export abstract class FileMockUtilities {
             '};',
             '',
             'export const config: ApplicationConfig = mergeApplicationConfig(appConfig, serverConfig);'
-        ], true, false);
+        ], true);
     }
 
     private static async createGlobalEnvModel(): Promise<void> {

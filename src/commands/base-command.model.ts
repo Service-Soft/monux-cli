@@ -1,7 +1,7 @@
-import { exitWithError } from '../utilities';
-import { WorkspaceConfig, WorkspaceUtilities } from '../workspace';
+import { LogUtilities, PathUtilities, ProcessUtilities } from '../encapsulation';
+import { WorkspaceConfig, WorkspaceSnapshot, WorkspaceSnapshotUtilities, WorkspaceUtilities } from '../workspace';
 
-const TOO_MANY_ARGUMENTS_ERROR_MESSAGE: string = 'Error parsing the command: Too many arguments.';
+const TOO_MANY_ARGUMENTS_ERROR_MESSAGE: string = 'The command was given too many arguments.';
 
 /**
  * Contains configuration shared by every cli command of Monux.
@@ -18,6 +18,12 @@ export abstract class BaseCommand<Input extends object = {}> {
      * @default 1
      */
     protected readonly maxLength: number | undefined = 1;
+    /**
+     * Whether the command restores the files of the workspace as they were before it ran, when it is interrupted or
+     * crashes. For the commands that write code, so a failed one leaves nothing half done.
+     * @default false
+     */
+    protected readonly restoresWorkspace: boolean = false;
 
     /**
      * Starts the cli command.
@@ -27,7 +33,38 @@ export abstract class BaseCommand<Input extends object = {}> {
     async start(args: string[]): Promise<void> {
         await this.validate(args);
         const input: Input = await this.resolveInput(args);
-        await this.run(input);
+        if (!this.restoresWorkspace) {
+            await this.run(input);
+            return;
+        }
+        await this.runRestoringWorkspace(input);
+    }
+
+    private async runRestoringWorkspace(input: Input): Promise<void> {
+        const snapshot: WorkspaceSnapshot = await WorkspaceSnapshotUtilities.create(PathUtilities.resolve('.'));
+        const restore: () => Promise<void> = () => this.restoreWorkspace(snapshot);
+        // when it exits with an error or is interrupted, which ends Monux before this catches anything
+        ProcessUtilities.addExitHandler(restore);
+        try {
+            await this.run(input);
+        }
+        catch (error) {
+            await restore();
+            throw error;
+        }
+        finally {
+            ProcessUtilities.removeExitHandler(restore);
+        }
+    }
+
+    private async restoreWorkspace(snapshot: WorkspaceSnapshot): Promise<void> {
+        const { changed, lockfileChanged } = await WorkspaceSnapshotUtilities.restore(snapshot);
+        if (changed) {
+            LogUtilities.warning('The workspace is as it was before the command.');
+        }
+        if (lockfileChanged) {
+            LogUtilities.warning('node_modules may still hold packages the command installed. "npm install" removes them.');
+        }
     }
 
     protected abstract run(input: Input): Promise<void> | void;
@@ -61,7 +98,7 @@ export abstract class BaseCommand<Input extends object = {}> {
         const config: WorkspaceConfig | undefined = await WorkspaceUtilities.getConfig();
         // eslint-disable-next-line typescript/strict-boolean-expressions
         if (!config?.isWorkspace) {
-            await exitWithError('This command can only be run inside a workspace');
+            await ProcessUtilities.exitWithError('This command needs to be run inside a workspace.');
         }
     }
 
@@ -74,7 +111,7 @@ export abstract class BaseCommand<Input extends object = {}> {
             return;
         }
         if (args.length > this.maxLength) {
-            await exitWithError(TOO_MANY_ARGUMENTS_ERROR_MESSAGE);
+            await ProcessUtilities.exitWithError(TOO_MANY_ARGUMENTS_ERROR_MESSAGE);
         }
     }
 }
