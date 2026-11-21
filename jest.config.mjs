@@ -5,8 +5,11 @@ const config = {
     testEnvironment: 'node',
     rootDir: 'src',
     transform: {
-        '^.+.tsx?$': ['ts-jest']
+        '^.+.tsx?$': ['ts-jest'],
+        // faker is an es module since 10, which the tests load as commonjs
+        '^.+/node_modules/@faker-js/faker/.+\\.js$': ['ts-jest', { tsconfig: { allowJs: true } }]
     },
+    transformIgnorePatterns: ['/node_modules/(?!@faker-js/faker/)'],
     setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
     bail: false,
     modulePathIgnorePatterns: ['tmp'],

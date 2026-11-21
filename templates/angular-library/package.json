@@ -1,0 +1,22 @@
+{
+    "name": "{{=packageName}}",
+    "version": "0.0.0",
+    "private": true,
+    "sideEffects": false,
+    "exports": {
+        ".": {
+            "style": "./dist/tailwind.css"
+        },
+        "./*": {
+            "types": "./dist/types/{{=distName}}-*.d.ts",
+            "default": "./dist/fesm2022/{{=distName}}-*.mjs"
+        }
+    },
+    "scripts": {
+        "build": "ng build",
+        "start": "ng build --watch --configuration development",
+        "test": "ng test --watch=false && npm run test:accessibility",
+        "test:accessibility": "ng run {{=name}}:build-storybook --quiet && vitest run --config tests/vitest.config.mts",
+        "storybook": "ng run {{=name}}:storybook"
+    }
+}

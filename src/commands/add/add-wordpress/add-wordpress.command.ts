@@ -1,10 +1,10 @@
 import { DEV_DOCKER_COMPOSE_FILE_NAME } from '../../../constants';
 import { DbType, DbUtilities } from '../../../db';
 import { ComposeService, DockerUtilities } from '../../../docker';
-import { QuestionsFor } from '../../../encapsulation';
+import { QuestionsFor, PathUtilities } from '../../../encapsulation';
 import { DefaultEnvKeys } from '../../../env';
 import { OmitStrict } from '../../../types';
-import { getPath, toKebabCase } from '../../../utilities';
+import { StringUtilities } from '../../../utilities';
 import { BaseAddCommand, AddConfiguration } from '../models';
 
 /**
@@ -29,9 +29,13 @@ export class AddWordpressCommand extends BaseAddCommand<AddWordpressConfiguratio
         }
     };
 
-    override async run(): Promise<void> {
+    protected override async run(): Promise<void> {
         const config: AddWordpressConfiguration = await this.getConfig();
-        const { dbComposeServiceName, databaseName } = await DbUtilities.configureDb(config.name, DbType.MARIADB, getPath('.'));
+        const { dbComposeServiceName, databaseName } = await DbUtilities.configureDb(
+            config.name,
+            DbType.MARIADB,
+            PathUtilities.resolve('.')
+        );
         await this.createProject(config, dbComposeServiceName, databaseName);
     }
 
@@ -44,7 +48,7 @@ export class AddWordpressCommand extends BaseAddCommand<AddWordpressConfiguratio
         const serviceDefinition: ComposeService = {
             name: config.name,
             image: `wordpress:${version}`,
-            volumes: [`${toKebabCase(config.name)}-data:/var/www/html`],
+            volumes: [`${StringUtilities.toKebabCase(config.name)}-data:/var/www/html`],
             environment: [
                 {
                     key: 'WORDPRESS_DB_HOST',
@@ -72,7 +76,7 @@ export class AddWordpressCommand extends BaseAddCommand<AddWordpressConfiguratio
             true,
             config.subDomain
         );
-        await DockerUtilities.addVolumeToComposeFiles(`${toKebabCase(config.name)}-data`);
+        await DockerUtilities.addVolumeToComposeFiles(`${StringUtilities.toKebabCase(config.name)}-data`);
         await DockerUtilities.addServiceToCompose(
             {
                 ...serviceDefinition,

@@ -1,0 +1,8 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        // ES modules for bundlers, like the build of an Angular project, which leaves out what it does not import
+        "outDir": "dist/esm",
+        "tsBuildInfoFile": "dist/esm.tsbuildinfo"
+    }
+}

@@ -1,9 +1,9 @@
-import { CPUtilities, FsUtilities, JsonUtilities } from '../encapsulation';
-import { WorkspaceProject, WorkspaceUtilities } from '../workspace';
-import { PackageJson } from './package-json.model';
 import { PACKAGE_JSON_FILE_NAME } from '../constants';
+import { CPUtilities, FsUtilities, JsonUtilities, PathUtilities, Path } from '../encapsulation';
+import { mergeDeep } from '../utilities';
+import { WorkspaceProject, WorkspaceUtilities } from '../workspace';
 import { NpmPackage } from './npm-package.enum';
-import { getPath, mergeDeep, Path } from '../utilities';
+import { PackageJson } from './package-json.model';
 
 /**
  * Options for running the npm init command.
@@ -42,34 +42,37 @@ export abstract class NpmUtilities {
      */
     static async init(config: 'root' | NpmInitConfig, output?: boolean): Promise<void> {
         if (config === 'root') {
-            const rootPackageJson: Path = getPath(PACKAGE_JSON_FILE_NAME);
+            const rootPackageJson: Path = PathUtilities.resolve(PACKAGE_JSON_FILE_NAME);
             await CPUtilities.exec('npm init -y', output);
             const oldPackageJson: PackageJson = await FsUtilities.parseFileAs(rootPackageJson);
-            await FsUtilities.updateFile(rootPackageJson, JsonUtilities.stringify(oldPackageJson), 'replace', false);
+            await FsUtilities.updateFile(rootPackageJson, JsonUtilities.stringify(oldPackageJson), 'replace');
             return;
         }
         await CPUtilities.exec(
             `npm init -y --scope=${config.scope} -w ${config.path}`,
             output
         );
-        const packageJsonPath: Path = getPath(config.path, PACKAGE_JSON_FILE_NAME);
+        const packageJsonPath: Path = PathUtilities.resolve(config.path, PACKAGE_JSON_FILE_NAME);
         const oldPackageJson: PackageJson = await FsUtilities.parseFileAs(packageJsonPath);
-        await FsUtilities.updateFile(packageJsonPath, JsonUtilities.stringify(oldPackageJson), 'replace', false);
+        await FsUtilities.updateFile(packageJsonPath, JsonUtilities.stringify(oldPackageJson), 'replace');
     }
 
     /**
      * Runs the given npm command in the project with the provided name.
      * @param projectName - The project to run the npm command in.
-     * @param commands - The npm command to run.
+     * @param command - The npm script to run, or the native command.
      * @param isNativeCommand - Whether or not the npm command is native (like "install") or a custom script defined in the package.json.
+     * @param args - What follows it: the arguments of the script, after "--" so npm does not read them, or those of npm
+     * for a native command, like the package to install.
      */
-    static async run(projectName: string, commands: string, isNativeCommand: boolean): Promise<void> {
-        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName, getPath('.'));
+    static async run(projectName: string, command: string, isNativeCommand: boolean, args: string[] = []): Promise<void> {
+        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName, PathUtilities.resolve('.'));
         if (!isNativeCommand) {
-            await CPUtilities.exec(`npm run ${commands} --workspace=${project.npmWorkspaceString}`);
+            const scriptArgs: string = args.length ? ` -- ${args.join(' ')}` : '';
+            await CPUtilities.exec(`npm run ${command} --workspace=${project.npmWorkspaceString}${scriptArgs}`);
             return;
         }
-        await CPUtilities.exec(`npm ${commands} --workspace=${project.npmWorkspaceString}`);
+        await CPUtilities.exec(`npm ${[command, ...args].join(' ')} --workspace=${project.npmWorkspaceString}`);
     }
 
     /**
@@ -92,6 +95,24 @@ export abstract class NpmUtilities {
     }
 
     /**
+     * Resolves the name of the package of a project, which other projects import it by.
+     * @param project - The project.
+     * @returns The name its package.json gives it, such as "@shop/api-contract".
+     */
+    static async resolvePackageName(project: WorkspaceProject): Promise<string> {
+        return (await FsUtilities.parseFileAs<PackageJson>(PathUtilities.resolve(project.path, PACKAGE_JSON_FILE_NAME))).name;
+    }
+
+    /**
+     * Installs a package of the workspace, like a library, into a project, which links it rather than downloading it.
+     * @param projectName - The name of the project to install the package into.
+     * @param packageName - The name of the package, as its package.json names it.
+     */
+    static async installFromWorkspace(projectName: string, packageName: string): Promise<void> {
+        await this.run(projectName, `i ${packageName}`, true);
+    }
+
+    /**
      * Installs the provided packages inside the root directory.
      * @param npmPackages - The packages to install.
      * @param development - Whether or not the packages will be installed with -D or not.
@@ -107,8 +128,8 @@ export abstract class NpmUtilities {
      * @param data - The data to update the package.json with.
      */
     static async updatePackageJson(projectName: string, data: Partial<PackageJson>): Promise<void> {
-        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName, getPath('.'));
-        const packageJsonPath: Path = getPath(project.path, PACKAGE_JSON_FILE_NAME);
+        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName, PathUtilities.resolve('.'));
+        const packageJsonPath: Path = PathUtilities.resolve(project.path, PACKAGE_JSON_FILE_NAME);
         await this.updatePackageJsonFile(packageJsonPath, data);
     }
 
@@ -117,7 +138,7 @@ export abstract class NpmUtilities {
      * @param data - The data to update the package.json with.
      */
     static async updateRootPackageJson(data: Partial<PackageJson>): Promise<void> {
-        await this.updatePackageJsonFile(getPath(PACKAGE_JSON_FILE_NAME), data);
+        await this.updatePackageJsonFile(PathUtilities.resolve(PACKAGE_JSON_FILE_NAME), data);
     }
 
     /**
@@ -128,6 +149,6 @@ export abstract class NpmUtilities {
     static async updatePackageJsonFile(path: Path, data: Partial<PackageJson>): Promise<void> {
         const oldPackageJson: PackageJson = await FsUtilities.parseFileAs(path);
         const packageJson: PackageJson = mergeDeep(oldPackageJson, data);
-        await FsUtilities.updateFile(path, JsonUtilities.stringify(packageJson), 'replace', false);
+        await FsUtilities.updateFile(path, JsonUtilities.stringify(packageJson), 'replace');
     }
 }

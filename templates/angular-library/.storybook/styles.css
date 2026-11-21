@@ -1,0 +1,10 @@
+/* storybook renders the sources, so tailwind scans them instead of the built package */
+@import "tailwindcss" source("../");
+@import "@service-soft/ui";
+/* the look of every project of the workspace, so the stories and their AXE checks show the colors the apps use */
+@import "../../../theme.css";
+
+/* what the apps put on their own body, so stories show the surface of light and dark mode */
+body {
+    @apply bg-surface text-on-surface;
+}

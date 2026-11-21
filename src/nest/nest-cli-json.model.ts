@@ -3,6 +3,10 @@
  */
 export interface NestCliJson {
     /**
+     * The file "nest start" runs, relative to the output folder, without its extension. "main" by default.
+     */
+    entryFile?: string,
+    /**
      * Options for compiling the project.
      */
     compilerOptions: {

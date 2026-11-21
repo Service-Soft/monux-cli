@@ -1,0 +1,43 @@
+<section class="mx-auto flex max-w-section flex-col gap-8 px-section-padding py-16">
+    <h1 class="font-heading text-headline" i18n="@@tenants.heading">Tenants</h1>
+    <ngx-entity-table
+        #table
+        label="Tenants"
+        i18n-label="@@tenants.tableLabel"
+        hideLabel
+        [service]="tenantService"
+        [columns]="['name', 'deactivatedAt']"
+        [edit]="mayUpdate ? 'dialog' : undefined"
+        [actions]="mayUpdate || mayDelete ? tenantActions : undefined"
+        [canCreate]="mayCreate"
+    />
+</section>
+
+<ng-template #tenantActions let-tenant>
+    @if (mayUpdate) {
+        <button
+            ui-button
+            type="button"
+            variant="text"
+            size="sm"
+            [attr.aria-label]="resolveToggleLabel(tenant)"
+            (click)="toggleDeactivated(tenant)"
+        >
+            {{ resolveToggleText(tenant) }}
+        </button>
+    }
+    <!-- only a deactivated tenant, whose requests the api refuses already -->
+    @if (mayDelete && tenant.deactivatedAt) {
+        <button
+            ui-button
+            type="button"
+            variant="text"
+            size="sm"
+            [attr.aria-label]="resolveDeleteLabel(tenant)"
+            (click)="delete(tenant)"
+            i18n="@@tenants.delete"
+        >
+            Delete
+        </button>
+    }
+</ng-template>

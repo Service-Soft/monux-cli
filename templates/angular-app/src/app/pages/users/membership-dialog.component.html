@@ -1,0 +1,22 @@
+<h2 class="font-heading text-title" i18n="@@membershipDialog.heading">
+    Roles of {{ data.user.name // i18n(ph="user") }} in {{ data.membership.tenantName // i18n(ph="tenant") }}
+</h2>
+<ui-form class="mt-4 grid gap-4" (submit)="save()">
+    <ui-input-chips
+        label="Roles"
+        i18n-label="@@membershipDialog.roles"
+        [required]="false"
+        [options]="roleOptions.hasValue() ? roleOptions.value() : []"
+        [(value)]="roles"
+    />
+    <!-- cancel comes first: the dialog focuses its first button, so pressing enter right away never saves -->
+    <div class="flex flex-wrap justify-end gap-2">
+        <button ui-button type="button" variant="text" (click)="dialogRef.close(false)" i18n="@@membershipDialog.cancel">Cancel</button>
+        <button ui-button type="submit" i18n="@@membershipDialog.save">Save</button>
+    </div>
+</ui-form>
+<div class="mt-4 text-body text-error empty:hidden" role="alert">
+    @for (paragraph of errorParagraphs(); track $index) {
+        <p>{{ paragraph }}</p>
+    }
+</div>

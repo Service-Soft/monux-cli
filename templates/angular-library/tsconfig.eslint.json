@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+        "outDir": "out-tsc/eslint",
+        "types": ["node", "vitest/globals"]
+    },
+    "extends": "./tsconfig.json",
+    "include": ["**/*.ts", ".storybook/*.ts"],
+    "exclude": ["dist", "storybook-static", "out-tsc"]
+}

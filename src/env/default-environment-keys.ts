@@ -1,4 +1,4 @@
-import { toSnakeCase } from '../utilities';
+import { StringUtilities } from '../utilities';
 import { EnvironmentVariableKey } from './environment-variable-key.model';
 
 /**
@@ -56,7 +56,7 @@ export abstract class DefaultEnvKeys {
      * @returns The environment variable key.
      */
     static domain(projectName: string): EnvironmentVariableKey {
-        return `${toSnakeCase(projectName)}_domain` as EnvironmentVariableKey;
+        return `${StringUtilities.toSnakeCase(projectName)}_domain` as EnvironmentVariableKey;
     }
 
     /**
@@ -65,7 +65,7 @@ export abstract class DefaultEnvKeys {
      * @returns The environment variable key.
      */
     static port(projectName: string): EnvironmentVariableKey {
-        return `${toSnakeCase(projectName)}_port` as EnvironmentVariableKey;
+        return `${StringUtilities.toSnakeCase(projectName)}_port` as EnvironmentVariableKey;
     }
 
     /**
@@ -74,7 +74,7 @@ export abstract class DefaultEnvKeys {
      * @returns The environment variable key.
      */
     static subDomain(projectName: string): EnvironmentVariableKey {
-        return `${toSnakeCase(projectName)}_sub_domain` as EnvironmentVariableKey;
+        return `${StringUtilities.toSnakeCase(projectName)}_sub_domain` as EnvironmentVariableKey;
     }
 
     /**
@@ -83,7 +83,7 @@ export abstract class DefaultEnvKeys {
      * @returns The environment variable key.
      */
     static baseUrl(projectName: string): EnvironmentVariableKey {
-        return `${toSnakeCase(projectName)}_base_url` as EnvironmentVariableKey;
+        return `${StringUtilities.toSnakeCase(projectName)}_base_url` as EnvironmentVariableKey;
     }
 
     /**
@@ -93,7 +93,7 @@ export abstract class DefaultEnvKeys {
      * @returns The environment variable key.
      */
     static dbUser(dbServiceName: string, databaseName: string): EnvironmentVariableKey {
-        return `${toSnakeCase(dbServiceName)}_${toSnakeCase(databaseName)}_db_user` as EnvironmentVariableKey;
+        return `${StringUtilities.toSnakeCase(dbServiceName)}_${StringUtilities.toSnakeCase(databaseName)}_db_user` as EnvironmentVariableKey;
     }
 
     /**
@@ -103,7 +103,7 @@ export abstract class DefaultEnvKeys {
      * @returns The environment variable key.
      */
     static dbPassword(dbServiceName: string, databaseName: string): EnvironmentVariableKey {
-        return `${toSnakeCase(dbServiceName)}_${toSnakeCase(databaseName)}_db_password` as EnvironmentVariableKey;
+        return `${StringUtilities.toSnakeCase(dbServiceName)}_${StringUtilities.toSnakeCase(databaseName)}_db_password` as EnvironmentVariableKey;
     }
 
     /**
@@ -112,7 +112,7 @@ export abstract class DefaultEnvKeys {
      * @returns The environment variable key.
      */
     static dbHost(dbServiceName: string): EnvironmentVariableKey {
-        return `${toSnakeCase(dbServiceName)}_db_host` as EnvironmentVariableKey;
+        return `${StringUtilities.toSnakeCase(dbServiceName)}_db_host` as EnvironmentVariableKey;
     }
 
     /**
@@ -121,7 +121,7 @@ export abstract class DefaultEnvKeys {
      * @returns The environment variable key.
      */
     static dbRootPassword(dbServiceName: string): EnvironmentVariableKey {
-        return `${toSnakeCase(dbServiceName)}_db_root_password` as EnvironmentVariableKey;
+        return `${StringUtilities.toSnakeCase(dbServiceName)}_db_root_password` as EnvironmentVariableKey;
     }
 
     /**
@@ -131,7 +131,7 @@ export abstract class DefaultEnvKeys {
      * @returns The environment variable key.
      */
     static dbName(dbServiceName: string, databaseName: string): EnvironmentVariableKey {
-        return `${toSnakeCase(dbServiceName)}_${toSnakeCase(databaseName)}_database` as EnvironmentVariableKey;
+        return `${StringUtilities.toSnakeCase(dbServiceName)}_${StringUtilities.toSnakeCase(databaseName)}_database` as EnvironmentVariableKey;
     }
 
     /**
@@ -140,7 +140,7 @@ export abstract class DefaultEnvKeys {
      * @returns The environment variable key.
      */
     static defaultUserEmail(apiProjectName: string): EnvironmentVariableKey {
-        return `${toSnakeCase(apiProjectName)}_default_user_email` as EnvironmentVariableKey;
+        return `${StringUtilities.toSnakeCase(apiProjectName)}_default_user_email` as EnvironmentVariableKey;
     }
 
     /**
@@ -149,6 +149,33 @@ export abstract class DefaultEnvKeys {
      * @returns The environment variable key.
      */
     static defaultUserPassword(apiProjectName: string): EnvironmentVariableKey {
-        return `${toSnakeCase(apiProjectName)}_default_user_password` as EnvironmentVariableKey;
+        return `${StringUtilities.toSnakeCase(apiProjectName)}_default_user_password` as EnvironmentVariableKey;
+    }
+
+    /**
+     * The secret an api signs its access tokens with.
+     * @param apiProjectName - The name of the api.
+     * @returns The environment variable key.
+     */
+    static jwtAccessSecret(apiProjectName: string): EnvironmentVariableKey {
+        return `${StringUtilities.toSnakeCase(apiProjectName)}_jwt_access_secret` as EnvironmentVariableKey;
+    }
+
+    /**
+     * The secret an api signs its refresh tokens with.
+     * @param apiProjectName - The name of the api.
+     * @returns The environment variable key.
+     */
+    static jwtRefreshSecret(apiProjectName: string): EnvironmentVariableKey {
+        return `${StringUtilities.toSnakeCase(apiProjectName)}_jwt_refresh_secret` as EnvironmentVariableKey;
+    }
+
+    /**
+     * The key an api encrypts what it stores encrypted with, such as the secrets of two factor authentication.
+     * @param apiProjectName - The name of the api.
+     * @returns The environment variable key.
+     */
+    static masterKey(apiProjectName: string): EnvironmentVariableKey {
+        return `${StringUtilities.toSnakeCase(apiProjectName)}_master_key` as EnvironmentVariableKey;
     }
 }

@@ -1,30 +1,29 @@
-/* eslint-disable no-console */
-import { ModuleResolutionKind } from 'typescript';
-
-import { AngularUtilities, NavElementTypes } from '../../../angular';
-import { ANGULAR_APP_COMPONENT_FILE_NAME, ANGULAR_JSON_FILE_NAME, APP_CONFIG_FILE_NAME, APPS_DIRECTORY_NAME, BASE_TS_CONFIG_FILE_NAME, DOCKER_FILE_NAME, GIT_IGNORE_FILE_NAME } from '../../../constants';
+import { AngularJson, AngularLanguage, AngularUtilities, LocalizationUtilities } from '../../../angular';
+import { ANGULAR_JSON_FILE_NAME, APPS_DIRECTORY_NAME, DOCKER_FILE_NAME, ENVIRONMENT_MODEL_TS_FILE_NAME } from '../../../constants';
 import { DockerUtilities } from '../../../docker';
-import { FsUtilities, JsonUtilities, QuestionsFor } from '../../../encapsulation';
+import { FsUtilities, JsonUtilities, LogUtilities, Path, PathUtilities, QuestionsFor } from '../../../encapsulation';
 import { DefaultEnvKeys, EnvUtilities } from '../../../env';
 import { EslintUtilities } from '../../../eslint';
 import { NpmPackage, NpmUtilities } from '../../../npm';
-import { TailwindUtilities } from '../../../tailwind';
-import { TsConfig, TsConfigUtilities } from '../../../tsconfig';
-import { OmitStrict } from '../../../types';
-import { getPath, Path, toPascalCase } from '../../../utilities';
+import { TemplateUtilities } from '../../../templates';
+import { TsUtilities } from '../../../ts';
+import { TsLibraryUtilities } from '../../../ts-library';
+import { DeepPartial, OmitStrict } from '../../../types';
+import { filterAsync, StringUtilities } from '../../../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../../../workspace';
-import { BaseAddCommand, AddConfiguration } from '../models';
+import { ZibriUtilities } from '../../../zibri';
+import { AddConfiguration, AddType, BaseAddCommand } from '../models';
 
 /**
- * Configuration for adding a new angular app.
+ * Configuration for adding an Angular app.
  */
 type AddAngularConfiguration = AddConfiguration & {
     /**
-     * Name of the api used by this app.
+     * The name of the zibri api the app works with.
      */
     apiName: string,
     /**
-     * The port that should be used by the application.
+     * The port the app is served on during development.
      * @default 4200
      */
     port: number,
@@ -35,277 +34,334 @@ type AddAngularConfiguration = AddConfiguration & {
      */
     subDomain?: string,
     /**
-     * Suffix for the html title (eg. "| My Company").
+     * The name of the app, as its pages show it in their titles.
      */
-    titleSuffix: string
+    title: string,
+    /**
+     * The languages of the app, such as "en" or "de", the one it is written in first. Each other one is built below its
+     * code, and translated in src/locale.
+     */
+    languages: string[]
 };
 
 /**
- * Command that handles adding an angular application to the monorepo.
+ * What installs the app as a PWA, as far as Monux changes it.
+ */
+type WebManifest = {
+    // eslint-disable-next-line jsdoc/require-jsdoc
+    name: string,
+    // eslint-disable-next-line jsdoc/require-jsdoc
+    short_name: string
+};
+
+// how much the app downloads before its first page shows, raw. Angular and its router are about 370kB of it, the
+// login, the navigation, the offline status bar and the error handling the rest. The build fails beyond, so that a
+// heavy dependency added to the first load does not go unnoticed
+const INITIAL_BUDGET_WARNING: string = '600kB';
+const INITIAL_BUDGET_ERROR: string = '800kB';
+
+// how the env.ts of the api names the pages of an app its mails link to, see templates/zibri
+const LINKED_PAGES: string[] = ['/${AppPage.CONFIRM_PASSWORD_RESET}', '/${AppPage.ACCEPT_INVITATION}'];
+
+// the comment in the LogApplication of the contract library of an api the apps are added above, see templates/api-contract
+const LOG_APPLICATION_MARKER: string = '// mx add adds the apps above this line';
+
+/**
+ * Command that handles adding an Angular app for a zibri api to the monorepo.
  */
 export class AddAngularCommand extends BaseAddCommand<AddAngularConfiguration> {
     protected override readonly configQuestions: QuestionsFor<OmitStrict<AddAngularConfiguration, keyof AddConfiguration>> = {
+        apiName: {
+            type: 'select',
+            name: 'apiName',
+            message: 'The zibri api of the app',
+            choices: async () => (await this.findApis()).map(api => api.name)
+        },
         port: {
             type: 'number',
             name: 'port',
-            message: 'port',
+            message: 'Port',
             validate: (v?: number) => !!v,
             default: 4200
         },
         subDomain: {
             type: 'input',
             name: 'subDomain',
-            message: 'sub domain'
+            message: 'Sub domain',
+            default: 'admin'
         },
-        titleSuffix: {
+        title: {
             type: 'input',
-            name: 'titleSuffix',
-            message: 'title suffix (eg. "| My Company")',
-            validate: (v?: string) => !!v,
-            default: `| ${toPascalCase(this.baseConfig.name)}`
+            name: 'title',
+            message: 'Name of the app, as its titles show it',
+            validate: (v?: string) => AngularUtilities.validateTitle(v),
+            default: StringUtilities.toPascalCase(this.baseConfig.name)
         },
-        apiName: {
-            type: 'input',
-            name: 'apiName',
-            message: 'name of the api to use',
-            validate: (v?: string) => !!v,
-            default: 'api'
-        }
+        languages: LocalizationUtilities.resolveLanguagesQuestion('app')
     };
 
-    override async run(): Promise<void> {
+    protected override async run(): Promise<void> {
+        if (!(await this.findApis()).length) {
+            throw new Error('An app works with a zibri api. Add one with "mx add" first');
+        }
         const config: AddAngularConfiguration = await this.getConfig();
+        const languages: AngularLanguage[] = LocalizationUtilities.resolveLanguages(config.languages);
         const root: Path = await this.createProject(config);
+        await AngularUtilities.addLocalization(root);
+        const contract: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(
+            ZibriUtilities.getContractName(config.apiName),
+            PathUtilities.resolve('.')
+        );
+
+        LogUtilities.step('Adding the login, the account and what makes the app work offline');
+        await this.cleanUp(root);
+        // languages.ts, which the seo, the server and the language switcher read
+        await TemplateUtilities.write('angular', root, {
+            name: config.name,
+            ...LocalizationUtilities.resolveTemplatePlaceholders(languages)
+        });
+        await TemplateUtilities.write(
+            'angular-app',
+            root,
+            {
+                title: config.title,
+                language: languages[0].code,
+                apiPrefix: StringUtilities.toSnakeCase(config.apiName),
+                contractPackage: await ZibriUtilities.resolveContractPackage(config.apiName),
+                logApplication: this.resolveLogApplication(config.name)
+            },
+            { multilingual: languages.length > 1 }
+        );
+        await this.updateManifest(root, config.title);
+        await this.installDependencies(config.name);
+        await this.updatePackageJson(config);
+        await this.updateAngularJson(root, config.name);
+        await LocalizationUtilities.configure(root, config.name, languages);
+        await EslintUtilities.addLintScripts(root);
+
+        await this.addToCompose(root, config);
+        await this.setupEnvironment(root, config);
+        await this.connectToApi(config, contract);
+        // after its scripts are complete, so that each of them that reads the library builds it first
+        await TsLibraryUtilities.install(contract, config.name);
+        await LocalizationUtilities.collectTexts(config.name, languages);
+
+        LogUtilities.step('Setting up eslint');
+        await EslintUtilities.addWords(LocalizationUtilities.resolveWords(languages));
+        await EslintUtilities.fix(root);
+        LogUtilities.success(`Added "${config.name}" in ${PathUtilities.getRelative(PathUtilities.resolve('.'), root)}`);
+    }
+
+    private async findApis(): Promise<WorkspaceProject[]> {
+        const rootDir: Path = PathUtilities.resolve('.');
+        return await filterAsync(
+            await WorkspaceUtilities.getProjects('apps', rootDir),
+            async p => await WorkspaceUtilities.findProjectType(p.name, rootDir) === AddType.ZIBRI
+        );
+    }
+
+    private async createProject(config: AddAngularConfiguration): Promise<Path> {
+        LogUtilities.step('Creating the Angular project');
+        await AngularUtilities.runCommand(
+            PathUtilities.resolve(APPS_DIRECTORY_NAME),
+            `new ${config.name}`,
+            {
+                '--skip-git': true,
+                '--style': 'tailwind',
+                '--ssr': true,
+                '--zoneless': true,
+                '--ai-config': 'none',
+                '--file-name-style-guide': '2016',
+                '--defaults': true
+            }
+        );
+        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, PathUtilities.resolve('.'));
+        await AngularUtilities.addServiceWorker(project.path);
+        return project.path;
+    }
+
+    private async cleanUp(root: Path): Promise<void> {
+        // what the workspace has once for every project, or what the template replaces
         await Promise.all([
-            this.cleanUp(root, config.name),
-            this.setupTsConfig(root, config.name),
-            this.createDockerfile(root, config),
-            EslintUtilities.setupProjectEslint(root, true),
-            this.setupTailwind(root),
-            EnvUtilities.setupProjectEnvironment(root, false),
-            DockerUtilities.addServiceToCompose(
-                {
-                    name: config.name,
-                    build: {
-                        dockerfile: `./${root}/${DOCKER_FILE_NAME}`,
-                        context: '.'
-                    },
-                    volumes: [`/${config.name}`]
-                },
-                4000,
-                config.port,
-                true,
-                true,
-                config.subDomain
-            ),
-            AngularUtilities.updateAngularJson(
-                getPath(root, ANGULAR_JSON_FILE_NAME),
-                {
-                    $schema: '../../node_modules/@angular/cli/lib/config/schema.json',
-                    projects: {
-                        [config.name]: {
-                            architect: {
-                                build: {
-                                    configurations: {
-                                        production: {
-                                            budgets: [
-                                                {
-                                                    maximumError: '3MB',
-                                                    maximumWarning: '500kB',
-                                                    type: 'initial'
-                                                },
-                                                {
-                                                    maximumError: '4kB',
-                                                    maximumWarning: '2kB',
-                                                    type: 'anyComponentStyle'
-                                                }
-                                            ]
-                                        }
-                                    }
+            '.vscode',
+            '.editorconfig',
+            '.gitignore',
+            '.prettierrc',
+            'README.md',
+            'src/app/app.component.css'
+        ].map(f => FsUtilities.rm(PathUtilities.resolve(root, f))));
+    }
+
+    private async updateManifest(root: Path, title: string): Promise<void> {
+        const manifestPath: Path = PathUtilities.resolve(root, 'public', 'manifest.webmanifest');
+        const manifest: WebManifest = await FsUtilities.parseFileAs(manifestPath);
+        await FsUtilities.updateFile(
+            manifestPath,
+            JsonUtilities.stringify({ ...manifest, name: title, short_name: title }),
+            'replace'
+        );
+    }
+
+    private async installDependencies(name: string): Promise<void> {
+        LogUtilities.step('Installing the libraries');
+        await NpmUtilities.install(name, [
+            NpmPackage.SERVICE_SOFT_UI,
+            NpmPackage.SERVICE_SOFT_NGX_NAVIGATION,
+            NpmPackage.SERVICE_SOFT_NGX_AUTH,
+            NpmPackage.SERVICE_SOFT_NGX_PWA,
+            NpmPackage.SERVICE_SOFT_NGX_ERROR_HANDLING,
+            NpmPackage.SERVICE_SOFT_NGX_PERSISTENCE_LOGGER,
+            NpmPackage.SERVICE_SOFT_NGX_ENTITY,
+            NpmPackage.ANGULAR_ARIA,
+            NpmPackage.ZIBRI_CONTRACT,
+            NpmPackage.UQR,
+            NpmPackage.FONTAWESOME_SOLID_ICONS
+        ]);
+        await NpmUtilities.install(name, [NpmPackage.ESLINT_PLUGIN_BETTER_TAILWINDCSS], true);
+    }
+
+    private async updatePackageJson(config: AddAngularConfiguration): Promise<void> {
+        await NpmUtilities.updatePackageJson(config.name, {
+            scripts: {
+                start: `ng serve --port ${config.port}`,
+                // the texts of index.html into every language, see scripts/localize-index.mjs
+                build: 'ng build && node scripts/localize-index.mjs',
+                test: 'ng test --watch=false'
+            }
+        });
+    }
+
+    private async updateAngularJson(root: Path, name: string): Promise<void> {
+        const update: DeepPartial<AngularJson> = {
+            projects: {
+                [name]: {
+                    architect: {
+                        build: {
+                            configurations: {
+                                production: {
+                                    budgets: [
+                                        { type: 'initial', maximumWarning: INITIAL_BUDGET_WARNING, maximumError: INITIAL_BUDGET_ERROR },
+                                        { type: 'anyComponentStyle', maximumWarning: '2kB', maximumError: '4kB' }
+                                    ]
                                 }
                             }
                         }
                     }
                 }
-            ),
-            AngularUtilities.setupMaterial(root)
-        ]);
-
-        const prodRootDomain: string = await EnvUtilities.getEnvVariable(
-            DefaultEnvKeys.PROD_ROOT_DOMAIN,
-            'dev.docker-compose.yaml',
-            getPath('.')
-        );
-        const fullDomain: string = config.subDomain ? `${config.subDomain}.${prodRootDomain}` : prodRootDomain;
-
-        await AngularUtilities.setupNavigation(root, config.name);
-        await AngularUtilities.setupLogging(root, config.name, config.apiName);
-        await AngularUtilities.setupAuth(root, config.name, config.apiName, fullDomain, config.titleSuffix);
-        await AngularUtilities.setupChangeSets(root, config.name, config.apiName);
-        await AngularUtilities.setupPwa(root, config.name);
-        await FsUtilities.replaceInFile(
-            getPath(root, 'src', 'app', APP_CONFIG_FILE_NAME),
-            '\'ALLOWED_DOMAINS_PLACEHOLDER\'',
-            `environment.${DefaultEnvKeys.domain(config.apiName)}`
-        );
-        await NpmUtilities.install(config.name, [NpmPackage.NGX_MATERIAL_ENTITY]);
-
-        await this.createDefaultPages(root, config);
-
-        await NpmUtilities.updatePackageJson(config.name, { scripts: { start: `ng serve --port ${config.port}` }, prettier: undefined });
-
-        const app: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
-        await EnvUtilities.buildEnvironmentFileForApp(app, false, 'dev.docker-compose.yaml', getPath('.'));
-    }
-
-    private async setupTailwind(root: string): Promise<void> {
-        await TailwindUtilities.setupProjectTailwind(root);
-        await FsUtilities.updateFile(getPath(root, 'src', 'styles.css'), [
-            '@tailwind base;',
-            '@tailwind components;',
-            '@tailwind utilities;'
-        ], 'append');
-    }
-
-    private async createDefaultPages(root: Path, config: AddAngularConfiguration): Promise<void> {
-        await AngularUtilities.generatePage(
-            root,
-            'Home',
-            {
-                addTo: 'navbar',
-                rowIndex: 0,
-                element: {
-                    type: NavElementTypes.TITLE_WITH_INTERNAL_LINK,
-                    title: 'Home',
-                    link: {
-                        route: {
-                            path: '',
-                            title: `Home ${config.titleSuffix}`,
-                            // @ts-ignore
-                            // eslint-disable-next-line typescript/no-unsafe-return, typescript/no-unsafe-member-access
-                            loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent),
-                            canActivate: ['JwtLoggedInGuard']
-                        }
-                    },
-                    position: 'center',
-                    // @ts-ignore
-                    condition: 'isLoggedIn'
-                }
-            },
-            undefined
-        );
-    }
-
-    private async createDockerfile(root: string, config: AddAngularConfiguration): Promise<void> {
-        await FsUtilities.createFile(
-            getPath(root, DOCKER_FILE_NAME),
-            [
-                'FROM node:20 AS build',
-                '# Set to a non-root built-in user `node`',
-                'USER node',
-                'RUN mkdir -p /home/node/root',
-                'COPY --chown=node . /home/node/root',
-                'WORKDIR /home/node/root',
-                'RUN npm install',
-                `RUN npm run build --workspace=${APPS_DIRECTORY_NAME}/${config.name} --omit=dev`,
-                '',
-                'FROM node:20',
-                'WORKDIR /usr/app',
-                `COPY --from=build /home/node/root/${APPS_DIRECTORY_NAME}/${config.name}/dist/${config.name} ./`,
-                'CMD node server/server.mjs'
-            ]
-        );
-    }
-
-    private async createProject(config: AddAngularConfiguration): Promise<Path> {
-        console.log('Creates the base app');
-        await AngularUtilities.runCommand(
-            getPath(APPS_DIRECTORY_NAME),
-            `new ${config.name}`,
-            { '--skip-git': true, '--style': 'css', '--inline-style': true, '--ssr': true, '--ai-config': 'none', '--zoneless': false }
-        );
-        const newProject: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.name, getPath('.'));
-        await AngularUtilities.updateAngularJson(
-            getPath(newProject.path, ANGULAR_JSON_FILE_NAME),
-            {
-                projects: {
-                    [newProject.name]: {
-                        schematics: {
-                            '@schematics/angular:component': {
-                                style: 'css',
-                                type: 'component'
-                            },
-                            '@schematics/angular:service': {
-                                type: 'service'
-                            },
-                            '@schematics/angular:pipe': {
-                                typeSeparator: '.'
-                            },
-                            '@schematics/angular:guard': {
-                                typeSeparator: '.'
-                            }
-                        }
-                    }
-                }
             }
-        );
-        await FsUtilities.updateFile(getPath(newProject.path, 'src', 'app', 'app.html'), '', 'replace');
-        await AngularUtilities.addProvider(newProject.path, 'provideHttpClient(withInterceptorsFromDi(), withFetch())', [
-            // eslint-disable-next-line sonar/no-duplicate-string
-            { defaultImport: false, element: 'provideHttpClient', path: '@angular/common/http' },
-            { defaultImport: false, element: 'withInterceptorsFromDi', path: '@angular/common/http' },
-            { defaultImport: false, element: 'withFetch', path: '@angular/common/http' }
-        ]);
-        return newProject.path;
-    }
-
-    private async cleanUp(root: string, name: string): Promise<void> {
-        console.log('cleans up');
-        await FsUtilities.replaceInFile(
-            getPath(root, 'src', 'app', ANGULAR_APP_COMPONENT_FILE_NAME),
-            `protected readonly title = signal('${name}');`,
-            '  constructor() {}'
-        );
-        await FsUtilities.replaceInFile(
-            getPath(root, 'src', 'app', ANGULAR_APP_COMPONENT_FILE_NAME),
-            'Component, signal',
-            'Component'
-        );
-        await FsUtilities.rm(getPath(root, '.vscode'));
-        await FsUtilities.rm(getPath(root, '.editorconfig'));
-        await FsUtilities.rm(getPath(root, GIT_IGNORE_FILE_NAME));
-        await FsUtilities.rm(getPath(root, 'src', 'app', 'app.spec.ts'));
-    }
-
-    private async setupTsConfig(root: string, projectName: string): Promise<void> {
-        console.log('sets up tsconfig');
-        await TsConfigUtilities.updateTsConfig(
-            projectName,
-            {
-                extends: `../../${BASE_TS_CONFIG_FILE_NAME}`,
-                compilerOptions: {
-                    moduleResolution: 'bundler' as unknown as ModuleResolutionKind,
-                    isolatedModules: false
-                }
-            }
-        );
-
-        const eslintTsconfig: TsConfig = {
-            compilerOptions: {
-                outDir: './out-tsc/eslint',
-                types: ['jasmine', 'node']
-            },
-            extends: `../../${BASE_TS_CONFIG_FILE_NAME}`,
-            files: [
-                'src/main.ts',
-                'src/main.server.ts',
-                'src/server.ts'
-            ],
-            include: [
-                'src/**/*.spec.ts',
-                'src/**/*.d.ts'
-            ]
         };
-        await FsUtilities.createFile(getPath(root, 'tsconfig.eslint.json'), JsonUtilities.stringify(eslintTsconfig));
+        await AngularUtilities.updateAngularJson(PathUtilities.resolve(root, ANGULAR_JSON_FILE_NAME), update);
+    }
+
+    private async addToCompose(root: Path, config: AddAngularConfiguration): Promise<void> {
+        const projectDirectory: string = PathUtilities.getRelative(PathUtilities.resolve('.'), root);
+        await DockerUtilities.addServiceToCompose(
+            {
+                name: config.name,
+                build: {
+                    dockerfile: `./${projectDirectory}/${DOCKER_FILE_NAME}`,
+                    context: '.'
+                }
+            },
+            4000,
+            config.port,
+            true,
+            true,
+            config.subDomain
+        );
+        await DockerUtilities.addAllowedHosts(config.name, config.subDomain);
+    }
+
+    private async setupEnvironment(root: Path, config: AddAngularConfiguration): Promise<void> {
+        await EnvUtilities.setupProjectEnvironment(root, false);
+        await EnvUtilities.addProjectVariableKey(
+            config.name,
+            PathUtilities.resolve(root, 'src', 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
+            DefaultEnvKeys.baseUrl(config.apiName),
+            false,
+            PathUtilities.resolve('.')
+        );
+    }
+
+    /**
+     * Gets the member of the LogApplication of the contract library an app sends its logs by.
+     * @param name - The name of the app.
+     * @returns The name of the member, such as "ADMIN".
+     */
+    private resolveLogApplication(name: string): string {
+        return StringUtilities.toSnakeCase(name).toUpperCase();
+    }
+
+    /**
+     * Makes the api of the app take its logs, its requests from the browser and send its password reset mails to it.
+     * @param config - The configuration of the app.
+     * @param contract - The contract library of the api.
+     */
+    private async connectToApi(config: AddAngularConfiguration, contract: WorkspaceProject): Promise<void> {
+        LogUtilities.step(`Connecting the app to "${config.apiName}"`);
+        const rootDir: Path = PathUtilities.resolve('.');
+        const api: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(config.apiName, rootDir);
+        const apiSource: Path = PathUtilities.resolve(api.path, 'src');
+        const appBaseUrl: string = `environment.${DefaultEnvKeys.baseUrl(config.name)}`;
+
+        await TsUtilities.addEnumMember(
+            PathUtilities.resolve(contract.path, 'src', 'log-application.enum.ts'),
+            LOG_APPLICATION_MARKER,
+            `${this.resolveLogApplication(config.name)} = '${config.name}'`
+        );
+        await NpmUtilities.run(contract.name, 'build', false);
+
+        const corsOriginsPath: Path = PathUtilities.resolve(apiSource, 'cors-origins.ts');
+        await this.addToArray(corsOriginsPath, 'resolveCorsOrigins', appBaseUrl);
+        const environmentImport: string = 'import { environment } from \'./environment/environment\';';
+        if (!(await FsUtilities.readFile(corsOriginsPath)).includes(environmentImport)) {
+            await FsUtilities.replaceInFile(
+                corsOriginsPath,
+                'import { CorsOrigin } from \'zibri\';\n',
+                `import { CorsOrigin } from 'zibri';\n\n${environmentImport}\n`
+            );
+        }
+
+        // the first app of an api gets the links of its password reset and invitation mails. Another one keeps the pages
+        // of the first
+        const envPath: Path = PathUtilities.resolve(apiSource, 'env.ts');
+        const apiUrl: string = `\${environment.${DefaultEnvKeys.baseUrl(config.apiName)}}`;
+        if ((await FsUtilities.readFile(envPath)).includes(`${apiUrl}${LINKED_PAGES[0]}`)) {
+            for (const page of LINKED_PAGES) {
+                await FsUtilities.replaceInFile(envPath, `${apiUrl}${page}`, `\${${appBaseUrl}}${page}`);
+            }
+            await FsUtilities.replaceInFile(
+                envPath,
+                /\n\s*\/\/ the pages of an app that set a new password[^\n]*\n[^\n]*\n/,
+                '\n    // the pages of the app that set a new password and accept an invitation, which the mails link to\n'
+            );
+        }
+
+        await EnvUtilities.addProjectVariableKey(
+            config.apiName,
+            PathUtilities.resolve(apiSource, 'environment', ENVIRONMENT_MODEL_TS_FILE_NAME),
+            DefaultEnvKeys.baseUrl(config.name),
+            false,
+            rootDir
+        );
+        await EnvUtilities.buildEnvironmentFileForApp(api, false, 'dev.docker-compose.yaml', rootDir);
+        await EslintUtilities.fix(api.path);
+    }
+
+    /**
+     * Adds a value to the end of an array a file of the api passes to a function on one line.
+     * @param path - The file.
+     * @param functionName - The name of the function the array is passed to.
+     * @param value - The value, as typescript.
+     */
+    private async addToArray(path: Path, functionName: string, value: string): Promise<void> {
+        const content: string = await FsUtilities.readFile(path);
+        const declaration: RegExp = new RegExp(`(${functionName}\\(\\[)([^\\]]*)\\]`);
+        const match: RegExpExecArray | null = declaration.exec(content);
+        if (match == undefined) {
+            throw new Error(`Could not find the array passed to ${functionName} in ${path}`);
+        }
+        const values: string = match[2].trim() ? `${match[2].trim()}, ${value}` : value;
+        await FsUtilities.updateFile(path, content.replace(declaration, `$1${values}]`), 'replace');
     }
 }

@@ -1,6 +1,7 @@
 import CliTable3, { Table } from 'cli-table3';
 
 import { ChalkUtilities } from './chalk.utilities';
+import { LogUtilities } from './log.utilities';
 
 /**
  * Definition for printing a table to the console.
@@ -41,9 +42,7 @@ export abstract class CliTableUtilities {
             table.push(row);
         }
 
-        // eslint-disable-next-line no-console
-        console.log(ChalkUtilities.boldUnderline(data.title));
-        // eslint-disable-next-line no-console
-        console.log(table.toString());
+        LogUtilities.heading(data.title);
+        LogUtilities.text(table.toString());
     }
 }

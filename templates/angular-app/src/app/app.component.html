@@ -1,0 +1,9 @@
+<!-- says when the user is offline or has changes that are not synced yet, and shows nothing otherwise -->
+<ngx-offline-status-bar />
+<ngx-navbar [rows]="navbarRows" [components]="navbarComponents" />
+<main class="min-h-screen">
+    <!-- created again for another tenant, so that a page shows what the tenant the user acts in holds -->
+    @for (tenantId of [authService.activeTenantId()]; track tenantId) {
+        <router-outlet />
+    }
+</main>

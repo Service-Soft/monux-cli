@@ -1,0 +1,10 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        // CommonJS for node, like an api requires it. The package has no "type": "module", so nodenext emits CommonJS
+        "module": "nodenext",
+        "moduleResolution": "nodenext",
+        "outDir": "dist/cjs",
+        "tsBuildInfoFile": "dist/cjs.tsbuildinfo"
+    }
+}

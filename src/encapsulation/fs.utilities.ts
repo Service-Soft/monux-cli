@@ -1,9 +1,11 @@
-import { Dirent } from 'fs';
-import { access, writeFile, mkdir, readFile, readdir, rm, rename, cp } from 'fs/promises';
-import { dirname } from 'path';
+import { Dirent } from 'node:fs';
+import { access, writeFile, mkdir, readFile, readdir, rm, rename, cp } from 'node:fs/promises';
 
 import { JsonUtilities } from './json.utilities';
-import { getPath, Path } from '../utilities';
+import { PathUtilities, Path } from './path.utilities';
+
+// eslint-disable-next-line jsdoc/require-jsdoc
+export type { Dirent };
 
 /**
  * Definition for a line in a file.
@@ -102,6 +104,7 @@ export abstract class FsUtilities {
      * @param newContent - The new content that should replace the old one.
      * @param fromIndex - The starting line index (inclusive). Defaults to the start of the file.
      * @param untilIndex - The ending line index (inclusive). Defaults to the end of the file.
+     * @throws When the file does not contain oldContent in the given lines.
      */
     static async replaceAllInFile(
         path: Path,
@@ -114,12 +117,13 @@ export abstract class FsUtilities {
     }
 
     /**
-     * Replace all instances of oldContent in the file at the given path with newContent.
+     * Replace the first instance of oldContent in the file at the given path with newContent.
      * @param path - The path of the file.
      * @param oldContent - The old content that should be replaced.
      * @param newContent - The new content that should replace the old one.
      * @param fromIndex - The starting line index (inclusive). Defaults to the start of the file.
      * @param untilIndex - The ending line index (inclusive). Defaults to the end of the file.
+     * @throws When the file does not contain oldContent in the given lines.
      */
     static async replaceInFile(
         path: Path,
@@ -149,10 +153,22 @@ export abstract class FsUtilities {
         const afterLines: string[] = lines.slice(end);
 
         const stringToModify: string = lines.slice(start, end).join('\n');
+        // a file Monux edits was written by a cli of a framework. When its output changes, this fails here instead of
+        // leaving the workspace without the edit.
+        if (!this.contains(stringToModify, oldContent)) {
+            throw new Error(`Could not find ${String(oldContent)} in ${path} to replace it`);
+        }
         const modifiedLines: string = stringToModify[all ? 'replaceAll' : 'replace'](oldContent, newContent);
 
         content = [...beforeLines, ...modifiedLines.split('\n'), ...afterLines].join('\n');
         await this.updateFile(path, content, 'replace');
+    }
+
+    private static contains(content: string, searchValue: string | RegExp): boolean {
+        // a global regex keeps its lastIndex between calls, a copy of it starts at the beginning.
+        return typeof searchValue === 'string'
+            ? content.includes(searchValue)
+            : new RegExp(searchValue.source, searchValue.flags.replace('g', '')).test(content);
     }
 
     /**
@@ -160,22 +176,17 @@ export abstract class FsUtilities {
      * @param path - The path of the new file to create.
      * @param data - The data to write into the file. Can be a raw data string or an array of lines, which are joined by \n.
      * @param recursive - Whether or not to recursively create the file.
-     * @param log - Whether or not the success of the creation should be logged to the console.
      */
-    static async createFile(path: Path, data: string | string[], recursive: boolean = true, log: boolean = true): Promise<void> {
+    static async createFile(path: Path, data: string | string[], recursive: boolean = true): Promise<void> {
         if (await this.exists(path)) {
             throw new Error(`File at ${path} already exists. Did you mean to call "updateFile"?`);
         }
         data = this.normalizeData(data);
-        const parentDir: Path = dirname(path) as Path;
+        const parentDir: Path = PathUtilities.getDirectory(path);
         if (recursive && !await this.exists(parentDir)) {
-            await this.mkdir(parentDir, true, false);
+            await this.mkdir(parentDir, true);
         }
         await writeFile(path, data);
-        if (log) {
-            // eslint-disable-next-line no-console
-            console.log('created', path);
-        }
     }
 
     private static normalizeData(data: string | string[]): string {
@@ -192,13 +203,11 @@ export abstract class FsUtilities {
      * @param path - The path of the new file to create.
      * @param data - The data to write into the file. Can be a raw data string or an array of lines, which are joined by \n.
      * @param action - Whether the data should replace the current content or be pre-/appended.
-     * @param log - Whether or not the success of the update should be logged to the console.
      */
     static async updateFile(
         path: Path,
         data: string | string[],
-        action: 'replace' | 'prepend' | 'append',
-        log: boolean = true
+        action: 'replace' | 'prepend' | 'append'
     ): Promise<void> {
         if (!await this.exists(path)) {
             throw new Error(`File at ${path} does not exist. Did you mean to call "createFile"?`);
@@ -222,10 +231,6 @@ export abstract class FsUtilities {
                 await writeFile(path, this.normalizeData(currentContent));
                 break;
             }
-        }
-        if (log) {
-            // eslint-disable-next-line no-console
-            console.log('updated', path);
         }
     }
 
@@ -275,14 +280,9 @@ export abstract class FsUtilities {
      * Creates a directory at the given path.
      * @param path - The path of the directory to create.
      * @param recursive - Whether or not missing directories in the path should be created as well.
-     * @param log - Whether or not the success of the creation should be logged to the console.
      */
-    static async mkdir(path: Path, recursive: boolean = true, log: boolean = true): Promise<void> {
+    static async mkdir(path: Path, recursive: boolean = true): Promise<void> {
         await mkdir(path, { recursive: recursive });
-        if (log) {
-            // eslint-disable-next-line no-console
-            console.log('created', path);
-        }
     }
 
     /**
@@ -292,6 +292,39 @@ export abstract class FsUtilities {
      */
     static async readdir(path: Path): Promise<Dirent[]> {
         return readdir(path, { withFileTypes: true });
+    }
+
+    /**
+     * Finds every file inside the directory at the given path, including the ones in its subdirectories.
+     * @param path - The path of the directory to search.
+     * @returns The paths of the files, relative to the given directory.
+     */
+    static async findFilesRecursive(path: Path): Promise<string[]> {
+        const entries: Dirent[] = await readdir(path, { withFileTypes: true, recursive: true });
+        return entries
+            .filter(e => e.isFile())
+            .map(e => PathUtilities.getRelative(path, PathUtilities.resolve(e.parentPath, e.name)))
+            .toSorted();
+    }
+
+    /**
+     * Reads the file at the given path as raw bytes, for files that might not be text, such as images.
+     * @param path - The path of the file to read.
+     * @returns The content of the file.
+     */
+    static async readFileBytes(path: Path): Promise<Buffer> {
+        return readFile(path);
+    }
+
+    /**
+     * Writes the given bytes to the file at the given path, replacing it when it exists.
+     * Creates missing parent directories.
+     * @param path - The path of the file to write.
+     * @param data - The content of the file.
+     */
+    static async writeFileBytes(path: Path, data: Buffer): Promise<void> {
+        await this.mkdir(PathUtilities.getDirectory(path), true);
+        await writeFile(path, data);
     }
 
     /**
@@ -308,8 +341,8 @@ export abstract class FsUtilities {
     }
 
     private static async copyEntry(entry: Dirent, destination: string): Promise<void> {
-        const source: Path = getPath(entry.parentPath, entry.name);
-        const dest: Path = getPath(destination, entry.name);
+        const source: Path = PathUtilities.resolve(entry.parentPath, entry.name);
+        const dest: Path = PathUtilities.resolve(destination, entry.name);
         // eslint-disable-next-line angular/no-experimental
         await cp(source, dest, { recursive: true, errorOnExist: true });
     }

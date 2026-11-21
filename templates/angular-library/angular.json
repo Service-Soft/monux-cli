@@ -1,0 +1,67 @@
+{
+    "$schema": "../../node_modules/@angular/cli/lib/config/schema.json",
+    "version": 1,
+    "cli": {
+        "packageManager": "npm",
+        "analytics": false
+    },
+    "newProjectRoot": "",
+    "projects": {
+        "{{=name}}": {
+            "projectType": "library",
+            "root": "",
+            "sourceRoot": "",
+            "prefix": "{{=prefix}}",
+            "architect": {
+                "build": {
+                    "builder": "@angular/build:ng-packagr",
+                    "configurations": {
+                        "production": {
+                            "tsConfig": "tsconfig.lib.prod.json"
+                        },
+                        "development": {
+                            "tsConfig": "tsconfig.lib.json"
+                        }
+                    },
+                    "defaultConfiguration": "production"
+                },
+                "test": {
+                    "builder": "@angular/build:unit-test",
+                    "options": {
+                        "tsConfig": "tsconfig.spec.json",
+                        "exclude": ["tests/**"]
+                    }
+                },
+                "storybook": {
+                    "builder": "@storybook/angular:start-storybook",
+                    "options": {
+                        "browserTarget": "{{=name}}:build",
+                        "compodoc": false,
+                        "configDir": ".storybook",
+                        "experimentalZoneless": true,
+                        "port": 6006,
+                        "styles": [".storybook/styles.css"],
+                        "tsConfig": ".storybook/tsconfig.json"
+                    }
+                },
+                "build-storybook": {
+                    "builder": "@storybook/angular:build-storybook",
+                    "options": {
+                        "browserTarget": "{{=name}}:build",
+                        "compodoc": false,
+                        "configDir": ".storybook",
+                        "experimentalZoneless": true,
+                        "outputDir": "storybook-static",
+                        "styles": [".storybook/styles.css"],
+                        "tsConfig": ".storybook/tsconfig.json"
+                    }
+                }
+            }
+        }
+    },
+    "schematics": {
+        "@schematics/angular:component": {
+            "type": "component"
+        }
+    }
+}

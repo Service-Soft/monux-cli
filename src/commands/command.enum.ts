@@ -18,6 +18,8 @@ export enum Command {
     D = 'd',
     GENERATE_PAGE = 'generatePage',
     GP = 'gp',
+    GENERATE_COMPONENT = 'generateComponent',
+    GC = 'gc',
     RUN_ALL = 'run-all',
     RUN_MANY = 'run-many',
     RA = 'ra',

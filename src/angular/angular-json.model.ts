@@ -180,9 +180,55 @@ interface AngularJsonSchematicOptions {
 }
 
 /**
+ * The language a project is written in, as its i18n has it.
+ */
+interface AngularJsonSourceLocale {
+    /**
+     * The code of the language, like 'en'.
+     */
+    code: string,
+    /**
+     * The path below which its build is served, like 'en', or '' for the root.
+     */
+    subPath: string
+}
+
+/**
+ * A language a project is translated into, as its i18n has it.
+ */
+export interface AngularJsonLocale {
+    /**
+     * The path of the file of its translation, like 'src/locale/messages.de.xlf'.
+     */
+    translation: string,
+    /**
+     * The path below which its build is served, like 'de'.
+     */
+    subPath: string
+}
+
+/**
+ * The languages Angular builds a project in.
+ */
+interface AngularJsonI18n {
+    /**
+     * The language the project is written in.
+     */
+    sourceLocale: AngularJsonSourceLocale,
+    /**
+     * The languages it is translated into, by their code.
+     */
+    locales: Record<string, AngularJsonLocale>
+}
+
+/**
  * Definition for a single angular.json project.
  */
 interface AngularJsonProject {
+    /**
+     * The languages Angular builds the project in.
+     */
+    i18n?: AngularJsonI18n,
     /**
      * The root of the project.
      */

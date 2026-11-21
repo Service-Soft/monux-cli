@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+        "types": ["node"]
+    },
+    "exclude": ["../dist", "../storybook-static"],
+    "extends": "../tsconfig.lib.json",
+    // the stories and the preview, which import the components. main.ts is read by node, not by the build of the stories
+    "include": ["../**/*.stories.ts", "./preview.ts"]
+}

@@ -1,0 +1,13 @@
+/* only used by eslint-plugin-better-tailwindcss: removes the built-in colors, fonts, text sizes and shadows of tailwind,
+   so the components can only use the tokens of @service-soft/ui and of the workspace, like the @service-soft libraries */
+@import "tailwindcss";
+
+@theme {
+    --color-*: initial;
+    --font-*: initial;
+    --text-*: initial;
+    --shadow-*: initial;
+}
+
+@import "@service-soft/ui/theme.css";
+@import "../../theme.css";

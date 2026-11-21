@@ -1,53 +1,54 @@
+import { InquirerUtilities } from '../../encapsulation';
+import { BaseCommand } from '../base-command.model';
 import { AddAngularCommand } from './add-angular';
 import { AddAngularLibraryCommand } from './add-angular-library';
 import { AddAngularWebsiteCommand } from './add-angular-website';
 import { AddLoopbackCommand } from './add-loopback';
+import { AddNestCommand } from './add-nest';
 import { AddTsLibraryCommand } from './add-ts-library';
 import { AddWordpressCommand } from './add-wordpress';
-import { AddConfiguration, addConfigurationQuestions, AddType } from './models';
-import { InquirerUtilities } from '../../encapsulation';
-import { BaseCommand } from '../base-command.model';
-import { AddNestCommand } from './add-nest';
 import { AddZibriCommand } from './add-zibri';
+import { AddConfiguration, addConfigurationQuestions, AddType } from './models';
 
 /**
  * Adds a new project to the current monorepo.
  */
 export class AddCommand extends BaseCommand<AddConfiguration> {
     protected override readonly insideWorkspace: boolean = true;
+    protected override readonly restoresWorkspace: boolean = true;
 
     protected override async run(config: AddConfiguration): Promise<void> {
         switch (config.type) {
             case AddType.ANGULAR: {
-                await new AddAngularCommand(config).run();
+                await new AddAngularCommand(config).add();
                 return;
             }
             case AddType.ANGULAR_LIBRARY: {
-                await new AddAngularLibraryCommand(config).run();
+                await new AddAngularLibraryCommand(config).add();
                 return;
             }
             case AddType.ANGULAR_WEBSITE: {
-                await new AddAngularWebsiteCommand(config).run();
+                await new AddAngularWebsiteCommand(config).add();
                 return;
             }
             case AddType.LOOPBACK: {
-                await new AddLoopbackCommand(config).run();
+                await new AddLoopbackCommand(config).add();
                 return;
             }
             case AddType.NEST: {
-                await new AddNestCommand(config).run();
+                await new AddNestCommand(config).add();
                 return;
             }
             case AddType.ZIBRI: {
-                await new AddZibriCommand(config).run();
+                await new AddZibriCommand(config).add();
                 return;
             }
             case AddType.TS_LIBRARY: {
-                await new AddTsLibraryCommand(config).run();
+                await new AddTsLibraryCommand(config).add();
                 return;
             }
             case AddType.WORDPRESS: {
-                await new AddWordpressCommand(config).run();
+                await new AddWordpressCommand(config).add();
                 return;
             }
         }

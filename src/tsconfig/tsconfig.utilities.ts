@@ -1,8 +1,8 @@
 import { ModuleKind, ModuleResolutionKind, ScriptTarget } from 'typescript';
 
 import { BASE_TS_CONFIG_FILE_NAME, TS_CONFIG_FILE_NAME } from '../constants';
-import { CPUtilities, FsUtilities, JsonUtilities } from '../encapsulation';
-import { getPath, mergeDeep, Path } from '../utilities';
+import { FsUtilities, JsonUtilities, Path, PathUtilities } from '../encapsulation';
+import { mergeDeep } from '../utilities';
 import { WorkspaceProject, WorkspaceUtilities } from '../workspace';
 import { TsConfig } from './tsconfig.model';
 
@@ -10,14 +10,6 @@ import { TsConfig } from './tsconfig.model';
  * Utilities for tsconfig.
  */
 export abstract class TsConfigUtilities {
-    /**
-     * Initializes typescript inside the given path.
-     * @param path - Where to initialize typescript.
-     */
-    static async init(path: Path): Promise<void> {
-        await CPUtilities.exec(`cd ${path} && npx --yes tsc --init`);
-    }
-
     /**
      * Creates the base ts config at the monorepo root.
      */
@@ -49,7 +41,7 @@ export abstract class TsConfigUtilities {
             },
             exclude: ['node_modules', 'tmp', 'dist']
         };
-        await FsUtilities.createFile(getPath(BASE_TS_CONFIG_FILE_NAME), JsonUtilities.stringify(tsconfig));
+        await FsUtilities.createFile(PathUtilities.resolve(BASE_TS_CONFIG_FILE_NAME), JsonUtilities.stringify(tsconfig));
     }
 
     /**
@@ -58,8 +50,8 @@ export abstract class TsConfigUtilities {
      * @param data - The data to update the tsconfig with.
      */
     static async updateTsConfig(projectName: string, data: Partial<TsConfig>): Promise<void> {
-        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName, getPath('.'));
-        const tsConfigPath: Path = getPath(project.path, TS_CONFIG_FILE_NAME);
+        const project: WorkspaceProject = await WorkspaceUtilities.findProjectOrFail(projectName, PathUtilities.resolve('.'));
+        const tsConfigPath: Path = PathUtilities.resolve(project.path, TS_CONFIG_FILE_NAME);
         await this.update(tsConfigPath, data);
     }
 
@@ -68,7 +60,7 @@ export abstract class TsConfigUtilities {
      * @param data - The data to update the tsconfig with.
      */
     static async updateBaseTsConfig(data: Partial<TsConfig>): Promise<void> {
-        await this.update(getPath(BASE_TS_CONFIG_FILE_NAME), data);
+        await this.update(PathUtilities.resolve(BASE_TS_CONFIG_FILE_NAME), data);
     }
 
     /**
@@ -79,6 +71,6 @@ export abstract class TsConfigUtilities {
     static async update(path: Path, data: Partial<TsConfig>): Promise<void> {
         const oldConfig: TsConfig = await FsUtilities.parseFileAs(path);
         const tsconfig: TsConfig = mergeDeep<TsConfig>(oldConfig, data);
-        await FsUtilities.updateFile(path, JsonUtilities.stringify(tsconfig), 'replace', false);
+        await FsUtilities.updateFile(path, JsonUtilities.stringify(tsconfig), 'replace');
     }
 }
